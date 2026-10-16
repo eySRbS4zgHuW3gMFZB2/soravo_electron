@@ -1,0 +1,183 @@
+import { app, BrowserWindow, globalShortcut, ipcMain, screen } from 'electron'
+import { existsSync } from 'fs'
+import { unlink } from 'fs/promises'
+import { join } from 'path'
+import { addTranscription, clearTranscriptions, listTranscriptions, openHistory } from './history.js'
+import { injectText } from './inject.js'
+import { settings, type SoravoSettings } from './settings.js'
+import { transcribeWav, writeTempWav } from './whisper.js'
+
+type RecState = 'idle' | 'recording' | 'transcribing' | 'error'
+
+let win: BrowserWindow | null = null
+let state: RecState = 'idle'
+let hideTimer: NodeJS.Timeout | null = null
+let audioTimer: NodeJS.Timeout | null = null
+
+function setState(next: RecState): void {
+  state = next
+  win?.webContents.send('soravo:state', next)
+}
+
+function fail(message: string): void {
+  if (audioTimer) {
+    clearTimeout(audioTimer)
+    audioTimer = null
+  }
+  win?.webContents.send('soravo:error', message)
+  setState('error')
+  scheduleHide(4000)
+  setTimeout(() => {
+    if (state === 'error') setState('idle')
+  }, 4000)
+}
+
+function preloadFile(): string {
+  const dir = join(__dirname, '../preload')
+  const mjs = join(dir, 'index.mjs')
+  return existsSync(mjs) ? mjs : join(dir, 'index.js')
+}
+
+function createWindow(): void {
+  const area = screen.getPrimaryDisplay().workArea
+  win = new BrowserWindow({
+    width: 560,
+    height: 84,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    focusable: false,
+    show: false,
+    webPreferences: {
+      preload: preloadFile(),
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false
+    }
+  })
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    void win.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  } else {
+    void win.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+  win.setPosition(Math.round(area.x + (area.width - 560) / 2), area.y + area.height - 84 - 28)
+}
+
+function showPill(): void {
+  if (win && !win.isVisible()) win.showInactive()
+}
+
+function scheduleHide(ms = 2500): void {
+  if (hideTimer) clearTimeout(hideTimer)
+  hideTimer = setTimeout(() => {
+    win?.hide()
+    hideTimer = null
+  }, ms)
+}
+
+async function toggle(): Promise<void> {
+  if (!win) return
+  if (state === 'idle' || state === 'error') {
+    if (hideTimer) {
+      clearTimeout(hideTimer)
+      hideTimer = null
+    }
+    setState('recording')
+    showPill()
+    win.webContents.send('soravo:record-command', 'start')
+  } else if (state === 'recording') {
+    setState('transcribing')
+    win.webContents.send('soravo:record-command', 'stop')
+    if (audioTimer) clearTimeout(audioTimer)
+    audioTimer = setTimeout(() => fail('No audio arrived from the recorder'), 15000)
+  }
+  // transcribing: ignore extra toggles
+}
+
+function registerHotkey(): void {
+  globalShortcut.unregisterAll()
+  const accelerator = settings.get('hotkey')
+  try {
+    const ok = globalShortcut.register(accelerator, () => void toggle())
+    if (!ok) win?.webContents.send('soravo:error', `Hotkey "${accelerator}" is already in use`)
+  } catch (err) {
+    win?.webContents.send(
+      'soravo:error',
+      `Invalid hotkey "${accelerator}": ${err instanceof Error ? err.message : String(err)}`
+    )
+  }
+}
+
+function registerIpc(): void {
+  ipcMain.handle('soravo:toggle', () => toggle())
+  ipcMain.handle('soravo:quit', () => app.quit())
+  ipcMain.handle('soravo:get-state', () => state)
+  ipcMain.handle('soravo:history', (_e, limit: number) =>
+    listTranscriptions(typeof limit === 'number' ? limit : 50)
+  )
+  ipcMain.handle('soravo:history-clear', () => {
+    clearTranscriptions()
+  })
+  ipcMain.handle('soravo:settings-get', () => settings.store)
+  ipcMain.handle('soravo:settings-set', (_e, patch: Partial<SoravoSettings>) => {
+    if (typeof patch.hotkey === 'string') settings.set('hotkey', patch.hotkey)
+    if (typeof patch.model === 'string') settings.set('model', patch.model)
+    if (typeof patch.language === 'string') settings.set('language', patch.language)
+    registerHotkey()
+    return settings.store
+  })
+  ipcMain.handle('soravo:set-height', (_e, px: number) => {
+    if (!win) return
+    const area = screen.getPrimaryDisplay().workArea
+    const height = Math.min(Math.max(Math.round(px), 84), 520)
+    const bounds = win.getBounds()
+    win.setBounds({ ...bounds, height, y: area.y + area.height - height - 28 })
+  })
+  ipcMain.handle('soravo:submit-audio', async (_e, wav: ArrayBuffer, durationMs: number) => {
+    if (audioTimer) {
+      clearTimeout(audioTimer)
+      audioTimer = null
+    }
+    if (!(wav instanceof ArrayBuffer) || wav.byteLength === 0) {
+      fail('Recording produced no audio')
+      return
+    }
+    const wavPath = await writeTempWav(wav)
+    try {
+      const text = (
+        await transcribeWav(wavPath, settings.get('model'), settings.get('language'))
+      ).trim()
+      if (!text) throw new Error('Transcription came back empty')
+      addTranscription(text, typeof durationMs === 'number' ? Math.round(durationMs) : null)
+      await injectText(text)
+      win?.webContents.send('soravo:transcript', text)
+      scheduleHide()
+      setState('idle')
+    } catch (err) {
+      fail(err instanceof Error ? err.message : String(err))
+    } finally {
+      await unlink(wavPath).catch(() => {})
+    }
+  })
+}
+
+void app.whenReady().then(() => {
+  if (!app.requestSingleInstanceLock()) {
+    app.quit()
+    return
+  }
+  openHistory()
+  createWindow()
+  registerIpc()
+  registerHotkey()
+})
+
+app.on('window-all-closed', () => {
+  app.quit()
+})
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
+})

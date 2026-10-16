@@ -1,0 +1,250 @@
+:root {
+  --soravo-primary: #9fe870;
+  --soravo-on-primary: #0e0f0c;
+  --soravo-ink: #0e0f0c;
+  --soravo-body: #454745;
+  --soravo-mute: #868685;
+  --soravo-canvas: #ffffff;
+  --soravo-canvas-soft: #e8ebe6;
+  --soravo-positive: #2ead4b;
+  --soravo-negative: #d03238;
+  --soravo-radius: 24px;
+  --soravo-font: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font-family: var(--soravo-font);
+  color: var(--soravo-ink);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.soravo-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 84px;
+  padding: 12px 16px;
+  background: var(--soravo-canvas);
+  border-radius: var(--soravo-radius);
+  box-shadow: 0 12px 40px rgba(14, 15, 12, 0.22);
+  -webkit-app-region: drag;
+}
+
+.soravo-pill button,
+.soravo-pill input,
+.soravo-pill select {
+  -webkit-app-region: no-drag;
+}
+
+.mic-btn {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--soravo-primary);
+  color: var(--soravo-on-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mic-btn.recording {
+  background: var(--soravo-negative);
+  color: #fff;
+}
+
+.mic-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.pill-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.pill-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill-sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--soravo-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill-sub.error {
+  color: var(--soravo-negative);
+}
+
+.rec-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--soravo-negative);
+  margin-right: 6px;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  border: 2px solid var(--soravo-canvas-soft);
+  border-top-color: var(--soravo-ink);
+  border-radius: 9999px;
+  animation: spin 0.8s linear infinite;
+  vertical-align: -2px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.icon-btn {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn.active {
+  background: var(--soravo-ink);
+  color: var(--soravo-primary);
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.soravo-drawer {
+  margin-top: 8px;
+  max-height: 328px;
+  overflow-y: auto;
+  background: var(--soravo-canvas);
+  border-radius: var(--soravo-radius);
+  box-shadow: 0 12px 40px rgba(14, 15, 12, 0.22);
+  padding: 16px;
+}
+
+.drawer-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.history-item {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--soravo-canvas-soft);
+  margin-bottom: 8px;
+}
+
+.history-text {
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0 0 4px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.history-meta {
+  font-size: 12px;
+  color: var(--soravo-mute);
+}
+
+.history-empty {
+  font-size: 14px;
+  color: var(--soravo-mute);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.row label {
+  flex: none;
+  width: 88px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.row input,
+.row select {
+  flex: 1;
+  font: inherit;
+  font-size: 14px;
+  color: var(--soravo-ink);
+  background: var(--soravo-canvas);
+  border: 1px solid var(--soravo-ink);
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-width: 0;
+}
+
+.btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  padding: 8px 16px;
+  cursor: pointer;
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
+}
+
+.btn.primary {
+  background: var(--soravo-primary);
+  color: var(--soravo-on-primary);
+}
+
+.btn.danger {
+  background: var(--soravo-negative);
+  color: #fff;
+}
