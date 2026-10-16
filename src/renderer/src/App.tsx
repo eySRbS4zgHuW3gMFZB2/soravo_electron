@@ -116,6 +116,7 @@ export default function App() {
         )}
         {state === 'transcribing' && <span className="mini-spinner" title="Transcribing" />}
         {state === 'error' && <span className="mini-errdot" title="Error" />}
+        {state === 'idle' && <span className="mini-hint">Soravo</span>}
       </div>
       {state === 'idle' ? (
         <button className="mini-ok" title="Dictate" onClick={() => void window.soravo.toggle()}>
