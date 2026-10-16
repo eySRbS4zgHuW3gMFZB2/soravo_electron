@@ -420,3 +420,99 @@ html[data-theme='dark'] .btn.primary {
   background: var(--soravo-primary);
   color: var(--soravo-on-primary);
 }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(14, 15, 12, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  -webkit-app-region: no-drag;
+}
+
+.modal-dialog {
+  display: flex;
+  width: min(880px, calc(100vw - 80px));
+  height: min(600px, calc(100vh - 80px));
+  background: var(--soravo-canvas-soft);
+  border-radius: var(--soravo-radius);
+  box-shadow: 0 24px 80px rgba(14, 15, 12, 0.35);
+  overflow: hidden;
+}
+
+.modal-sidebar {
+  flex: none;
+  width: 220px;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-heading {
+  margin: 0 0 12px 12px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.modal-tab {
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--soravo-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.modal-tab.active {
+  background: var(--soravo-canvas);
+}
+
+.modal-content {
+  flex: 1;
+  min-width: 0;
+  background: var(--soravo-canvas-soft);
+  padding: 20px 24px 16px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-title {
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--soravo-canvas);
+  color: var(--soravo-ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 0 4px;
+}
