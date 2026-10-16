@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { RecState } from './soravo'
 import { blobToWav16k } from './audio'
+import { playBlip } from './sounds'
 
 interface Recorder {
   mr: MediaRecorder
@@ -36,15 +37,44 @@ function MicIcon() {
   )
 }
 
+async function soundsEnabled(): Promise<boolean> {
+  try {
+    const s = await window.soravo.getSettings()
+    return s.sounds
+  } catch {
+    return true
+  }
+}
+
+async function openMic(microphoneId: string): Promise<MediaStream> {
+  const base = { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+  if (!microphoneId) {
+    return navigator.mediaDevices.getUserMedia({ audio: base })
+  }
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: { ...base, deviceId: { exact: microphoneId } }
+    })
+  } catch {
+    // Selected device vanished (unplugged); fall back to auto-detect.
+    return navigator.mediaDevices.getUserMedia({ audio: base })
+  }
+}
+
 export default function App() {
   const [state, setState] = useState<RecState>('idle')
   const recRef = useRef<Recorder | null>(null)
 
   const startRecorder = async () => {
+    playBlip('start', await soundsEnabled())
+    let microphoneId = ''
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-      })
+      microphoneId = (await window.soravo.getSettings()).microphoneId
+    } catch {
+      microphoneId = ''
+    }
+    try {
+      const stream = await openMic(microphoneId)
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : ''
@@ -56,6 +86,7 @@ export default function App() {
       recRef.current = { mr, chunks, stream, startedAt: Date.now() }
       mr.start(250)
     } catch {
+      playBlip('error', await soundsEnabled())
       await window.soravo.submitAudio(new ArrayBuffer(0), 0)
     }
   }
@@ -67,6 +98,7 @@ export default function App() {
       if (submit) await window.soravo.submitAudio(new ArrayBuffer(0), 0)
       return
     }
+    playBlip('stop', await soundsEnabled())
     const durationMs = Date.now() - rec.startedAt
     const blob = await new Promise<Blob>((resolve) => {
       rec.mr.onstop = () =>
@@ -78,14 +110,19 @@ export default function App() {
     try {
       const { buffer } = await blobToWav16k(blob)
       await window.soravo.submitAudio(buffer, durationMs)
+      playBlip('success', await soundsEnabled())
     } catch {
+      playBlip('error', await soundsEnabled())
       await window.soravo.submitAudio(new ArrayBuffer(0), 0)
     }
   }
 
   useEffect(() => {
     window.soravo.getState().then(setState).catch(() => {})
-    const offState = window.soravo.onState(setState)
+    const offState = window.soravo.onState((s) => {
+      setState(s)
+      if (s === 'error') void soundsEnabled().then((on) => playBlip('error', on))
+    })
     const offCmd = window.soravo.onRecordCommand((cmd) => {
       if (cmd === 'start') void startRecorder()
       else if (cmd === 'stop') void stopRecorder(true)

@@ -333,3 +333,49 @@
   border-radius: 12px;
   padding: 12px 16px;
 }
+
+.row input[type='checkbox'] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--soravo-positive);
+}
+
+/* Dark theme: flip surfaces, keep the lime accent and dark hero. */
+html[data-theme='dark'] {
+  --soravo-canvas: #191c15;
+  --soravo-canvas-soft: #22261e;
+  --soravo-ink: #f0f3e6;
+  --soravo-body: #c2c7b2;
+  --soravo-mute: #8b9080;
+}
+
+html[data-theme='dark'] .hub-hero {
+  background: #0e0f0c;
+}
+
+html[data-theme='dark'] .row input,
+html[data-theme='dark'] .row select {
+  background: #101209;
+  border-color: #3a3f30;
+  color: var(--soravo-ink);
+}
+
+html[data-theme='dark'] .hub-nav.active,
+html[data-theme='dark'] .hub-local-card,
+html[data-theme='dark'] .hub-entry,
+html[data-theme='dark'] .hub-stat,
+html[data-theme='dark'] .hub-note {
+  background: #22261e;
+}
+
+html[data-theme='dark'] .hub-mini-btn,
+html[data-theme='dark'] .btn {
+  background: #2c3125;
+  color: var(--soravo-ink);
+}
+
+html[data-theme='dark'] .btn.primary {
+  background: var(--soravo-primary);
+  color: var(--soravo-on-primary);
+}

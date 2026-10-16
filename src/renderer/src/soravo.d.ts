@@ -9,8 +9,17 @@ export interface TranscriptEntry {
 
 export interface SoravoSettings {
   hotkey: string
+  pasteHotkey: string
+  copyHotkey: string
   model: string
   language: string
+  microphoneId: string
+  sounds: boolean
+  smartCleanup: boolean
+  vocabulary: Record<string, string>
+  launchAtLogin: boolean
+  theme: 'light' | 'dark'
+  retention: 'all' | '30days' | 'session'
 }
 
 export interface SoravoAPI {

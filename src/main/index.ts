@@ -1,8 +1,9 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu, nativeImage, screen, Tray } from 'electron'
+import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, Menu, nativeImage, screen, Tray } from 'electron'
 import { existsSync } from 'fs'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
-import { addTranscription, clearTranscriptions, deleteTranscription, listTranscriptions, openHistory } from './history.js'
+import { addTranscription, clearTranscriptions, deleteTranscription, listTranscriptions, openHistory, pruneHistory } from './history.js'
+import { applyVocabulary, cleanupTranscript } from './cleanup.js'
 import { injectText } from './inject.js'
 import { settings, type SoravoSettings } from './settings.js'
 import { runtimeStatus, transcribeWav, writeTempWav } from './whisper.js'
@@ -186,18 +187,51 @@ async function toggle(): Promise<void> {
   // transcribing: ignore extra toggles
 }
 
+function hotkeyError(accelerator: string, detail: string): void {
+  win?.webContents.send('soravo:error', `Hotkey "${accelerator}": ${detail}`)
+}
+
+function tryRegister(accelerator: string, action: () => void): void {
+  if (!accelerator.trim()) return
+  try {
+    const ok = globalShortcut.register(accelerator, action)
+    if (!ok) hotkeyError(accelerator, 'already in use')
+  } catch (err) {
+    hotkeyError(accelerator, err instanceof Error ? err.message : String(err))
+  }
+}
+
+async function pasteLastTranscript(): Promise<void> {
+  const [latest] = listTranscriptions(1)
+  if (!latest) {
+    win?.webContents.send('soravo:error', 'No dictations yet to paste')
+    return
+  }
+  try {
+    await injectText(latest.text)
+  } catch (err) {
+    win?.webContents.send('soravo:error', err instanceof Error ? err.message : String(err))
+  }
+}
+
+function copyLastTranscript(): void {
+  const [latest] = listTranscriptions(1)
+  if (!latest) {
+    win?.webContents.send('soravo:error', 'No dictations yet to copy')
+    return
+  }
+  clipboard.writeText(latest.text)
+}
+
+function applyLoginItem(): void {
+  app.setLoginItemSettings({ openAtLogin: settings.get('launchAtLogin') })
+}
+
 function registerHotkey(): void {
   globalShortcut.unregisterAll()
-  const accelerator = settings.get('hotkey')
-  try {
-    const ok = globalShortcut.register(accelerator, () => void toggle())
-    if (!ok) win?.webContents.send('soravo:error', `Hotkey "${accelerator}" is already in use`)
-  } catch (err) {
-    win?.webContents.send(
-      'soravo:error',
-      `Invalid hotkey "${accelerator}": ${err instanceof Error ? err.message : String(err)}`
-    )
-  }
+  tryRegister(settings.get('hotkey'), () => void toggle())
+  tryRegister(settings.get('pasteHotkey'), () => void pasteLastTranscript())
+  tryRegister(settings.get('copyHotkey'), () => copyLastTranscript())
 }
 
 function registerIpc(): void {
@@ -233,8 +267,29 @@ function registerIpc(): void {
   ipcMain.handle('soravo:settings-get', () => settings.store)
   ipcMain.handle('soravo:settings-set', (_e, patch: Partial<SoravoSettings>) => {
     if (typeof patch.hotkey === 'string') settings.set('hotkey', patch.hotkey)
+    if (typeof patch.pasteHotkey === 'string') settings.set('pasteHotkey', patch.pasteHotkey)
+    if (typeof patch.copyHotkey === 'string') settings.set('copyHotkey', patch.copyHotkey)
     if (typeof patch.model === 'string') settings.set('model', patch.model)
     if (typeof patch.language === 'string') settings.set('language', patch.language)
+    if (typeof patch.microphoneId === 'string') settings.set('microphoneId', patch.microphoneId)
+    if (typeof patch.sounds === 'boolean') settings.set('sounds', patch.sounds)
+    if (typeof patch.smartCleanup === 'boolean') settings.set('smartCleanup', patch.smartCleanup)
+    if (patch.vocabulary && typeof patch.vocabulary === 'object') {
+      settings.set('vocabulary', patch.vocabulary)
+    }
+    if (typeof patch.launchAtLogin === 'boolean') {
+      settings.set('launchAtLogin', patch.launchAtLogin)
+      applyLoginItem()
+    }
+    if (patch.theme === 'light' || patch.theme === 'dark') settings.set('theme', patch.theme)
+    if (
+      patch.retention === 'all' ||
+      patch.retention === '30days' ||
+      patch.retention === 'session'
+    ) {
+      settings.set('retention', patch.retention)
+      pruneHistory(patch.retention)
+    }
     registerHotkey()
     return settings.store
   })
@@ -256,9 +311,16 @@ function registerIpc(): void {
     }
     const wavPath = await writeTempWav(wav)
     try {
-      const text = (
+      const raw = (
         await transcribeWav(wavPath, settings.get('model'), settings.get('language'))
       ).trim()
+      if (!raw) throw new Error('Transcription came back empty')
+      const text = settings.get('smartCleanup')
+        ? applyVocabulary(
+            cleanupTranscript(raw, settings.get('language')),
+            settings.get('vocabulary')
+          ).trim()
+        : raw
       if (!text) throw new Error('Transcription came back empty')
       addTranscription(text, typeof durationMs === 'number' ? Math.round(durationMs) : null)
       await injectText(text)
@@ -279,6 +341,8 @@ void app.whenReady().then(() => {
     return
   }
   openHistory()
+  pruneHistory(settings.get('retention'))
+  applyLoginItem()
   createWindow()
   createHubWindow()
   createTray()

@@ -54,3 +54,16 @@ export function clearTranscriptions(): void {
 export function deleteTranscription(id: number): void {
   openHistory().prepare('DELETE FROM transcriptions WHERE id = ?').run(id)
 }
+
+export type RetentionMode = 'all' | '30days' | 'session'
+
+export function pruneHistory(retention: RetentionMode): void {
+  const d = openHistory()
+  if (retention === 'session') {
+    d.exec('DELETE FROM transcriptions')
+  } else if (retention === '30days') {
+    d.exec(
+      "DELETE FROM transcriptions WHERE created_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-30 days')"
+    )
+  }
+}

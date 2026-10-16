@@ -306,6 +306,11 @@ function HistoryPage({
   )
 }
 
+interface MicDevice {
+  deviceId: string
+  label: string
+}
+
 function SettingsPage({
   settings,
   onSave,
@@ -316,27 +321,142 @@ function SettingsPage({
   onQuit: () => void
 }) {
   const [hotkey, setHotkey] = useState(settings?.hotkey ?? '')
+  const [pasteHotkey, setPasteHotkey] = useState(settings?.pasteHotkey ?? '')
+  const [copyHotkey, setCopyHotkey] = useState(settings?.copyHotkey ?? '')
   const [model, setModel] = useState(settings?.model ?? 'base.en')
   const [language, setLanguage] = useState(settings?.language ?? 'en')
+  const [microphoneId, setMicrophoneId] = useState(settings?.microphoneId ?? '')
+  const [sounds, setSounds] = useState(settings?.sounds ?? true)
+  const [smartCleanup, setSmartCleanup] = useState(settings?.smartCleanup ?? true)
+  const [vocabulary, setVocabulary] = useState<Record<string, string>>(settings?.vocabulary ?? {})
+  const [newFrom, setNewFrom] = useState('')
+  const [newTo, setNewTo] = useState('')
+  const [launchAtLogin, setLaunchAtLogin] = useState(settings?.launchAtLogin ?? false)
+  const [theme, setTheme] = useState<'light' | 'dark'>(settings?.theme ?? 'light')
+  const [retention, setRetention] = useState<'all' | '30days' | 'session'>(settings?.retention ?? 'all')
+  const [devices, setDevices] = useState<MicDevice[]>([])
   const [runtime, setRuntime] = useState<{ binary: boolean; model: string; modelPresent: boolean } | null>(null)
 
   useEffect(() => {
-    setHotkey(settings?.hotkey ?? '')
-    setModel(settings?.model ?? 'base.en')
-    setLanguage(settings?.language ?? 'en')
+    if (!settings) return
+    setHotkey(settings.hotkey)
+    setPasteHotkey(settings.pasteHotkey)
+    setCopyHotkey(settings.copyHotkey)
+    setModel(settings.model)
+    setLanguage(settings.language)
+    setMicrophoneId(settings.microphoneId)
+    setSounds(settings.sounds)
+    setSmartCleanup(settings.smartCleanup)
+    setVocabulary(settings.vocabulary)
+    setLaunchAtLogin(settings.launchAtLogin)
+    setTheme(settings.theme)
+    setRetention(settings.retention)
   }, [settings])
 
   useEffect(() => {
     window.soravo.getRuntimeStatus().then(setRuntime).catch(() => setRuntime(null))
+    navigator.mediaDevices
+      .enumerateDevices()
+      .then((all) =>
+        setDevices(
+          all
+            .filter((d) => d.kind === 'audioinput')
+            .map((d, i) => ({ deviceId: d.deviceId, label: d.label || `Microphone ${i + 1}` }))
+        )
+      )
+      .catch(() => setDevices([]))
   }, [])
+
+  const addWord = () => {
+    const from = newFrom.trim()
+    const to = newTo.trim()
+    if (!from || !to) return
+    setVocabulary((v) => ({ ...v, [from]: to }))
+    setNewFrom('')
+    setNewTo('')
+  }
+
+  const removeWord = (from: string) => {
+    setVocabulary((v) => {
+      const next = { ...v }
+      delete next[from]
+      return next
+    })
+  }
+
+  const save = () =>
+    onSave({
+      hotkey: hotkey.trim() || 'CommandOrControl+Alt+Space',
+      pasteHotkey: pasteHotkey.trim(),
+      copyHotkey: copyHotkey.trim(),
+      model: model.trim() || 'base.en',
+      language: language.trim() || 'en',
+      microphoneId,
+      sounds,
+      smartCleanup,
+      vocabulary,
+      launchAtLogin,
+      theme,
+      retention
+    })
+
+  const vocabEntries = Object.entries(vocabulary)
 
   return (
     <div className="hub-page">
       <h1 className="hub-greeting">Settings</h1>
+
+      <h3 className="hub-section">Dictation</h3>
       <div className="row">
         <label>Hotkey</label>
         <input value={hotkey} onChange={(e) => setHotkey(e.target.value)} spellCheck={false} />
       </div>
+      <div className="row">
+        <label>Paste last</label>
+        <input
+          value={pasteHotkey}
+          onChange={(e) => setPasteHotkey(e.target.value)}
+          spellCheck={false}
+          placeholder="Empty = disabled"
+        />
+      </div>
+      <div className="row">
+        <label>Copy last</label>
+        <input
+          value={copyHotkey}
+          onChange={(e) => setCopyHotkey(e.target.value)}
+          spellCheck={false}
+          placeholder="Empty = disabled"
+        />
+      </div>
+      <div className="row">
+        <label>Language</label>
+        <input value={language} onChange={(e) => setLanguage(e.target.value)} spellCheck={false} />
+      </div>
+
+      <h3 className="hub-section">Microphone</h3>
+      <div className="row">
+        <label>Input</label>
+        <select value={microphoneId} onChange={(e) => setMicrophoneId(e.target.value)}>
+          <option value="">Auto-detect</option>
+          {devices.map((d) => (
+            <option key={d.deviceId} value={d.deviceId}>
+              {d.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="row">
+        <label>Sound effects</label>
+        <input type="checkbox" checked={sounds} onChange={(e) => setSounds(e.target.checked)} />
+      </div>
+
+      <h3 className="hub-section">Transcript</h3>
+      <div className="row">
+        <label>Smart cleanup</label>
+        <input type="checkbox" checked={smartCleanup} onChange={(e) => setSmartCleanup(e.target.checked)} />
+      </div>
+      <p className="hub-note">Removes filler words, fixes spacing, and capitalizes sentences before pasting.</p>
       <div className="row">
         <label>Model</label>
         <select value={model} onChange={(e) => setModel(e.target.value)}>
@@ -344,24 +464,62 @@ function SettingsPage({
           <option value="small.en">small.en (better, ~500MB)</option>
         </select>
       </div>
+
+      <h3 className="hub-section">Custom vocabulary ({vocabEntries.length})</h3>
+      <p className="hub-note">Spoken form on the left is always written as the right side.</p>
+      {vocabEntries.map(([from, to]) => (
+        <div className="row" key={from}>
+          <label>{from}</label>
+          <input value={to} readOnly />
+          <button className="btn danger" onClick={() => removeWord(from)}>
+            Remove
+          </button>
+        </div>
+      ))}
       <div className="row">
-        <label>Language</label>
-        <input value={language} onChange={(e) => setLanguage(e.target.value)} spellCheck={false} />
+        <label>Heard as</label>
+        <input value={newFrom} onChange={(e) => setNewFrom(e.target.value)} placeholder="e.g. sore avo" spellCheck={false} />
       </div>
       <div className="row">
-        <button
-          className="btn primary"
-          onClick={() =>
-            void onSave({
-              hotkey: hotkey.trim() || 'CommandOrControl+Alt+Space',
-              model: model.trim() || 'base.en',
-              language: language.trim() || 'en'
-            })
-          }
-        >
-          Save
+        <label>Write as</label>
+        <input value={newTo} onChange={(e) => setNewTo(e.target.value)} placeholder="e.g. Soravo" spellCheck={false} />
+      </div>
+      <div className="row">
+        <label />
+        <button className="btn" onClick={addWord}>
+          Add word
         </button>
       </div>
+
+      <h3 className="hub-section">Application</h3>
+      <div className="row">
+        <label>Theme</label>
+        <select value={theme} onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <div className="row">
+        <label>History keeps</label>
+        <select value={retention} onChange={(e) => setRetention(e.target.value as 'all' | '30days' | 'session')}>
+          <option value="all">Everything</option>
+          <option value="30days">Last 30 days</option>
+          <option value="session">This session only</option>
+        </select>
+      </div>
+      <div className="row">
+        <label>Start at login</label>
+        <input type="checkbox" checked={launchAtLogin} onChange={(e) => setLaunchAtLogin(e.target.checked)} />
+      </div>
+      <div className="row">
+        <button className="btn primary" onClick={() => void save()}>
+          Save
+        </button>
+        <button className="btn danger" onClick={onQuit}>
+          Quit Soravo
+        </button>
+      </div>
+
       <h3 className="hub-section">Transcription engine</h3>
       <p className="hub-note">
         {runtime === null
@@ -370,13 +528,6 @@ function SettingsPage({
             ? `Ready — whisper.cpp binary + model ${runtime.model} present. Nothing is downloaded at runtime.`
             : 'Incomplete — run `npm run fetch:whisper` in the Soravo project, then restart the app.'}
       </p>
-      <h3 className="hub-section">Application</h3>
-      <p className="hub-note">Closing this window hides Soravo to the tray. Quit fully from here or the tray menu.</p>
-      <div className="row">
-        <button className="btn danger" onClick={onQuit}>
-          Quit Soravo
-        </button>
-      </div>
     </div>
   )
 }
@@ -411,6 +562,10 @@ export default function HubApp() {
       offError()
     }
   }, [])
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = settings?.theme ?? 'light'
+  }, [settings])
 
   const copyEntry = (id: number, text: string) => {
     navigator.clipboard.writeText(text).then(
