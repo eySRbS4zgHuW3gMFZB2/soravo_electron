@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, screen } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu, nativeImage, screen, Tray } from 'electron'
 import { existsSync } from 'fs'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
@@ -10,6 +10,7 @@ import { transcribeWav, writeTempWav } from './whisper.js'
 type RecState = 'idle' | 'recording' | 'transcribing' | 'error'
 
 let win: BrowserWindow | null = null
+let tray: Tray | null = null
 let state: RecState = 'idle'
 let hideTimer: NodeJS.Timeout | null = null
 let audioTimer: NodeJS.Timeout | null = null
@@ -36,6 +37,26 @@ function preloadFile(): string {
   const dir = join(__dirname, '../preload')
   const mjs = join(dir, 'index.mjs')
   return existsSync(mjs) ? mjs : join(dir, 'index.js')
+}
+
+function iconPath(): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, 'icon.ico')
+    : join(app.getAppPath(), 'resources', 'icon.ico')
+}
+
+function createTray(): void {
+  const image = nativeImage.createFromPath(iconPath())
+  tray = new Tray(image.isEmpty() ? nativeImage.createEmpty() : image)
+  tray.setToolTip('Soravo — voice typing')
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: 'Toggle dictation', click: () => void toggle() },
+      { type: 'separator' },
+      { label: 'Quit Soravo', click: () => app.quit() }
+    ])
+  )
+  tray.on('click', () => void toggle())
 }
 
 function createWindow(): void {
@@ -170,8 +191,13 @@ void app.whenReady().then(() => {
   }
   openHistory()
   createWindow()
+  createTray()
   registerIpc()
   registerHotkey()
+  // First-run visibility: show the pill briefly so the app doesn't look dead.
+  setState('idle')
+  showPill()
+  scheduleHide(6000)
 })
 
 app.on('window-all-closed', () => {
