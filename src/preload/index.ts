@@ -20,8 +20,9 @@ export interface SoravoAPI {
   quit(): Promise<void>
   getState(): Promise<RecState>
   onState(cb: (s: RecState) => void): () => void
-  onRecordCommand(cb: (cmd: 'start' | 'stop') => void): () => void
+  onRecordCommand(cb: (cmd: 'start' | 'stop' | 'cancel') => void): () => void
   submitAudio(wav: ArrayBuffer, durationMs: number): Promise<void>
+  cancel(): Promise<void>
   setHeight(px: number): Promise<void>
   onTranscript(cb: (text: string) => void): () => void
   onError(cb: (message: string) => void): () => void
@@ -41,12 +42,13 @@ const api: SoravoAPI = {
   quit: () => ipcRenderer.invoke('soravo:quit'),
   getState: () => ipcRenderer.invoke('soravo:get-state'),
   onRecordCommand: (cb) => {
-    const fn = (_e: unknown, cmd: 'start' | 'stop') => cb(cmd)
+    const fn = (_e: unknown, cmd: 'start' | 'stop' | 'cancel') => cb(cmd)
     ipcRenderer.on('soravo:record-command', fn)
     return () => ipcRenderer.removeListener('soravo:record-command', fn)
   },
   submitAudio: (wav, durationMs) =>
     ipcRenderer.invoke('soravo:submit-audio', wav, durationMs),
+  cancel: () => ipcRenderer.invoke('soravo:cancel'),
   setHeight: (px) => ipcRenderer.invoke('soravo:set-height', px),
   onState: (cb) => {
     const fn = (_e: unknown, s: RecState) => cb(s)

@@ -248,3 +248,128 @@ body {
   background: var(--soravo-negative);
   color: #fff;
 }
+
+.soravo-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 72px;
+  padding: 8px 12px;
+  background: var(--soravo-ink);
+  border-radius: 9999px;
+  box-shadow: 0 12px 40px rgba(14, 15, 12, 0.35);
+  -webkit-app-region: drag;
+}
+
+.soravo-mini button {
+  -webkit-app-region: no-drag;
+}
+
+.mini-x {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-x svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mini-x:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.mini-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+}
+
+.live-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.live-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--soravo-primary);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.live-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.live-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.live-dots i:nth-child(4) {
+  animation-delay: 0.45s;
+}
+
+.live-dots i:nth-child(5) {
+  animation-delay: 0.6s;
+}
+
+.mini-ok {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--soravo-primary);
+  color: var(--soravo-on-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-ok:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.mini-ok svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mini-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--soravo-primary);
+  border-radius: 9999px;
+  animation: spin 0.8s linear infinite;
+}
+
+.mini-errdot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: var(--soravo-negative);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.mini-hint {
+  color: #fff;
+  font-size: 12px;
+  white-space: nowrap;
+}

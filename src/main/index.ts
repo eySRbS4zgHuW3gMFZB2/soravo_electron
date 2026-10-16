@@ -117,8 +117,8 @@ function showHub(): void {
 function createWindow(): void {
   const area = screen.getPrimaryDisplay().workArea
   win = new BrowserWindow({
-    width: 560,
-    height: 84,
+    width: 280,
+    height: 72,
     frame: false,
     transparent: true,
     resizable: false,
@@ -139,7 +139,7 @@ function createWindow(): void {
     void win.loadFile(join(__dirname, '../renderer/index.html'))
   }
   attachDiagnostics(win)
-  win.setPosition(Math.round(area.x + (area.width - 560) / 2), area.y + area.height - 84 - 28)
+  win.setPosition(Math.round(area.x + (area.width - 280) / 2), area.y + area.height - 72 - 28)
   console.log('[soravo] window created, preload:', preloadFile())
   if (!app.isPackaged) win.webContents.openDevTools({ mode: 'detach' })
 }
@@ -203,6 +203,15 @@ function registerHotkey(): void {
 function registerIpc(): void {
   ipcMain.handle('soravo:toggle', () => toggle())
   ipcMain.handle('soravo:quit', () => app.quit())
+  ipcMain.handle('soravo:cancel', () => {
+    if (audioTimer) {
+      clearTimeout(audioTimer)
+      audioTimer = null
+    }
+    win?.webContents.send('soravo:record-command', 'cancel')
+    if (state !== 'idle') setState('idle')
+    scheduleHide()
+  })
   ipcMain.handle('soravo:get-state', () => state)
   ipcMain.handle('soravo:history', (_e, limit: number) =>
     listTranscriptions(typeof limit === 'number' ? limit : 50)

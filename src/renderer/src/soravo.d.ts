@@ -18,8 +18,9 @@ export interface SoravoAPI {
   quit(): Promise<void>
   getState(): Promise<RecState>
   onState(cb: (s: RecState) => void): () => void
-  onRecordCommand(cb: (cmd: 'start' | 'stop') => void): () => void
+  onRecordCommand(cb: (cmd: 'start' | 'stop' | 'cancel') => void): () => void
   submitAudio(wav: ArrayBuffer, durationMs: number): Promise<void>
+  cancel(): Promise<void>
   setHeight(px: number): Promise<void>
   onTranscript(cb: (text: string) => void): () => void
   onError(cb: (message: string) => void): () => void
