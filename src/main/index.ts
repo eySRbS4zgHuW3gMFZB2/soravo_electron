@@ -84,6 +84,15 @@ function createWindow(): void {
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'))
   }
+  win.webContents.on('console-message', (_e, _level, message) => {
+    console.log('[renderer]', message)
+  })
+  win.webContents.on('preload-error', (_e, preloadPath, error) => {
+    console.log('[soravo] preload-error:', preloadPath, String(error))
+  })
+  win.webContents.on('did-fail-load', (_e, code, desc, url) => {
+    console.log('[soravo] did-fail-load:', code, desc, url)
+  })
   win.setPosition(Math.round(area.x + (area.width - 560) / 2), area.y + area.height - 84 - 28)
   console.log('[soravo] window created, preload:', preloadFile())
   if (!app.isPackaged) win.webContents.openDevTools({ mode: 'detach' })
