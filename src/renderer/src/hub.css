@@ -434,8 +434,8 @@ html[data-theme='dark'] .btn.primary {
 
 .modal-dialog {
   display: flex;
-  width: min(880px, calc(100vw - 80px));
-  height: min(600px, calc(100vh - 80px));
+  width: min(960px, calc(100vw - 60px));
+  height: min(680px, calc(100vh - 60px));
   background: var(--soravo-canvas-soft);
   border-radius: var(--soravo-radius);
   box-shadow: 0 24px 80px rgba(14, 15, 12, 0.35);
@@ -481,6 +481,11 @@ html[data-theme='dark'] .btn.primary {
   padding: 20px 24px 16px;
   overflow-y: auto;
   position: relative;
+  scrollbar-width: none;
+}
+
+.modal-content::-webkit-scrollbar {
+  display: none;
 }
 
 .modal-title {
