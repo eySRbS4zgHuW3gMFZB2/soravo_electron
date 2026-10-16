@@ -26,6 +26,7 @@ function fail(message: string): void {
     clearTimeout(audioTimer)
     audioTimer = null
   }
+  console.log('[soravo] error:', message)
   win?.webContents.send('soravo:error', message)
   setState('error')
   scheduleHide(4000)
@@ -36,8 +37,11 @@ function fail(message: string): void {
 
 function preloadFile(): string {
   const dir = join(__dirname, '../preload')
-  const mjs = join(dir, 'index.mjs')
-  return existsSync(mjs) ? mjs : join(dir, 'index.js')
+  for (const name of ['index.cjs', 'index.mjs', 'index.js']) {
+    const candidate = join(dir, name)
+    if (existsSync(candidate)) return candidate
+  }
+  return join(dir, 'index.cjs')
 }
 
 function iconPath(): string {
@@ -84,8 +88,10 @@ function createWindow(): void {
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'))
   }
-  win.webContents.on('console-message', (_e, _level, message) => {
-    console.log('[renderer]', message)
+  win.webContents.on('console-message', (_e, params) => {
+    const message =
+      typeof params === 'string' ? params : (params as { message?: string }).message
+    if (message) console.log('[renderer]', message)
   })
   win.webContents.on('preload-error', (_e, preloadPath, error) => {
     console.log('[soravo] preload-error:', preloadPath, String(error))
@@ -110,8 +116,18 @@ function scheduleHide(ms = 2500): void {
   }, ms)
 }
 
+let lastToggleAt = 0
+
 async function toggle(): Promise<void> {
   console.log('[soravo] toggle, state was:', state)
+  // Ignore key-repeat/double-fire within 800ms: holding the hotkey must
+  // not instantly stop the recording it just started.
+  const now = Date.now()
+  if (now - lastToggleAt < 800) {
+    console.log('[soravo] toggle debounced')
+    return
+  }
+  lastToggleAt = now
   if (!win) return
   if (state === 'idle' || state === 'error') {
     if (hideTimer) {
