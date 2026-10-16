@@ -619,6 +619,8 @@ function SettingsModal({
 }
 
 function InsightsPage({ insights }: { insights: InsightsData | null }) {
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [rhythm, setRhythm] = useState<'hour' | 'weekday'>('hour')
   if (!insights) {
     return (
       <div className="hub-page">
@@ -636,13 +638,23 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
   const maxDay = Math.max(1, ...byDate.values())
   const level = (w: number) =>
     w === 0 ? 0 : w <= maxDay * 0.25 ? 1 : w <= maxDay * 0.5 ? 2 : w <= maxDay * 0.75 ? 3 : 4
+  const WINDOW_WEEKS = 16
+  const end = new Date(today)
+  end.setDate(end.getDate() - weekOffset * 7)
+  const endSunday = new Date(end)
+  endSunday.setDate(end.getDate() - end.getDay())
+  const gridStart = new Date(endSunday)
+  gridStart.setDate(endSunday.getDate() - 7 * (WINDOW_WEEKS - 1))
+  const oldest = insights.perDay.length > 0 ? insights.perDay[0].date : null
+  const canEarlier = oldest !== null && gridStart > new Date(`${oldest}T00:00:00`)
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const pad = (n: number) => String(n).padStart(2, '0')
   const weeks: Array<Array<{ date: Date; words: number } | null>> = []
-  for (let w = 0; w < 16; w++) {
+  for (let w = 0; w < WINDOW_WEEKS; w++) {
     const col: Array<{ date: Date; words: number } | null> = []
     for (let d = 0; d < 7; d++) {
-      const date = new Date(start)
-      date.setDate(start.getDate() + w * 7 + d)
+      const date = new Date(gridStart)
+      date.setDate(gridStart.getDate() + w * 7 + d)
       if (date.getTime() > today.getTime()) {
         col.push(null)
       } else {
@@ -652,6 +664,12 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
     }
     weeks.push(col)
   }
+  const monthLabels = weeks.map((col) => {
+    for (const cell of col) {
+      if (cell && cell.date.getDate() <= 7) return monthNames[cell.date.getMonth()]
+    }
+    return ''
+  })
 
   const maxHour = Math.max(1, ...insights.perHour)
   const maxWeekday = Math.max(1, ...insights.perWeekday)
@@ -683,51 +701,106 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
 
       <h3 className="hub-section">Activity</h3>
       <div className="hub-heatmap-card">
-        <div className="heatmap">
-          {weeks.map((col, wi) => (
-            <div className="heatmap-col" key={wi}>
-              {col.map((cell, di) =>
-                cell === null ? (
-                  <span className="heatmap-cell empty" key={di} />
-                ) : (
-                  <span
-                    className="heatmap-cell"
-                    data-level={level(cell.words)}
-                    key={di}
-                    title={`${cell.date.toLocaleDateString()}: ${cell.words} words`}
-                  />
-                )
-              )}
-            </div>
-          ))}
+        <div className="heatmap-head">
+          <span className="heatmap-streak">
+            {insights.dayStreak} day streak
+          </span>
+          <span className="heatmap-longest">
+            LONGEST STREAK | {insights.longestStreak} {insights.longestStreak === 1 ? 'DAY' : 'DAYS'}
+          </span>
+        </div>
+        <div className="heatmap-navrow">
+          <button
+            className="heatmap-nav"
+            title="Earlier"
+            disabled={!canEarlier}
+            onClick={() => setWeekOffset((o) => o + 8)}
+          >
+            ‹
+          </button>
+          <div className="heatmap-months">
+            {monthLabels.map((label, i) => (
+              <span key={i}>{label}</span>
+            ))}
+          </div>
+          <button
+            className="heatmap-nav"
+            title="Later"
+            disabled={weekOffset === 0}
+            onClick={() => setWeekOffset((o) => Math.max(0, o - 8))}
+          >
+            ›
+          </button>
+        </div>
+        <div className="heatmap-body">
+          <div className="heatmap-days">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+              <span key={d}>{d}</span>
+            ))}
+          </div>
+          <div className="heatmap">
+            {weeks.map((col, wi) => (
+              <div className="heatmap-col" key={wi}>
+                {col.map((cell, di) =>
+                  cell === null ? (
+                    <span className="heatmap-cell empty" key={di} />
+                  ) : (
+                    <span
+                      className="heatmap-cell"
+                      data-level={level(cell.words)}
+                      key={di}
+                      title={`${cell.date.toLocaleDateString()}: ${cell.words} words`}
+                    />
+                  )
+                )}
+              </div>
+            ))}
+          </div>
         </div>
         <div className="heatmap-legend">
-          <span>Less</span>
-          {[0, 1, 2, 3, 4].map((l) => (
+          <span>More</span>
+          {[4, 3, 2, 1].map((l) => (
             <span className="heatmap-cell" data-level={l} key={l} />
           ))}
-          <span>More</span>
+          <span>Less</span>
         </div>
       </div>
 
-      <h3 className="hub-section">By hour</h3>
-      <div className="hub-bars">
-        {insights.perHour.map((w, h) => (
-          <div className="hub-bar-col" key={h} title={`${hourLabel(h)}: ${w} words`}>
-            <div className="hub-bar" style={{ height: `${Math.max(3, Math.round((w / maxHour) * 72))}px` }} />
-            <span>{h % 3 === 0 ? hourLabel(h) : ''}</span>
+      <h3 className="hub-section">When you dictate</h3>
+      <div className="hub-rhythm-card">
+        <div className="seg">
+          <button
+            className={rhythm === 'hour' ? 'seg-btn active' : 'seg-btn'}
+            onClick={() => setRhythm('hour')}
+          >
+            Hour
+          </button>
+          <button
+            className={rhythm === 'weekday' ? 'seg-btn active' : 'seg-btn'}
+            onClick={() => setRhythm('weekday')}
+          >
+            Weekday
+          </button>
+        </div>
+        {rhythm === 'hour' ? (
+          <div className="hub-bars">
+            {insights.perHour.map((w, h) => (
+              <div className="hub-bar-col" key={h} title={`${hourLabel(h)}: ${w} words`}>
+                <div className="hub-bar" style={{ height: `${Math.max(3, Math.round((w / maxHour) * 72))}px` }} />
+                <span>{h % 3 === 0 ? hourLabel(h) : ''}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      <h3 className="hub-section">By weekday</h3>
-      <div className="hub-bars">
-        {insights.perWeekday.map((w, i) => (
-          <div className="hub-bar-col" key={weekdays[i]} title={`${weekdays[i]}: ${w} words`}>
-            <div className="hub-bar" style={{ height: `${Math.max(3, Math.round((w / maxWeekday) * 72))}px` }} />
-            <span>{weekdays[i]}</span>
+        ) : (
+          <div className="hub-bars">
+            {insights.perWeekday.map((w, i) => (
+              <div className="hub-bar-col" key={weekdays[i]} title={`${weekdays[i]}: ${w} words`}>
+                <div className="hub-bar" style={{ height: `${Math.max(3, Math.round((w / maxWeekday) * 72))}px` }} />
+                <span>{weekdays[i]}</span>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
 
       <h3 className="hub-section">Top words</h3>

@@ -496,6 +496,123 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   color: var(--soravo-mute);
 }
 
+.heatmap-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.heatmap-streak {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.heatmap-longest {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: var(--soravo-mute);
+}
+
+.heatmap-navrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.heatmap-nav {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--soravo-ink);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.heatmap-nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.heatmap-nav:not(:disabled):hover {
+  background: var(--soravo-canvas-soft);
+}
+
+.heatmap-months {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--soravo-mute);
+}
+
+.heatmap-months span {
+  width: 11px;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.heatmap-body {
+  display: flex;
+  gap: 6px;
+}
+
+.heatmap-days {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--soravo-mute);
+}
+
+.heatmap-days span {
+  height: 11px;
+  line-height: 11px;
+}
+
+.hub-rhythm-card {
+  background: var(--soravo-canvas);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.seg {
+  display: inline-flex;
+  background: var(--soravo-canvas-soft);
+  border-radius: 9999px;
+  padding: 3px;
+  margin-bottom: 12px;
+}
+
+.seg-btn {
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--soravo-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 16px;
+  cursor: pointer;
+}
+
+.seg-btn.active {
+  background: var(--soravo-ink);
+  color: var(--soravo-primary);
+}
+
+.hub-rhythm-card .hub-bars {
+  background: transparent;
+  padding: 4px 0 0;
+}
+
 .hub-bars {
   display: flex;
   align-items: flex-end;
