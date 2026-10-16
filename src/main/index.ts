@@ -2,8 +2,8 @@ import { app, BrowserWindow, clipboard, globalShortcut, ipcMain, Menu, nativeIma
 import { existsSync } from 'fs'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
-import { addTranscription, clearTranscriptions, deleteTranscription, listTranscriptions, openHistory, pruneHistory } from './history.js'
-import { applyVocabulary, cleanupTranscript } from './cleanup.js'
+import { addTranscription, clearTranscriptions, deleteTranscription, getInsights, listTranscriptions, openHistory, pruneHistory } from './history.js'
+import { applyVocabularyWithStats, cleanupWithStats } from './cleanup.js'
 import { injectText } from './inject.js'
 import { settings, type SoravoSettings } from './settings.js'
 import { runtimeStatus, transcribeWav, writeTempWav } from './whisper.js'
@@ -256,6 +256,7 @@ function registerIpc(): void {
   ipcMain.handle('soravo:history-delete', (_e, id: number) => {
     if (typeof id === 'number') deleteTranscription(id)
   })
+  ipcMain.handle('soravo:insights', () => getInsights())
   ipcMain.handle('soravo:runtime-status', () => runtimeStatus(settings.get('model')))
   ipcMain.handle('soravo:win-min', () => hubWin?.minimize())
   ipcMain.handle('soravo:win-max', () => {
@@ -315,14 +316,15 @@ function registerIpc(): void {
         await transcribeWav(wavPath, settings.get('model'), settings.get('language'))
       ).trim()
       if (!raw) throw new Error('Transcription came back empty')
-      const text = settings.get('smartCleanup')
-        ? applyVocabulary(
-            cleanupTranscript(raw, settings.get('language')),
-            settings.get('vocabulary')
-          ).trim()
-        : raw
+      const cleaned = settings.get('smartCleanup')
+        ? cleanupWithStats(raw, settings.get('language'))
+        : { text: raw, fillersRemoved: 0 }
+      const vocabed = settings.get('smartCleanup')
+        ? applyVocabularyWithStats(cleaned.text, settings.get('vocabulary'))
+        : { text: cleaned.text, applied: 0 }
+      const text = vocabed.text.trim()
       if (!text) throw new Error('Transcription came back empty')
-      addTranscription(text, typeof durationMs === 'number' ? Math.round(durationMs) : null)
+      addTranscription(text, typeof durationMs === 'number' ? Math.round(durationMs) : null, cleaned.fillersRemoved, vocabed.applied)
       await injectText(text)
       win?.webContents.send('soravo:transcript', text)
       scheduleHide()

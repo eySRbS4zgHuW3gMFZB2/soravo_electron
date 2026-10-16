@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { RecState, SoravoSettings, TranscriptEntry } from './soravo'
+import type { InsightsData, RecState, SoravoSettings, TranscriptEntry } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
 
-type Page = 'dictation' | 'history'
+type Page = 'dictation' | 'history' | 'insights'
 type SettingsTab = 'general' | 'system' | 'privacy'
 
 function fmtHotkey(accelerator: string): string {
@@ -112,6 +112,15 @@ function CloseIcon() {
   )
 }
 
+function ChartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+      <path d="M7 14l4-4 3 3 5-6" />
+    </svg>
+  )
+}
+
 function Titlebar() {
   return (
     <div className="hub-titlebar">
@@ -152,6 +161,10 @@ function Sidebar({
       <button className={page === 'history' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('history')}>
         <HistoryIcon />
         <span>History</span>
+      </button>
+      <button className={page === 'insights' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('insights')}>
+        <ChartIcon />
+        <span>Insights</span>
       </button>
       <button className="hub-nav" onClick={onOpenSettings}>
         <SettingsIcon />
@@ -605,6 +618,142 @@ function SettingsModal({
   )
 }
 
+function InsightsPage({ insights }: { insights: InsightsData | null }) {
+  if (!insights) {
+    return (
+      <div className="hub-page">
+        <h1 className="hub-greeting">Insights</h1>
+        <p className="history-empty">Loading…</p>
+      </div>
+    )
+  }
+
+  const byDate = new Map(insights.perDay.map((d) => [d.date, d.words]))
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const start = new Date(today)
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - 7 * 15)
+  const maxDay = Math.max(1, ...byDate.values())
+  const level = (w: number) =>
+    w === 0 ? 0 : w <= maxDay * 0.25 ? 1 : w <= maxDay * 0.5 ? 2 : w <= maxDay * 0.75 ? 3 : 4
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const weeks: Array<Array<{ date: Date; words: number } | null>> = []
+  for (let w = 0; w < 16; w++) {
+    const col: Array<{ date: Date; words: number } | null> = []
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(start)
+      date.setDate(start.getDate() + w * 7 + d)
+      if (date.getTime() > today.getTime()) {
+        col.push(null)
+      } else {
+        const key = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+        col.push({ date, words: byDate.get(key) ?? 0 })
+      }
+    }
+    weeks.push(col)
+  }
+
+  const maxHour = Math.max(1, ...insights.perHour)
+  const maxWeekday = Math.max(1, ...insights.perWeekday)
+  const hourLabel = (h: number) => {
+    if (h === 0) return '12a'
+    if (h === 12) return '12p'
+    return h < 12 ? `${h}a` : `${h - 12}p`
+  }
+  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const maxWord = Math.max(1, ...insights.topWords.map((w) => w.count))
+
+  return (
+    <div className="hub-page insights-page">
+      <h1 className="hub-greeting">Insights</h1>
+      <div className="insights-stats">
+        <StatCard value={String(insights.words)} label="total words" />
+        <StatCard value={String(insights.dictations)} label="dictations" />
+        <StatCard value={String(insights.avgWpm)} label="avg wpm" />
+        <StatCard value={String(insights.dayStreak)} label="day streak" />
+      </div>
+
+      <h3 className="hub-section">Fixes made by Soravo</h3>
+      <div className="insights-stats">
+        <StatCard value={String(insights.correctionsFillers)} label="filler words removed" />
+        <StatCard value={String(insights.correctionsVocab)} label="vocabulary fixes" />
+        <StatCard value={`${insights.audioMinutes}`} label="minutes dictated" />
+        <StatCard value={String(insights.longestStreak)} label="longest streak" />
+      </div>
+
+      <h3 className="hub-section">Activity</h3>
+      <div className="hub-heatmap-card">
+        <div className="heatmap">
+          {weeks.map((col, wi) => (
+            <div className="heatmap-col" key={wi}>
+              {col.map((cell, di) =>
+                cell === null ? (
+                  <span className="heatmap-cell empty" key={di} />
+                ) : (
+                  <span
+                    className="heatmap-cell"
+                    data-level={level(cell.words)}
+                    key={di}
+                    title={`${cell.date.toLocaleDateString()}: ${cell.words} words`}
+                  />
+                )
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="heatmap-legend">
+          <span>Less</span>
+          {[0, 1, 2, 3, 4].map((l) => (
+            <span className="heatmap-cell" data-level={l} key={l} />
+          ))}
+          <span>More</span>
+        </div>
+      </div>
+
+      <h3 className="hub-section">By hour</h3>
+      <div className="hub-bars">
+        {insights.perHour.map((w, h) => (
+          <div className="hub-bar-col" key={h} title={`${hourLabel(h)}: ${w} words`}>
+            <div className="hub-bar" style={{ height: `${Math.max(3, Math.round((w / maxHour) * 72))}px` }} />
+            <span>{h % 3 === 0 ? hourLabel(h) : ''}</span>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="hub-section">By weekday</h3>
+      <div className="hub-bars">
+        {insights.perWeekday.map((w, i) => (
+          <div className="hub-bar-col" key={weekdays[i]} title={`${weekdays[i]}: ${w} words`}>
+            <div className="hub-bar" style={{ height: `${Math.max(3, Math.round((w / maxWeekday) * 72))}px` }} />
+            <span>{weekdays[i]}</span>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="hub-section">Top words</h3>
+      {insights.topWords.length === 0 && <p className="history-empty">Dictate more to see your top words.</p>}
+      {insights.topWords.map((w) => (
+        <div className="toprow" key={w.word}>
+          <span className="toprow-label">{w.word}</span>
+          <div className="toprow-track">
+            <div className="toprow-fill" style={{ width: `${Math.round((w.count / maxWord) * 100)}%` }} />
+          </div>
+          <span className="toprow-count">{w.count}</span>
+        </div>
+      ))}
+
+      <h3 className="hub-section">Repeated phrases</h3>
+      {insights.topPhrases.length === 0 && <p className="history-empty">No repeated phrases yet.</p>}
+      {insights.topPhrases.map((p) => (
+        <div className="toprow" key={p.phrase}>
+          <span className="toprow-label wide">“{p.phrase}”</span>
+          <span className="toprow-count">×{p.count}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function HubApp() {
   const [page, setPage] = useState<Page>('dictation')
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -612,6 +761,7 @@ export default function HubApp() {
   const [lastText, setLastText] = useState('')
   const [error, setError] = useState('')
   const [history, setHistory] = useState<TranscriptEntry[]>([])
+  const [insights, setInsights] = useState<InsightsData | null>(null)
   const [settings, setSettings] = useState<SoravoSettings | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
 
@@ -640,6 +790,10 @@ export default function HubApp() {
   useEffect(() => {
     document.documentElement.dataset.theme = settings?.theme ?? 'light'
   }, [settings])
+
+  useEffect(() => {
+    window.soravo.getInsights().then(setInsights).catch(() => setInsights(null))
+  }, [page, lastText])
 
   const copyEntry = (id: number, text: string) => {
     navigator.clipboard.writeText(text).then(
@@ -687,6 +841,7 @@ export default function HubApp() {
               onRefresh={refreshHistory}
             />
           )}
+          {page === 'insights' && <InsightsPage insights={insights} />}
         </main>
       </div>
       {settingsOpen && settings && (

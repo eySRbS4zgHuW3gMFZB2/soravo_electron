@@ -22,6 +22,22 @@ export interface SoravoSettings {
   retention: 'all' | '30days' | 'session'
 }
 
+export interface InsightsData {
+  dictations: number
+  words: number
+  audioMinutes: number
+  avgWpm: number
+  dayStreak: number
+  longestStreak: number
+  correctionsFillers: number
+  correctionsVocab: number
+  perDay: Array<{ date: string; words: number }>
+  perHour: number[]
+  perWeekday: number[]
+  topWords: Array<{ word: string; count: number }>
+  topPhrases: Array<{ phrase: string; count: number }>
+}
+
 export interface SoravoAPI {
   toggle(): Promise<void>
   quit(): Promise<void>
@@ -35,6 +51,7 @@ export interface SoravoAPI {
   onError(cb: (message: string) => void): () => void
   getHistory(limit?: number): Promise<TranscriptEntry[]>
   clearHistory(): Promise<void>
+  getInsights(): Promise<InsightsData>
   getSettings(): Promise<SoravoSettings>
   setSettings(patch: Partial<SoravoSettings>): Promise<SoravoSettings>
 }

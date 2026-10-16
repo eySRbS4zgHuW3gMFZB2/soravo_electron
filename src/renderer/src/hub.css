@@ -421,6 +421,158 @@ html[data-theme='dark'] .btn.primary {
   color: var(--soravo-on-primary);
 }
 
+.insights-page {
+  max-width: 860px;
+}
+
+.insights-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.hub-heatmap-card {
+  background: var(--soravo-canvas);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.heatmap {
+  display: flex;
+  gap: 3px;
+}
+
+.heatmap-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.heatmap-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--soravo-canvas-soft);
+}
+
+.heatmap-cell.empty {
+  background: transparent;
+}
+
+.heatmap-cell[data-level='1'] {
+  background: #d9f4c2;
+}
+
+.heatmap-cell[data-level='2'] {
+  background: #9fe870;
+}
+
+.heatmap-cell[data-level='3'] {
+  background: #5fce3f;
+}
+
+.heatmap-cell[data-level='4'] {
+  background: #2ead4b;
+}
+
+html[data-theme='dark'] .heatmap-cell[data-level='1'] {
+  background: #2c4423;
+}
+
+html[data-theme='dark'] .heatmap-cell[data-level='2'] {
+  background: #4c7a35;
+}
+
+html[data-theme='dark'] .heatmap-cell[data-level='3'] {
+  background: #6fae4e;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--soravo-mute);
+}
+
+.hub-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  background: var(--soravo-canvas);
+  border-radius: 16px;
+  padding: 16px 16px 8px;
+}
+
+.hub-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hub-bar {
+  width: 100%;
+  border-radius: 4px;
+  background: var(--soravo-primary);
+}
+
+.hub-bar-col span {
+  font-size: 10px;
+  color: var(--soravo-mute);
+  height: 12px;
+}
+
+.toprow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--soravo-canvas);
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-bottom: 6px;
+}
+
+.toprow-label {
+  flex: none;
+  width: 140px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toprow-label.wide {
+  flex: 1;
+  width: auto;
+}
+
+.toprow-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--soravo-canvas-soft);
+  overflow: hidden;
+}
+
+.toprow-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--soravo-primary);
+}
+
+.toprow-count {
+  flex: none;
+  font-size: 13px;
+  color: var(--soravo-mute);
+  min-width: 32px;
+  text-align: right;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
