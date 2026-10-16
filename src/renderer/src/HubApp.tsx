@@ -669,7 +669,7 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
       if (cell && cell.date.getDate() <= 7) return monthNames[cell.date.getMonth()]
     }
     return ''
-  })
+  }).map((label, i, all) => (label !== '' && i > 0 && all[i - 1] === label ? '' : label))
 
   const maxHour = Math.max(1, ...insights.perHour)
   const maxWeekday = Math.max(1, ...insights.perWeekday)
