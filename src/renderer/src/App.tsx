@@ -9,10 +9,6 @@ interface Recorder {
   startedAt: number
 }
 
-function fmtHotkey(accelerator: string): string {
-  return accelerator.replace(/CommandOrControl/gi, 'Ctrl').split('+').join(' + ')
-}
-
 function XIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -42,7 +38,6 @@ function MicIcon() {
 
 export default function App() {
   const [state, setState] = useState<RecState>('idle')
-  const [hotkey, setHotkey] = useState('')
   const recRef = useRef<Recorder | null>(null)
 
   const startRecorder = async () => {
@@ -90,7 +85,6 @@ export default function App() {
 
   useEffect(() => {
     window.soravo.getState().then(setState).catch(() => {})
-    window.soravo.getSettings().then((s) => setHotkey(fmtHotkey(s.hotkey))).catch(() => {})
     const offState = window.soravo.onState(setState)
     const offCmd = window.soravo.onRecordCommand((cmd) => {
       if (cmd === 'start') void startRecorder()
@@ -111,7 +105,8 @@ export default function App() {
       </button>
       <div className="mini-status">
         {state === 'recording' && (
-          <span className="live-dots" title="Recording">
+          <span className="live-bars" title="Recording">
+            <i />
             <i />
             <i />
             <i />
@@ -121,7 +116,6 @@ export default function App() {
         )}
         {state === 'transcribing' && <span className="mini-spinner" title="Transcribing" />}
         {state === 'error' && <span className="mini-errdot" title="Error" />}
-        {state === 'idle' && <span className="mini-hint">{hotkey ? `Press ${hotkey}` : 'Soravo'}</span>}
       </div>
       {state === 'idle' ? (
         <button className="mini-ok" title="Dictate" onClick={() => void window.soravo.toggle()}>

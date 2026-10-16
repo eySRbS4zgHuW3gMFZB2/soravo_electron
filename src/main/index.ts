@@ -104,7 +104,7 @@ function createHubWindow(): void {
   } else {
     void hubWin.loadFile(join(__dirname, '../renderer/index.html'), { hash: '/hub' })
   }
-  if (!app.isPackaged) hubWin.webContents.openDevTools({ mode: 'detach' })
+  if (process.env.SORAVO_DEVTOOLS === '1') hubWin.webContents.openDevTools({ mode: 'detach' })
 }
 
 function showHub(): void {
@@ -117,8 +117,8 @@ function showHub(): void {
 function createWindow(): void {
   const area = screen.getPrimaryDisplay().workArea
   win = new BrowserWindow({
-    width: 280,
-    height: 72,
+    width: 210,
+    height: 56,
     frame: false,
     transparent: true,
     resizable: false,
@@ -139,9 +139,9 @@ function createWindow(): void {
     void win.loadFile(join(__dirname, '../renderer/index.html'))
   }
   attachDiagnostics(win)
-  win.setPosition(Math.round(area.x + (area.width - 280) / 2), area.y + area.height - 72 - 28)
+  win.setPosition(Math.round(area.x + (area.width - 210) / 2), area.y + area.height - 56 - 28)
   console.log('[soravo] window created, preload:', preloadFile())
-  if (!app.isPackaged) win.webContents.openDevTools({ mode: 'detach' })
+  if (process.env.SORAVO_DEVTOOLS === '1') win.webContents.openDevTools({ mode: 'detach' })
 }
 
 function showPill(): void {

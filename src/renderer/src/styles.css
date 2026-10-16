@@ -252,9 +252,9 @@ body {
 .soravo-mini {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 72px;
-  padding: 8px 12px;
+  gap: 8px;
+  height: 56px;
+  padding: 6px 10px;
   background: var(--soravo-ink);
   border-radius: 9999px;
   box-shadow: 0 12px 40px rgba(14, 15, 12, 0.35);
@@ -267,8 +267,8 @@ body {
 
 .mini-x {
   flex: none;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: 9999px;
   background: transparent;
@@ -280,8 +280,8 @@ body {
 }
 
 .mini-x svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .mini-x:hover {
@@ -293,42 +293,66 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 72px;
+  min-width: 64px;
 }
 
-.live-dots {
+.live-bars {
   display: flex;
-  gap: 5px;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
 }
 
-.live-dots i {
-  width: 6px;
-  height: 6px;
+.live-bars i {
+  width: 4px;
   border-radius: 9999px;
   background: var(--soravo-primary);
-  animation: pulse 1s ease-in-out infinite;
+  animation: bars 0.9s ease-in-out infinite;
 }
 
-.live-dots i:nth-child(2) {
-  animation-delay: 0.15s;
+.live-bars i:nth-child(1) {
+  height: 8px;
 }
 
-.live-dots i:nth-child(3) {
-  animation-delay: 0.3s;
+.live-bars i:nth-child(2) {
+  height: 16px;
+  animation-delay: 0.12s;
 }
 
-.live-dots i:nth-child(4) {
-  animation-delay: 0.45s;
+.live-bars i:nth-child(3) {
+  height: 20px;
+  animation-delay: 0.24s;
 }
 
-.live-dots i:nth-child(5) {
+.live-bars i:nth-child(4) {
+  height: 14px;
+  animation-delay: 0.36s;
+}
+
+.live-bars i:nth-child(5) {
+  height: 9px;
+  animation-delay: 0.48s;
+}
+
+.live-bars i:nth-child(6) {
+  height: 15px;
   animation-delay: 0.6s;
+}
+
+@keyframes bars {
+  0%,
+  100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1);
+  }
 }
 
 .mini-ok {
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border: none;
   border-radius: 9999px;
   background: var(--soravo-primary);
@@ -345,8 +369,8 @@ body {
 }
 
 .mini-ok svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .mini-spinner {
