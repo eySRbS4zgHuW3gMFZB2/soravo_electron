@@ -618,6 +618,36 @@ function SettingsModal({
   )
 }
 
+function WpmGauge({ avg, top }: { avg: number; top: number }) {
+  const R = 88
+  const ARC = Math.PI * R
+  const scale = 200
+  const frac = Math.min(1, avg / scale)
+  const topFrac = Math.min(1, top / scale)
+  const dotX = 100 - R * Math.cos(Math.PI * topFrac)
+  const dotY = 100 - R * Math.sin(Math.PI * topFrac)
+  return (
+    <svg viewBox="0 0 200 112" className="gauge-svg">
+      <path
+        d="M 12 100 A 88 88 0 0 1 188 100"
+        fill="none"
+        stroke="var(--soravo-canvas-soft)"
+        strokeWidth="14"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 12 100 A 88 88 0 0 1 188 100"
+        fill="none"
+        stroke="var(--soravo-primary)"
+        strokeWidth="14"
+        strokeLinecap="round"
+        strokeDasharray={`${(ARC * frac).toFixed(1)} ${ARC.toFixed(1)}`}
+      />
+      {top > 0 && <circle cx={dotX} cy={dotY} r="5" fill="var(--soravo-ink)" />}
+    </svg>
+  )
+}
+
 function InsightsPage({ insights }: { insights: InsightsData | null }) {
   const [weekOffset, setWeekOffset] = useState(0)
   const [rhythm, setRhythm] = useState<'hour' | 'weekday'>('hour')
@@ -638,7 +668,7 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
   const maxDay = Math.max(1, ...byDate.values())
   const level = (w: number) =>
     w === 0 ? 0 : w <= maxDay * 0.25 ? 1 : w <= maxDay * 0.5 ? 2 : w <= maxDay * 0.75 ? 3 : 4
-  const WINDOW_WEEKS = 16
+  const WINDOW_WEEKS = 26
   const end = new Date(today)
   end.setDate(end.getDate() - weekOffset * 7)
   const endSunday = new Date(end)
@@ -700,7 +730,16 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
       </div>
 
       <h3 className="hub-section">Activity</h3>
-      <div className="hub-heatmap-card">
+      <div className="insights-duo">
+        <div className="gauge-card">
+          <div className="gauge-num">{insights.avgWpm}</div>
+          <div className="gauge-label">WORDS PER MINUTE</div>
+          <WpmGauge avg={insights.avgWpm} top={insights.topWpm} />
+          <div className="gauge-top">
+            {insights.topWpm > 0 ? `Top ${insights.topWpm} wpm` : 'Dictate to set a top speed'}
+          </div>
+        </div>
+        <div className="hub-heatmap-card">
         <div className="heatmap-head">
           <span className="heatmap-streak">
             {insights.dayStreak} day streak
@@ -763,6 +802,7 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
             <span className="heatmap-cell" data-level={l} key={l} />
           ))}
           <span>Less</span>
+        </div>
         </div>
       </div>
 

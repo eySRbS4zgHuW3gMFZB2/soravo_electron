@@ -14,6 +14,7 @@ export interface InsightsData {
   words: number
   audioMinutes: number
   avgWpm: number
+  topWpm: number
   dayStreak: number
   longestStreak: number
   correctionsFillers: number
@@ -146,6 +147,7 @@ export function getInsights(): InsightsData {
   let words = 0
   let rateWords = 0
   let rateMs = 0
+  let topWpm = 0
   let audioMs = 0
   let correctionsFillers = 0
   let correctionsVocab = 0
@@ -159,6 +161,9 @@ export function getInsights(): InsightsData {
       rateWords += count
       rateMs += row.durationMs
       audioMs += row.durationMs
+    }
+    if (row.durationMs && row.durationMs >= 5000) {
+      topWpm = Math.max(topWpm, Math.round((count / row.durationMs) * 60000))
     }
     const when = new Date(row.createdAt)
     const day = dayKeyLocal(when)
@@ -213,6 +218,7 @@ export function getInsights(): InsightsData {
     words,
     audioMinutes: Math.round((audioMs / 60000) * 10) / 10,
     avgWpm: rateMs > 0 ? Math.round((rateWords / rateMs) * 60000) : 0,
+    topWpm,
     dayStreak: streak,
     longestStreak: longest,
     correctionsFillers,

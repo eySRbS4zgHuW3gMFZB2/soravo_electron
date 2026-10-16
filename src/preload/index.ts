@@ -44,6 +44,7 @@ export interface InsightsData {
   words: number
   audioMinutes: number
   avgWpm: number
+  topWpm: number
   dayStreak: number
   longestStreak: number
   correctionsFillers: number

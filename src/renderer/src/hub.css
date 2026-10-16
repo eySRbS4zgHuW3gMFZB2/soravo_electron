@@ -449,8 +449,8 @@ html[data-theme='dark'] .btn.primary {
 }
 
 .heatmap-cell {
-  width: 11px;
-  height: 11px;
+  width: 13px;
+  height: 13px;
   border-radius: 3px;
   background: var(--soravo-canvas-soft);
 }
@@ -553,7 +553,7 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
 }
 
 .heatmap-months span {
-  width: 11px;
+  width: 13px;
   white-space: nowrap;
   overflow: visible;
 }
@@ -573,8 +573,8 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
 }
 
 .heatmap-days span {
-  height: 11px;
-  line-height: 11px;
+  height: 13px;
+  line-height: 13px;
 }
 
 .hub-rhythm-card {
@@ -606,6 +606,45 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
 .seg-btn.active {
   background: var(--soravo-ink);
   color: var(--soravo-primary);
+}
+
+.insights-duo {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.gauge-card {
+  background: var(--soravo-canvas);
+  border-radius: 16px;
+  padding: 20px 16px 12px;
+  text-align: center;
+}
+
+.gauge-num {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.gauge-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--soravo-mute);
+  margin: 4px 0 8px;
+}
+
+.gauge-svg {
+  width: 100%;
+  max-width: 230px;
+}
+
+.gauge-top {
+  font-size: 12px;
+  color: var(--soravo-mute);
+  margin-top: 2px;
 }
 
 .hub-rhythm-card .hub-bars {
