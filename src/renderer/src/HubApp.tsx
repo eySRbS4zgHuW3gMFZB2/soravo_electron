@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { RecState, SoravoSettings, TranscriptEntry } from './soravo'
+import HotkeyCapture from './HotkeyCapture'
 
 type Page = 'dictation' | 'history' | 'settings'
 
@@ -409,25 +410,15 @@ function SettingsPage({
       <h3 className="hub-section">Dictation</h3>
       <div className="row">
         <label>Hotkey</label>
-        <input value={hotkey} onChange={(e) => setHotkey(e.target.value)} spellCheck={false} />
+        <HotkeyCapture value={hotkey} onCommit={setHotkey} />
       </div>
       <div className="row">
         <label>Paste last</label>
-        <input
-          value={pasteHotkey}
-          onChange={(e) => setPasteHotkey(e.target.value)}
-          spellCheck={false}
-          placeholder="Empty = disabled"
-        />
+        <HotkeyCapture value={pasteHotkey} allowEmpty onCommit={setPasteHotkey} />
       </div>
       <div className="row">
         <label>Copy last</label>
-        <input
-          value={copyHotkey}
-          onChange={(e) => setCopyHotkey(e.target.value)}
-          spellCheck={false}
-          placeholder="Empty = disabled"
-        />
+        <HotkeyCapture value={copyHotkey} allowEmpty onCommit={setCopyHotkey} />
       </div>
       <div className="row">
         <label>Language</label>

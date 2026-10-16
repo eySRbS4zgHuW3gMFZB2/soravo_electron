@@ -341,6 +341,47 @@
   accent-color: var(--soravo-positive);
 }
 
+.hotkey-row {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hotkey-capture {
+  flex: 1;
+  min-width: 0;
+}
+
+.hotkey-field {
+  flex: 1;
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--soravo-ink);
+  background: var(--soravo-canvas);
+  border: 1px solid var(--soravo-ink);
+  border-radius: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+
+.hotkey-field.listening {
+  border-color: var(--soravo-positive);
+  box-shadow: 0 0 0 2px var(--soravo-primary);
+  outline: none;
+  cursor: text;
+}
+
+.hotkey-error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--soravo-negative);
+}
+
 /* Dark theme: flip surfaces, keep the lime accent and dark hero. */
 html[data-theme='dark'] {
   --soravo-canvas: #191c15;
