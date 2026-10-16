@@ -50,3 +50,7 @@ export function listTranscriptions(limit: number): TranscriptEntry[] {
 export function clearTranscriptions(): void {
   openHistory().exec('DELETE FROM transcriptions')
 }
+
+export function deleteTranscription(id: number): void {
+  openHistory().prepare('DELETE FROM transcriptions WHERE id = ?').run(id)
+}

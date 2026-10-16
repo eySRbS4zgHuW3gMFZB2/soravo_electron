@@ -27,6 +27,23 @@ export function modelPath(model: string): string {
   return join(thirdPartyDir(), 'models', `ggml-${model}.bin`)
 }
 
+export interface RuntimeStatus {
+  binary: boolean
+  model: string
+  modelPresent: boolean
+}
+
+export function runtimeStatus(model: string): RuntimeStatus {
+  let binary = false
+  try {
+    requireWhisperBinary()
+    binary = true
+  } catch {
+    binary = false
+  }
+  return { binary, model, modelPresent: existsSync(modelPath(model)) }
+}
+
 /** Absolute whisper binary path, or an Error explaining how to fetch it. */
 export function requireWhisperBinary(): string {
   const bin = findBinary(thirdPartyDir())

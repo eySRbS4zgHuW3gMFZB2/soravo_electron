@@ -27,6 +27,11 @@ export interface SoravoAPI {
   onError(cb: (message: string) => void): () => void
   getHistory(limit?: number): Promise<TranscriptEntry[]>
   clearHistory(): Promise<void>
+  onHistoryDelete(id: number): Promise<void>
+  getRuntimeStatus(): Promise<{ binary: boolean; model: string; modelPresent: boolean }>
+  winMin(): Promise<void>
+  winMax(): Promise<void>
+  winClose(): Promise<void>
   getSettings(): Promise<SoravoSettings>
   setSettings(patch: Partial<SoravoSettings>): Promise<SoravoSettings>
 }
@@ -60,6 +65,11 @@ const api: SoravoAPI = {
   },
   getHistory: (limit = 50) => ipcRenderer.invoke('soravo:history', limit),
   clearHistory: () => ipcRenderer.invoke('soravo:history-clear'),
+  onHistoryDelete: (id) => ipcRenderer.invoke('soravo:history-delete', id),
+  getRuntimeStatus: () => ipcRenderer.invoke('soravo:runtime-status'),
+  winMin: () => ipcRenderer.invoke('soravo:win-min'),
+  winMax: () => ipcRenderer.invoke('soravo:win-max'),
+  winClose: () => ipcRenderer.invoke('soravo:win-close'),
   getSettings: () => ipcRenderer.invoke('soravo:settings-get'),
   setSettings: (patch) => ipcRenderer.invoke('soravo:settings-set', patch)
 }

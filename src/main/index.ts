@@ -2,14 +2,15 @@ import { app, BrowserWindow, globalShortcut, ipcMain, Menu, nativeImage, screen,
 import { existsSync } from 'fs'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
-import { addTranscription, clearTranscriptions, listTranscriptions, openHistory } from './history.js'
+import { addTranscription, clearTranscriptions, deleteTranscription, listTranscriptions, openHistory } from './history.js'
 import { injectText } from './inject.js'
 import { settings, type SoravoSettings } from './settings.js'
-import { transcribeWav, writeTempWav } from './whisper.js'
+import { runtimeStatus, transcribeWav, writeTempWav } from './whisper.js'
 
 type RecState = 'idle' | 'recording' | 'transcribing' | 'error'
 
 let win: BrowserWindow | null = null
+let hubWin: BrowserWindow | null = null
 let tray: Tray | null = null
 let state: RecState = 'idle'
 let hideTimer: NodeJS.Timeout | null = null
@@ -56,12 +57,61 @@ function createTray(): void {
   tray.setToolTip('Soravo — voice typing')
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      { label: 'Open Soravo', click: () => showHub() },
       { label: 'Toggle dictation', click: () => void toggle() },
       { type: 'separator' },
       { label: 'Quit Soravo', click: () => app.quit() }
     ])
   )
-  tray.on('click', () => void toggle())
+  tray.on('click', () => showHub())
+}
+
+function attachDiagnostics(w: BrowserWindow): void {
+  w.webContents.on('console-message', (_e, params) => {
+    const message =
+      typeof params === 'string' ? params : (params as { message?: string }).message
+    if (message) console.log('[renderer]', message)
+  })
+  w.webContents.on('preload-error', (_e, preloadPath, error) => {
+    console.log('[soravo] preload-error:', preloadPath, String(error))
+  })
+  w.webContents.on('did-fail-load', (_e, code, desc, url) => {
+    console.log('[soravo] did-fail-load:', code, desc, url)
+  })
+}
+
+function createHubWindow(): void {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize
+  hubWin = new BrowserWindow({
+    width: Math.min(1240, width - 80),
+    height: Math.min(800, height - 80),
+    minWidth: 960,
+    minHeight: 600,
+    frame: false,
+    transparent: true,
+    show: false,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: preloadFile(),
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false
+    }
+  })
+  attachDiagnostics(hubWin)
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    void hubWin.loadURL(`${process.env['ELECTRON_RENDERER_URL']}#/hub`)
+  } else {
+    void hubWin.loadFile(join(__dirname, '../renderer/index.html'), { hash: '/hub' })
+  }
+  if (!app.isPackaged) hubWin.webContents.openDevTools({ mode: 'detach' })
+}
+
+function showHub(): void {
+  if (!hubWin) return
+  if (hubWin.isMinimized()) hubWin.restore()
+  hubWin.show()
+  hubWin.focus()
 }
 
 function createWindow(): void {
@@ -88,17 +138,7 @@ function createWindow(): void {
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'))
   }
-  win.webContents.on('console-message', (_e, params) => {
-    const message =
-      typeof params === 'string' ? params : (params as { message?: string }).message
-    if (message) console.log('[renderer]', message)
-  })
-  win.webContents.on('preload-error', (_e, preloadPath, error) => {
-    console.log('[soravo] preload-error:', preloadPath, String(error))
-  })
-  win.webContents.on('did-fail-load', (_e, code, desc, url) => {
-    console.log('[soravo] did-fail-load:', code, desc, url)
-  })
+  attachDiagnostics(win)
   win.setPosition(Math.round(area.x + (area.width - 560) / 2), area.y + area.height - 84 - 28)
   console.log('[soravo] window created, preload:', preloadFile())
   if (!app.isPackaged) win.webContents.openDevTools({ mode: 'detach' })
@@ -170,6 +210,17 @@ function registerIpc(): void {
   ipcMain.handle('soravo:history-clear', () => {
     clearTranscriptions()
   })
+  ipcMain.handle('soravo:history-delete', (_e, id: number) => {
+    if (typeof id === 'number') deleteTranscription(id)
+  })
+  ipcMain.handle('soravo:runtime-status', () => runtimeStatus(settings.get('model')))
+  ipcMain.handle('soravo:win-min', () => hubWin?.minimize())
+  ipcMain.handle('soravo:win-max', () => {
+    if (!hubWin) return
+    if (hubWin.isMaximized()) hubWin.unmaximize()
+    else hubWin.maximize()
+  })
+  ipcMain.handle('soravo:win-close', () => hubWin?.hide())
   ipcMain.handle('soravo:settings-get', () => settings.store)
   ipcMain.handle('soravo:settings-set', (_e, patch: Partial<SoravoSettings>) => {
     if (typeof patch.hotkey === 'string') settings.set('hotkey', patch.hotkey)
@@ -220,6 +271,7 @@ void app.whenReady().then(() => {
   }
   openHistory()
   createWindow()
+  createHubWindow()
   createTray()
   registerIpc()
   registerHotkey()
@@ -228,6 +280,7 @@ void app.whenReady().then(() => {
   setState('idle')
   showPill()
   scheduleHide(6000)
+  showHub()
 })
 
 app.on('window-all-closed', () => {
