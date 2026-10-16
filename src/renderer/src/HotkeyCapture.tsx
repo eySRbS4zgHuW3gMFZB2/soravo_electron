@@ -14,7 +14,7 @@ interface PressedKey {
 
 const MODIFIER_ORDER = ['CommandOrControl', 'Alt', 'Shift', 'Super']
 
-function codeToName(code: string, key: string): string | null {
+export function codeToName(code: string, key: string): string | null {
   if (code === 'ControlLeft' || code === 'ControlRight') return 'CommandOrControl'
   if (code === 'AltLeft' || code === 'AltRight') return 'Alt'
   if (code === 'ShiftLeft' || code === 'ShiftRight') return 'Shift'
@@ -64,7 +64,10 @@ function codeToName(code: string, key: string): string | null {
     NumpadMultiply: 'nummult',
     NumpadDivide: 'numdiv',
     MediaPlayPause: 'MediaPlayPause',
-    MediaTrackNext: 'MediaNextTrack',
+    CapsLock: 'CapsLock',
+    PrintScreen: 'PrintScreen',
+    Pause: 'Pause',
+    ScrollLock: 'ScrollLock',    MediaTrackNext: 'MediaNextTrack',
     MediaTrackPrevious: 'MediaPreviousTrack',
     MediaStop: 'MediaStop'
   }
@@ -73,7 +76,7 @@ function codeToName(code: string, key: string): string | null {
   return null
 }
 
-function toAccelerator(pressed: PressedKey[]): string | null {
+export function toAccelerator(pressed: PressedKey[]): string | null {
   const modifiers: string[] = []
   let main: string | null = null
   for (const { code, key } of pressed) {
@@ -90,7 +93,7 @@ function toAccelerator(pressed: PressedKey[]): string | null {
   return [...modifiers, main].join('+')
 }
 
-function isRegisterable(accelerator: string): boolean {
+export function isRegisterable(accelerator: string): boolean {
   const parts = accelerator.split('+')
   const main = parts[parts.length - 1]
   if (/^F([1-9]|1[0-9]|2[0-4])$/.test(main)) return true
