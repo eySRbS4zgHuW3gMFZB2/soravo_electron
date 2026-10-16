@@ -17,6 +17,7 @@ let audioTimer: NodeJS.Timeout | null = null
 
 function setState(next: RecState): void {
   state = next
+  console.log('[soravo] state ->', next)
   win?.webContents.send('soravo:state', next)
 }
 
@@ -84,6 +85,8 @@ function createWindow(): void {
     void win.loadFile(join(__dirname, '../renderer/index.html'))
   }
   win.setPosition(Math.round(area.x + (area.width - 560) / 2), area.y + area.height - 84 - 28)
+  console.log('[soravo] window created, preload:', preloadFile())
+  if (!app.isPackaged) win.webContents.openDevTools({ mode: 'detach' })
 }
 
 function showPill(): void {
@@ -99,6 +102,7 @@ function scheduleHide(ms = 2500): void {
 }
 
 async function toggle(): Promise<void> {
+  console.log('[soravo] toggle, state was:', state)
   if (!win) return
   if (state === 'idle' || state === 'error') {
     if (hideTimer) {
@@ -194,6 +198,7 @@ void app.whenReady().then(() => {
   createTray()
   registerIpc()
   registerHotkey()
+  console.log('[soravo] ready, hotkey:', settings.get('hotkey'))
   // First-run visibility: show the pill briefly so the app doesn't look dead.
   setState('idle')
   showPill()
