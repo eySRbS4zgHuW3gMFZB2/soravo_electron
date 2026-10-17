@@ -269,17 +269,17 @@ fn apply_vocabulary(text: &str, vocab: &std::collections::HashMap<String, String
     (result, applied)
 }
 
-// Whisper transcription
+// CrispASR transcription
 fn transcribe_wav(
     wav_path: &str,
     model: &str,
     language: &str,
     resource_dir: &std::path::Path,
 ) -> Result<String, String> {
-    let whisper_binary = if cfg!(target_os = "windows") {
-        "whisper-cli.exe"
+    let crispasr_binary = if cfg!(target_os = "windows") {
+        "crispasr.exe"
     } else {
-        "whisper-cli"
+        "crispasr"
     };
 
     // In dev mode, current_dir is src-tauri/, so project root is parent
@@ -289,9 +289,9 @@ fn transcribe_wav(
     let model_file = format!("ggml-{}.bin", model);
 
     let whisper_candidates = [
-        current_dir.join("third-party/bin").join(whisper_binary),
-        project_root.join("third-party/bin").join(whisper_binary),
-        std::path::Path::new("third-party/bin").join(whisper_binary),
+        current_dir.join("third-party/bin").join(crispasr_binary),
+        project_root.join("third-party/bin").join(crispasr_binary),
+        std::path::Path::new("third-party/bin").join(crispasr_binary),
     ];
 
     let model_candidates = [
@@ -318,10 +318,10 @@ fn transcribe_wav(
 
     eprintln!("[soravo] current_dir: {}", current_dir.display());
     eprintln!("[soravo] project_root: {}", project_root.display());
-    eprintln!("[soravo] whisper path: {}", whisper_path.display());
+    eprintln!("[soravo] crispasr path: {}", whisper_path.display());
     eprintln!("[soravo] model path: {}", model_path_str);
     eprintln!("[soravo] wav path: {}", wav_path);
-    eprintln!("[soravo] whisper exists: {}", whisper_path.exists());
+    eprintln!("[soravo] crispasr exists: {}", whisper_path.exists());
     eprintln!("[soravo] model exists: {}", std::path::Path::new(&model_path_str).exists());
 
     let output = std::process::Command::new(&whisper_path)
@@ -331,13 +331,14 @@ fn transcribe_wav(
         .arg(wav_path)
         .arg("-l")
         .arg(language)
-        .arg("--no-timestamps")
+        .arg("-nt")
+        .arg("-np")
         .output()
-        .map_err(|e| format!("Failed to run whisper: {}", e))?;
+        .map_err(|e| format!("Failed to run CrispASR: {}", e))?;
 
     if !output.status.success() {
         return Err(format!(
-            "Whisper failed: {}",
+            "CrispASR failed: {}",
             String::from_utf8_lossy(&output.stderr)
         ));
     }
@@ -813,9 +814,10 @@ async fn get_insights(app: tauri::AppHandle) -> Result<InsightsData, String> {
 #[tauri::command]
 async fn get_runtime_status(app: tauri::AppHandle, model: String) -> Result<serde_json::Value, String> {
     let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
-    let whisper_path = resource_dir.join("third-party").join("whisper-cli.exe");
+    let whisper_path = resource_dir.join("third-party").join("bin").join("crispasr.exe");
     let model_path = resource_dir
         .join("third-party")
+        .join("models")
         .join(format!("ggml-{}.bin", model));
     Ok(serde_json::json!({
         "binary": whisper_path.exists(),
