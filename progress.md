@@ -7,7 +7,7 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - **Framework**: Tauri v2 (Rust backend + WebView frontend)
 - **Frontend**: React 18.3.1, TypeScript 6, Vite 6.4.4
 - **Storage**: SQLite (rusqlite) + tauri-plugin-store
-- **Transcription**: whisper.cpp (ggml-base.en.bin, ~142 MB)
+- **Transcription**: CrispASR (ggml-base.en.bin, ~142 MB, multi-backend ASR)
 - **Packaging**: Tauri bundle (NSIS + MSI)
 - **Dev Tools**: Rust 1.99.1 (MSVC), Cargo 1.99.1, Node.js v26.12.0, npm 11.20.0
 
@@ -145,6 +145,15 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - Pushed Tauri migration to GitHub as `main` branch
 - Updated README.md and progress.md for Tauri v2
 - Main Electron repo preserved as safe checkpoint
+
+### Phase 7: CrispASR Migration
+- Created worktree `crispasr-migration` from Tauri migration checkpoint
+- Replaced whisper.cpp transcription engine with CrispASR (v0.8.43, Windows CPU)
+- Downloaded CrispASR binary (crispasr.exe, ~19MB) + openblas.dll (~1.7MB)
+- Updated Rust backend: binary name, CLI flags (-nt, -np), error messages
+- Reusing existing ggml-base.en.bin model (CrispASR supports Whisper models natively)
+- Verified: transcription works end-to-end with CrispASR
+- Pushed to GitHub as `crispasr-migration` branch
 
 ## Known Issues
 1. **Push-to-talk (hold)**: Tauri global shortcut only fires key-down, so true hold-to-talk isn't possible. Current binding is toggle (press to start, press to stop).
