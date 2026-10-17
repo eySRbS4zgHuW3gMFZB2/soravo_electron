@@ -9,7 +9,7 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["electron-vite/client"]
+    "types": ["vite/client"]
   },
   "include": ["src/renderer/**/*"]
 }
