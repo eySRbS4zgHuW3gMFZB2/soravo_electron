@@ -829,3 +829,32 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   gap: 8px;
   padding: 16px 0 4px;
 }
+
+.modal-backdrop.sub-backdrop {
+  z-index: 60;
+  background: rgba(14, 15, 12, 0.6);
+}
+
+.modal-dialog.sub-dialog {
+  width: min(560px, calc(100vw - 120px));
+  height: auto;
+  max-height: min(560px, calc(100vh - 120px));
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 24px;
+  position: relative;
+  display: block;
+}
+
+.modal-dialog.sub-dialog::-webkit-scrollbar {
+  display: none;
+}
+
+.row-summary {
+  flex: 1;
+  font-size: 14px;
+  color: var(--soravo-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

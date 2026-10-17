@@ -50,6 +50,7 @@ export interface SoravoAPI {
   setHeight(px: number): Promise<void>
   onTranscript(cb: (text: string) => void): () => void
   onError(cb: (message: string) => void): () => void
+  onDataChanged(cb: () => void): () => void
   getHistory(limit?: number): Promise<TranscriptEntry[]>
   clearHistory(): Promise<void>
   getInsights(): Promise<InsightsData>

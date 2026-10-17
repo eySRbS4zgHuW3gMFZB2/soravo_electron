@@ -17,10 +17,15 @@ let state: RecState = 'idle'
 let hideTimer: NodeJS.Timeout | null = null
 let audioTimer: NodeJS.Timeout | null = null
 
+function sendAll(channel: string, ...args: unknown[]): void {
+  win?.webContents.send(channel, ...args)
+  hubWin?.webContents.send(channel, ...args)
+}
+
 function setState(next: RecState): void {
   state = next
   console.log('[soravo] state ->', next)
-  win?.webContents.send('soravo:state', next)
+  sendAll('soravo:state', next)
 }
 
 function fail(message: string): void {
@@ -29,7 +34,7 @@ function fail(message: string): void {
     audioTimer = null
   }
   console.log('[soravo] error:', message)
-  win?.webContents.send('soravo:error', message)
+  sendAll('soravo:error', message)
   setState('error')
   scheduleHide(4000)
   setTimeout(() => {
@@ -188,7 +193,7 @@ async function toggle(): Promise<void> {
 }
 
 function hotkeyError(accelerator: string, detail: string): void {
-  win?.webContents.send('soravo:error', `Hotkey "${accelerator}": ${detail}`)
+  sendAll('soravo:error', `Hotkey "${accelerator}": ${detail}`)
 }
 
 function tryRegister(accelerator: string, action: () => void): void {
@@ -252,9 +257,13 @@ function registerIpc(): void {
   )
   ipcMain.handle('soravo:history-clear', () => {
     clearTranscriptions()
+    sendAll('soravo:data-changed')
   })
   ipcMain.handle('soravo:history-delete', (_e, id: number) => {
-    if (typeof id === 'number') deleteTranscription(id)
+    if (typeof id === 'number') {
+      deleteTranscription(id)
+      sendAll('soravo:data-changed')
+    }
   })
   ipcMain.handle('soravo:insights', () => getInsights())
   ipcMain.handle('soravo:runtime-status', () => runtimeStatus(settings.get('model')))
@@ -325,8 +334,9 @@ function registerIpc(): void {
       const text = vocabed.text.trim()
       if (!text) throw new Error('Transcription came back empty')
       addTranscription(text, typeof durationMs === 'number' ? Math.round(durationMs) : null, cleaned.fillersRemoved, vocabed.applied)
+      sendAll('soravo:data-changed')
       await injectText(text)
-      win?.webContents.send('soravo:transcript', text)
+      sendAll('soravo:transcript', text)
       scheduleHide()
       setState('idle')
     } catch (err) {

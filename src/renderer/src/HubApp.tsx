@@ -340,6 +340,36 @@ interface MicDevice {
   label: string
 }
 
+function SubModal({
+  title,
+  subtitle,
+  onClose,
+  children
+}: {
+  title: string
+  subtitle?: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="modal-backdrop sub-backdrop" onClick={onClose}>
+      <div
+        className="modal-dialog sub-dialog"
+        role="dialog"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="modal-close" title="Close" onClick={onClose}>
+          <CloseIcon />
+        </button>
+        <h2 className="modal-title">{title}</h2>
+        {subtitle ? <p className="hub-note">{subtitle}</p> : null}
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function SettingsModal({
   settings,
   historyCount,
@@ -371,6 +401,7 @@ function SettingsModal({
   const [theme, setTheme] = useState<'light' | 'dark'>(settings.theme)
   const [retention, setRetention] = useState<'all' | '30days' | 'session'>(settings.retention)
   const [devices, setDevices] = useState<MicDevice[]>([])
+  const [sub, setSub] = useState<null | 'shortcuts' | 'microphone' | 'language'>(null)
   const [runtime, setRuntime] = useState<{ binary: boolean; model: string; modelPresent: boolean } | null>(null)
   const [savedTick, setSavedTick] = useState(false)
 
@@ -456,19 +487,29 @@ function SettingsModal({
             <div>
               <h2 className="modal-title">General</h2>
               <div className="row">
-                <label>Language</label>
-                <input value={language} onChange={(e) => setLanguage(e.target.value)} spellCheck={false} />
+                <label>Shortcuts</label>
+                <span className="row-summary">{fmtHotkey(hotkey)}</span>
+                <button className="btn" onClick={() => setSub('shortcuts')}>
+                  Change
+                </button>
               </div>
               <div className="row">
                 <label>Microphone</label>
-                <select value={microphoneId} onChange={(e) => setMicrophoneId(e.target.value)}>
-                  <option value="">Auto-detect</option>
-                  {devices.map((d) => (
-                    <option key={d.deviceId} value={d.deviceId}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
+                <span className="row-summary">
+                  {microphoneId
+                    ? (devices.find((d) => d.deviceId === microphoneId)?.label ?? 'Custom device')
+                    : 'Auto-detect'}
+                </span>
+                <button className="btn" onClick={() => setSub('microphone')}>
+                  Change
+                </button>
+              </div>
+              <div className="row">
+                <label>Dictation language</label>
+                <span className="row-summary">{language || 'en'}</span>
+                <button className="btn" onClick={() => setSub('language')}>
+                  Change
+                </button>
               </div>
               <div className="row">
                 <label>Theme</label>
@@ -481,20 +522,55 @@ function SettingsModal({
                 <label>Sound effects</label>
                 <input type="checkbox" checked={sounds} onChange={(e) => setSounds(e.target.checked)} />
               </div>
-              <h3 className="hub-section">Shortcuts</h3>
-              <p className="hub-note">Click a shortcut, press the keys, release to save. Esc cancels.</p>
-              <div className="row">
-                <label>Dictate</label>
-                <HotkeyCapture value={hotkey} onCommit={setHotkey} />
-              </div>
-              <div className="row">
-                <label>Paste last</label>
-                <HotkeyCapture value={pasteHotkey} allowEmpty onCommit={setPasteHotkey} />
-              </div>
-              <div className="row">
-                <label>Copy last</label>
-                <HotkeyCapture value={copyHotkey} allowEmpty onCommit={setCopyHotkey} />
-              </div>
+
+              {sub === 'shortcuts' && (
+                <SubModal
+                  title="Shortcuts"
+                  subtitle="Choose your preferred shortcuts for using Soravo."
+                  onClose={() => setSub(null)}
+                >
+                  <div className="row">
+                    <label>Dictate</label>
+                    <HotkeyCapture value={hotkey} onCommit={setHotkey} />
+                  </div>
+                  <p className="hub-note">Press to start, press again to stop and transcribe.</p>
+                  <div className="row">
+                    <label>Paste last</label>
+                    <HotkeyCapture value={pasteHotkey} allowEmpty onCommit={setPasteHotkey} />
+                  </div>
+                  <div className="row">
+                    <label>Copy last</label>
+                    <HotkeyCapture value={copyHotkey} allowEmpty onCommit={setCopyHotkey} />
+                  </div>
+                </SubModal>
+              )}
+              {sub === 'microphone' && (
+                <SubModal title="Microphone" subtitle="Used for dictation." onClose={() => setSub(null)}>
+                  <div className="row">
+                    <label>Input</label>
+                    <select value={microphoneId} onChange={(e) => setMicrophoneId(e.target.value)}>
+                      <option value="">Auto-detect</option>
+                      {devices.map((d) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                          {d.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </SubModal>
+              )}
+              {sub === 'language' && (
+                <SubModal
+                  title="Dictation language"
+                  subtitle="Whisper language code, e.g. en, es, fr. Also tunes cleanup rules."
+                  onClose={() => setSub(null)}
+                >
+                  <div className="row">
+                    <label>Language</label>
+                    <input value={language} onChange={(e) => setLanguage(e.target.value)} spellCheck={false} />
+                  </div>
+                </SubModal>
+              )}
             </div>
           )}
 
@@ -893,10 +969,15 @@ export default function HubApp() {
       refreshHistory()
     })
     const offError = window.soravo.onError(setError)
+    const offData = window.soravo.onDataChanged(() => {
+      refreshHistory()
+      window.soravo.getInsights().then(setInsights).catch(() => {})
+    })
     return () => {
       offState()
       offText()
       offError()
+      offData()
     }
   }, [])
 

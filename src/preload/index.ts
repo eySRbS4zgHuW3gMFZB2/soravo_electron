@@ -67,6 +67,7 @@ export interface SoravoAPI {
   setHeight(px: number): Promise<void>
   onTranscript(cb: (text: string) => void): () => void
   onError(cb: (message: string) => void): () => void
+  onDataChanged(cb: () => void): () => void
   getHistory(limit?: number): Promise<TranscriptEntry[]>
   clearHistory(): Promise<void>
   getInsights(): Promise<InsightsData>
@@ -106,6 +107,11 @@ const api: SoravoAPI = {
     const fn = (_e: unknown, message: string) => cb(message)
     ipcRenderer.on('soravo:error', fn)
     return () => ipcRenderer.removeListener('soravo:error', fn)
+  },
+  onDataChanged: (cb) => {
+    const fn = () => cb()
+    ipcRenderer.on('soravo:data-changed', fn)
+    return () => ipcRenderer.removeListener('soravo:data-changed', fn)
   },
   getHistory: (limit = 50) => ipcRenderer.invoke('soravo:history', limit),
   clearHistory: () => ipcRenderer.invoke('soravo:history-clear'),
