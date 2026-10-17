@@ -1,25 +1,26 @@
 # Soravo — Development Progress
 
 ## Project Overview
-Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), built on Electron + React + TypeScript. Transcription runs entirely on-device via whisper.cpp (ggml-base.en model). No accounts, no cloud, no telemetry.
+Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), built on Tauri v2 + React + TypeScript. Transcription runs entirely on-device via whisper.cpp (ggml-base.en model). No accounts, no cloud, no telemetry.
 
 ## Tech Stack
-- **Framework**: Electron 42.11.2, Electron Forge 7.11.2, electron-vite 6
+- **Framework**: Tauri v2 (Rust backend + WebView frontend)
 - **Frontend**: React 18.3.1, TypeScript 6, Vite 6.4.4
-- **Storage**: SQLite (better-sqlite3 via node:sqlite) + electron-store
+- **Storage**: SQLite (rusqlite) + tauri-plugin-store
 - **Transcription**: whisper.cpp (ggml-base.en.bin, ~142 MB)
-- **Packaging**: Electron Forge (squirrel, zip makers)
+- **Packaging**: Tauri bundle (NSIS + MSI)
+- **Dev Tools**: Rust 1.99.1 (MSVC), Cargo 1.99.1, Node.js v26.12.0, npm 11.20.0
 
 ## Completed Features
 
 ### Core Dictation
-- [x] Global hotkey toggle (push-to-talk via Electron globalShortcut)
+- [x] Global hotkey toggle (push-to-talk via tauri-plugin-global-shortcut)
 - [x] Microphone capture (getUserMedia with echo/noise suppression)
 - [x] 16kHz mono WAV encoding (OfflineAudioContext resampling)
 - [x] Local transcription via whisper.cpp CLI (file-mode, ~2s per utterance)
 - [x] Clipboard injection (PowerShell SendKeys Ctrl+V, restores previous clipboard)
 - [x] SQLite history storage (text, timestamp, duration, filler/vocab counts)
-- [x] Live data push (main → renderer via IPC `soravo:transcript`, `soravo:data-changed`)
+- [x] Live data push (Rust → frontend via Tauri events `soravo:transcript`, `soravo:data-changed`)
 
 ### UI — Pill Overlay
 - [x] Compact dark pill (56px tall, fit-content width, Soravo lime accent)
@@ -30,6 +31,8 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - [x] Audio feedback blips (WebAudio, no assets)
 - [x] Auto-hide after completion (2.5s)
 - [x] Debounced hotkey (800ms) to prevent key-repeat
+- [x] Pill stays hidden on startup — only shows during dictation
+- [x] Transparent window with rounded corners, no shadow/border
 
 ### UI — Hub Window
 - [x] Sidebar: Dictation, History, Settings
@@ -37,7 +40,7 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - [x] History page: search, copy, delete, clear all
 - [x] Insights page: stats, corrections, activity heatmap (26-week, Wispr-style), WPM radial gauge, hour/weekday rhythm chart (segmented toggle), top words, repeated phrases
 - [x] Title bar with minimize/maximize/close
-- [x] Wispr-style dark pill overlay
+- [x] Transparent window with rounded corners, no shadow/border
 
 ### Settings (Wispr-style sub-modals)
 - [x] General tab: Language, Microphone (dropdown), Theme (light/dark), Sound effects
@@ -47,7 +50,7 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - [x] System tab: Model selection, Smart cleanup, Custom vocabulary (heard-as → write-as), Start at login, Quit
 - [x] Data & Privacy tab: retention (all/30 days/session), delete all transcripts
 - [x] Wispr-style hotkey capture: click field, press keys, release to commit, Esc cancels
-- [x] Persisted to electron-store (JSON)
+- [x] Persisted to tauri-plugin-store (JSON)
 
 ### Wispr Flow Feature Parity (from config.json analysis)
 - [x] Hotkey capture (press-to-capture, like Wispr)
@@ -58,7 +61,7 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - [x] Launch at login
 - [x] Light/dark theme (hub re-skins live)
 - [x] History retention (30-day pruning)
-- [x] Push-to-talk (toggle binding, since Electron can't do key-up detection)
+- [x] Push-to-talk (toggle binding)
 - [x] Paste last transcript hotkey
 - [x] Copy last transcript hotkey
 - [x] Insights: total words, dictations, avg wpm, day/longest streak, corrections, heatmap, top words, repeated phrases
@@ -70,12 +73,12 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - [ ] Email auto-signature (needs cloud AI)
 - [ ] Per-app transcription formats (needs cloud AI)
 - [ ] Focus mode (needs cloud AI)
-- [ ] CapsLock as standalone hotkey (Electron can't bind bare CapsLock)
+- [ ] CapsLock as standalone hotkey (needs native hook)
 - [ ] Global Esc-to-dismiss (hostile UX)
 - [ ] Mouse button hotkeys (needs native hook)
 - [ ] Notetaker/meeting recording (out of MVP scope)
 - [ ] Mouse shortcut bindings (needs native hook)
-- [ ] Push-to-talk (hold-to-talk) vs toggle (Electron globalShortcut is key-down only)
+- [ ] Push-to-talk (hold-to-talk) vs toggle (Tauri global shortcut is key-down only)
 
 ## Development History
 
@@ -115,30 +118,39 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - Merged hour/weekday charts into single customizable chart with segmented toggle
 - Modal dialog with sub-modals (backdrop, close button, save button)
 
-### Phase 5: Tauri Migration Attempt
-- Installed Rust 1.98.1 (GNU toolchain via Chocolatey)
-- Installed MinGW-w64 (for gcc/windres)
-- Installed Visual Studio 2017 Build Tools
-- Created Tauri v2 project structure (src-tauri/, Cargo.toml, capabilities)
-- Ported Rust backend: settings, SQLite, whisper, clipboard, tray, window management
-- Migrated frontend to use @tauri-apps/api invoke/listen
-- **Issue**: Rust was GNU toolchain (x86_64-pc-windows-gnu), Tauri needs MSVC
-- **Issue**: Transparent window + pill stretched full width
-- **Issue**: Dev build failed with linker errors
-- Fixed window size (1240x800), opaque background, pill fit-content
-- Fixed duplicate tauri_plugin_log registration
-- Bundled whisper-cli + DLLs + model into Tauri resources
-- Fixed dev build by installing Rust MSVC toolchain (rustup + stable-x86_64-pc-windows-msvc)
+### Phase 5: Tauri Migration (Successful)
+- Created git worktree `electron-to-tauri-migration` from Electron checkpoint
+- Installed Rust 1.99.1 (MSVC toolchain via rustup)
+- Initialized Tauri v2 project (src-tauri/, Cargo.toml, capabilities)
+- Ported Rust backend (~950 lines):
+  - RecState, TranscriptEntry, InsightsData, SoravoSettings structs
+  - SQLite database (open, migrate, CRUD, insights computation)
+  - Settings via tauri-plugin-store (get/set with all fields)
+  - Whisper transcription (spawn_blocking, path resolution)
+  - Text cleanup (filler removal, capitalization, vocabulary)
+  - Text injection (clipboard + PowerShell SendKeys)
+  - Global hotkey registration (tauri-plugin-global-shortcut)
+  - Tray icon, window management (pill + hub)
+  - All IPC commands (toggle, cancel, submit_audio, history, insights, settings, etc.)
+- Created frontend shim (`src/renderer/src/soravo.ts`) mapping `window.soravo` to Tauri `invoke`/`listen`
+- Updated main.tsx to route by window label (pill → App, hub → HubApp)
+- Configured tauri.conf.json (pill: 210×56 transparent, hub: 1240×800 transparent, shadow: false)
+- Fixed whisper path resolution for dev mode (relative to project root)
+- Fixed window transparency/shadow/border issues
+- Fixed hotkey → pill visibility (event listener in frontend shim)
+- Pill stays hidden on startup (only shows during dictation)
+- Verified: cargo build succeeds, tauri dev launches, transcription works
 
-### Phase 6: Revert to Electron
-- Reverted all Tauri changes via git reset --hard HEAD
-- Restored Electron build (app.exe, MSI, NSIS installers)
-- Verified Electron dev build runs correctly
+### Phase 6: GitHub Checkpoint
+- Pushed Tauri migration to GitHub as `main` branch
+- Updated README.md and progress.md for Tauri v2
+- Main Electron repo preserved as safe checkpoint
 
 ## Known Issues
-1. **Push-to-talk (hold)**: Electron globalShortcut only fires key-down, so true hold-to-talk isn't possible. Current binding is toggle (press to start, press to stop).
-2. **CapsLock hotkey**: Electron can't bind bare CapsLock. Wispr uses native helper for this.
-3. **Mouse button hotkeys**: Need native hook, not implemented in MVP.
+1. **Push-to-talk (hold)**: Tauri global shortcut only fires key-down, so true hold-to-talk isn't possible. Current binding is toggle (press to start, press to stop).
+2. **CapsLock hotkey**: Tauri can't bind bare CapsLock. Needs native hook.
+3. **Mouse button hotkeys**: Need native hook, not implemented.
+4. **Text injection**: Clipboard + SendKeys implementation exists but needs end-to-end testing.
 
 ## Environment
 - **OS**: Windows 10 Enterprise LTSC 2021 (64-bit)
@@ -146,9 +158,8 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - **npm**: 11.20.0
 - **Rust**: 1.99.1 (MSVC toolchain via rustup)
 - **Cargo**: 1.99.1
-- **MinGW**: 16.1.0 (GCC 14.2.0)
-- **Visual Studio**: 2017 Build Tools
 - **Git**: 2.56.0 (portable)
 - **GitHub CLI**: 2.102.0 (authenticated as eySRbS4zgHuW3gMFZB2)
 - **Package Manager**: Chocolatey 2.7.4
 - **MCP Servers**: Supabase (connected), Cloudflare (connected), REA (207 tools)
+- **GitHub Repo**: https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron (main = Tauri v2)
