@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { InsightsData, RecState, SoravoSettings, TranscriptEntry } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 type Page = 'dictation' | 'history' | 'insights' | 'models'
 type SettingsTab = 'general' | 'system' | 'privacy'
@@ -577,10 +586,21 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label>Theme</label>
-                <select value={theme} onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
+                <ToggleGroup
+                  type="single"
+                  value={theme}
+                  onValueChange={(v) => v && setTheme(v as 'light' | 'dark')}
+                  variant="outline"
+                  spacing={0}
+                  className="w-full"
+                >
+                  <ToggleGroupItem value="light" className="flex-1">
+                    Light
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="dark" className="flex-1">
+                    Dark
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
               <div className="row">
                 <label>Sound effects</label>
@@ -628,14 +648,26 @@ function SettingsModal({
                 <SubModal title="Microphone" subtitle="Used for dictation." onClose={() => setSub(null)}>
                   <div className="row">
                     <label>Input</label>
-                    <select value={microphoneId} onChange={(e) => setMicrophoneId(e.target.value)}>
-                      <option value="">Auto-detect</option>
-                      {devices.map((d) => (
-                        <option key={d.deviceId} value={d.deviceId}>
-                          {d.label}
-                        </option>
-                      ))}
-                    </select>
+                    <Select
+                      // Radix rejects an empty-string item value, so map
+                      // auto-detect onto a sentinel and back on the way out.
+                      value={microphoneId === '' ? 'auto' : microphoneId}
+                      onValueChange={(v) => setMicrophoneId(v === 'auto' ? '' : v)}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Auto-detect" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="auto">Auto-detect</SelectItem>
+                          {devices.map((d) => (
+                            <SelectItem key={d.deviceId} value={d.deviceId}>
+                              {d.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </SubModal>
               )}
@@ -743,14 +775,24 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label>History keeps</label>
-                <select
+                <ToggleGroup
+                  type="single"
                   value={retention}
-                  onChange={(e) => setRetention(e.target.value as 'all' | '30days' | 'session')}
+                  onValueChange={(v) => v && setRetention(v as 'all' | '30days' | 'session')}
+                  variant="outline"
+                  spacing={0}
+                  className="w-full"
                 >
-                  <option value="all">Everything</option>
-                  <option value="30days">Last 30 days</option>
-                  <option value="session">This session only</option>
-                </select>
+                  <ToggleGroupItem value="all" className="flex-1">
+                    Everything
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="30days" className="flex-1">
+                    30 days
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="session" className="flex-1">
+                    Session
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
               <div className="row">
                 <label>{historyCount} saved</label>

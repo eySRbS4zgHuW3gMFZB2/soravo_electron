@@ -1,3 +1,16 @@
+/* Tailwind v4 WITHOUT preflight.
+   Preflight resets margins/borders/buttons app-wide, which would regress the
+   hand-written styles in this file. We only need the theme layer and the
+   utility layer for the shadcn components to work. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import 'tw-animate-css';
+
+/* This app toggles dark mode with html[data-theme='dark'], not a .dark class,
+   so point the dark: variant at the existing attribute. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 :root {
   --soravo-primary: #9fe870;
   --soravo-on-primary: #0e0f0c;
@@ -10,6 +23,89 @@
   --soravo-negative: #d03238;
   --soravo-radius: 24px;
   --soravo-font: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+   shadcn/ui semantic tokens.
+
+   Every token is derived from a --soravo-* variable rather than hard-coded.
+   The dark theme already flips the --soravo-* variables on
+   html[data-theme='dark'], so these tokens need no separate dark block.
+   --------------------------------------------------------------------------- */
+:root {
+  --radius: 0.75rem;
+
+  --background: var(--soravo-canvas);
+  --foreground: var(--soravo-ink);
+
+  --card: var(--soravo-canvas);
+  --card-foreground: var(--soravo-ink);
+
+  --popover: var(--soravo-canvas);
+  --popover-foreground: var(--soravo-ink);
+
+  --primary: var(--soravo-primary);
+  --primary-foreground: var(--soravo-on-primary);
+
+  --secondary: #eef0ea;
+  --secondary-foreground: #0e0f0c;
+
+  --muted: #eef0ea;
+  --muted-foreground: #6b7069;
+
+  --accent: #e4e8dd;
+  --accent-foreground: #0e0f0c;
+
+  --destructive: var(--soravo-negative);
+
+  --border: #d3d8cd;
+  --input: #c6ccbe;
+  --ring: var(--soravo-primary);
+}
+
+/* Border / muted / accent need real contrast against the surface. Mapping them
+   onto --soravo-canvas-soft made them invisible: in dark mode #22261e sits
+   almost exactly on the #1a1d16 panel, so control outlines and selected
+   states disappeared. These are explicit instead. */
+html[data-theme='dark'] {
+  --secondary: #262b20;
+  --secondary-foreground: #f0f3e6;
+
+  --muted: #2a2f23;
+  --muted-foreground: #9aa08e;
+
+  --accent: #333a2b;
+  --accent-foreground: #f0f3e6;
+
+  --border: #3a4033;
+  --input: #454c3c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
 }
 
 * {
