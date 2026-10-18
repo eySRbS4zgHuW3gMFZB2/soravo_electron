@@ -17,6 +17,7 @@ export interface SoravoSettings {
   hotkey: string
   pasteHotkey: string
   copyHotkey: string
+  holdToTalk: boolean
   model: string
   language: string
   microphoneId: string
@@ -67,6 +68,8 @@ export interface SoravoAPI {
   winClose(): Promise<void>
   getSettings(): Promise<SoravoSettings>
   setSettings(patch: Partial<SoravoSettings>): Promise<SoravoSettings>
+  validateBinding(accel: string): Promise<boolean>
+  bindingHelp(): Promise<Record<string, string[]>>
 }
 
 // Map camelCase settings to the Tauri command format
@@ -92,6 +95,7 @@ function settingsFromTauri(s: any): SoravoSettings {
     hotkey: s.hotkey ?? s.hotKey ?? 'CommandOrControl+Alt+Space',
     pasteHotkey: s.pasteHotkey ?? s.paste_hotkey ?? 'CommandOrControl+Alt+V',
     copyHotkey: s.copyHotkey ?? s.copy_hotkey ?? 'CommandOrControl+Alt+C',
+    holdToTalk: s.holdToTalk ?? s.hold_to_talk ?? false,
     model: s.model ?? 'base.en',
     language: s.language ?? 'en',
     microphoneId: s.microphoneId ?? s.microphone_id ?? '',
@@ -180,6 +184,7 @@ export const soravo: SoravoAPI = {
     if (patch.hotkey !== undefined) tauriPatch.hotkey = patch.hotkey
     if (patch.pasteHotkey !== undefined) tauriPatch.pasteHotkey = patch.pasteHotkey
     if (patch.copyHotkey !== undefined) tauriPatch.copyHotkey = patch.copyHotkey
+    if (patch.holdToTalk !== undefined) tauriPatch.holdToTalk = patch.holdToTalk
     if (patch.model !== undefined) tauriPatch.model = patch.model
     if (patch.language !== undefined) tauriPatch.language = patch.language
     if (patch.microphoneId !== undefined) tauriPatch.microphoneId = patch.microphoneId
@@ -192,6 +197,8 @@ export const soravo: SoravoAPI = {
     const raw = await invoke<any>('set_settings', { patch: tauriPatch })
     return settingsFromTauri(raw)
   },
+  validateBinding: (accel) => invoke<boolean>('validate_binding', { accel }),
+  bindingHelp: () => invoke<Record<string, string[]>>('binding_help'),
 }
 
 // Expose on window for compatibility

@@ -9,7 +9,7 @@
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
-    "fetch:whisper": "node scripts/fetch-whisper.mjs",
+    "fetch:asr": "node scripts/fetch-asr.mjs",
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
     "tauri": "tauri",

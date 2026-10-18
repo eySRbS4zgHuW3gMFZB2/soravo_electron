@@ -28,13 +28,14 @@ cd soravo_electron
 npm install
 ```
 
-## Install whisper.cpp Runtime
+## Transcription Engine
 
-```bash
-npm run fetch:whisper
-```
+This app uses **CrispASR** (v0.8.43) as its transcription engine. CrispASR is a multi-backend ASR tool that supports Whisper, Parakeet, and other models.
 
-This downloads `whisper-cli.exe` + `ggml-base.en.bin` model (~150 MB) into `third-party/`.
+The CrispASR binary (`crispasr.exe` + `openblas.dll`) is included in `third-party/bin/`.
+The model file (`ggml-base.en.bin`, ~142 MB) is in `third-party/models/`.
+
+To download additional models, place them in `third-party/models/` and update the model path in Settings.
 
 ## Run Dev Build
 
@@ -69,7 +70,7 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 
 - **No admin required** for dev (portable tools used)
 - **Microphone permission** needed on first run (Windows will prompt)
-- **Whisper binary** is git-ignored; run `fetch:whisper` after clone
+- **CrispASR binary** is included in `third-party/bin/` (crispasr.exe + openblas.dll)
 - **SQLite DB** auto-created at `%APPDATA%/soravo/soravo.sqlite`
 - **Settings** stored at `%APPDATA%/soravo/soravo-settings.json`
 - **Default hotkey**: `Ctrl+Alt+Space` (configurable in Settings)
@@ -79,7 +80,7 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 - **Framework**: Tauri v2 (Rust backend + WebView frontend)
 - **Frontend**: React 18, TypeScript, Vite
 - **Storage**: SQLite (rusqlite) + tauri-plugin-store
-- **Transcription**: whisper.cpp (ggml-base.en.bin, ~142 MB)
+- **Transcription**: CrispASR (ggml-base.en.bin, ~142 MB, multi-backend ASR)
 - **Packaging**: Tauri bundle (NSIS + MSI)
 
 ## License
