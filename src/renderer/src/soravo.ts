@@ -29,6 +29,25 @@ export interface SoravoSettings {
   retention: Retention
 }
 
+export interface ModelInfo {
+  id: string
+  name: string
+  sizeBytes: number
+  sizeLabel: string
+  license: string
+  installed: boolean
+  active: boolean
+  url: string
+  language: string
+  microphoneId: string
+  sounds: boolean
+  smartCleanup: boolean
+  vocabulary: Record<string, string>
+  launchAtLogin: boolean
+  theme: Theme
+  retention: Retention
+}
+
 export interface InsightsData {
   dictations: number
   words: number
@@ -63,6 +82,12 @@ export interface SoravoAPI {
   getInsights(): Promise<InsightsData>
   onHistoryDelete(id: number): Promise<void>
   getRuntimeStatus(): Promise<{ binary: boolean; model: string; modelPresent: boolean }>
+  listModels(): Promise<ModelInfo[]>
+  downloadModel(id: string): Promise<void>
+  deleteModel(id: string): Promise<void>
+  setActiveModel(id: string): Promise<void>
+  onModelDownloadProgress(cb: (p: { id: string; received: number; total: number; percent: number }) => void): () => void
+  onModelDownloadComplete(cb: (p: { id: string }) => void): () => void
   winMin(): Promise<void>
   winMax(): Promise<void>
   winClose(): Promise<void>
@@ -132,6 +157,14 @@ async function setupEventListeners() {
     const cbs = listeners['data-changed']
     if (cbs) cbs.forEach((cb) => cb())
   })
+  await listen('soravo:model-download-progress', (event) => {
+    const cbs = listeners['model-download-progress']
+    if (cbs) cbs.forEach((cb) => cb(event.payload))
+  })
+  await listen('soravo:model-download-complete', (event) => {
+    const cbs = listeners['model-download-complete']
+    if (cbs) cbs.forEach((cb) => cb(event.payload))
+  })
   // Listen for hotkey toggle events from the Rust backend
   await listen('soravo:toggle-hotkey', () => {
     soravo.toggle().catch(console.error)
@@ -166,12 +199,16 @@ export const soravo: SoravoAPI = {
   getInsights: () => invoke<InsightsData>('get_insights'),
   onHistoryDelete: (id) => invoke('delete_history', { id }).then(() => {}),
   getRuntimeStatus: async () => {
-    const s = await invoke<any>('get_runtime_status', { model: 'base.en' })
-    // Need to get model from settings first
     const settings = await soravo.getSettings()
-    const status = await invoke<any>('get_runtime_status', { model: settings.model })
+    const status = await invoke<any>('get_runtime_status', { model: settings.model || 'tiny.en' })
     return { binary: status.binary, model: status.model, modelPresent: status.modelPresent }
   },
+  listModels: () => invoke<ModelInfo[]>('list_models'),
+  downloadModel: (id) => invoke('download_model', { id }),
+  deleteModel: (id) => invoke('delete_model', { id }),
+  setActiveModel: (id) => invoke('set_active_model', { id }),
+  onModelDownloadProgress: (cb) => addListener('model-download-progress', cb as Function),
+  onModelDownloadComplete: (cb) => addListener('model-download-complete', cb as Function),
   winMin: () => invoke('win_min'),
   winMax: () => invoke('win_max'),
   winClose: () => invoke('win_close'),
