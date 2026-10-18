@@ -6,15 +6,12 @@ import HubApp from './HubApp'
 import './styles.css'
 import './hub.css'
 import './soravo'
-import { installRadixDataAttrs } from './radix-data-attrs'
 
 const rootEl = document.getElementById('root')
 if (!rootEl) throw new Error('Missing #root element')
 
 async function main() {
-  // shadcn targets a Radix that writes data-checked / data-open; this one
-  // writes data-state. Mirror them before anything renders.
-  installRadixDataAttrs()
+  // Nothing to bootstrap: every component keys its state styles on data-state directly.
 
   // Determine which component to render based on window label
   let isHub = false

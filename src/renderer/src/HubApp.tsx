@@ -562,13 +562,16 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label>Theme</label>
+                {/* className="seg" is the app's pill treatment: canvas-soft track, 9999px
+                      radius, 13px semibold, lime fill with white text when on.
+                      The bare ToggleGroup drew a bordered box with black text
+                      instead. */}
                 <ToggleGroup
                   type="single"
                   value={theme}
                   onValueChange={(v) => v && setTheme(v as 'light' | 'dark')}
-                  variant="outline"
                   spacing={0}
-                  className="w-full"
+                  className="seg w-full"
                 >
                   <ToggleGroupItem value="light" className="flex-1">
                     Light
@@ -735,13 +738,13 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label>History keeps</label>
+                {/* Same pill treatment as Theme, for the same reason. */}
                 <ToggleGroup
                   type="single"
                   value={retention}
                   onValueChange={(v) => v && setRetention(v as 'all' | '30days' | 'session')}
-                  variant="outline"
                   spacing={0}
-                  className="w-full"
+                  className="seg w-full"
                 >
                   <ToggleGroupItem value="all" className="flex-1">
                     Everything
@@ -878,7 +881,12 @@ function ModelsPage() {
       <div className="hub-card">
         {models.map((m) => (
           <div key={m.id} className="row" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--soravo-canvas-soft)' }}>
-            <div>
+            {/* flex:1/minWidth:0 holds the text column at a fixed width, and the
+                action column below is a fixed 184px, so neither the wrapping
+                nor the row height changes when a row gains or loses its
+                Download / Set Active / Delete buttons. Without this, pressing
+                Set Active made the whole list re-space itself. */}
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{m.name}</div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>
                 {m.sizeLabel} · {m.license} license
@@ -892,7 +900,7 @@ function ModelsPage() {
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flex: 'none', width: 184, justifyContent: 'flex-end' }}>
               {!m.installed && downloading !== m.id && (
                 <Button variant="secondary" onClick={() => handleDownload(m.id)}>Download</Button>
               )}

@@ -319,13 +319,18 @@ body {
 
 /* The bubble now renders through Radix's Tooltip portal, which positions it
    itself, so the old position: fixed / inline top+left are dropped. */
+/* Fills from the shadcn Tooltip are left at the registry defaults, so the
+   bubble takes its colours from the app's surface tokens instead. Using
+   --soravo-ink as the background made it render as a white box with black
+   text in dark mode, which sat badly against the rest of the UI. */
 .hint-bubble {
   z-index: 300;
   width: 250px;
   padding: 9px 11px;
   border-radius: 10px;
-  background: var(--soravo-ink);
-  color: var(--soravo-canvas);
+  background: var(--soravo-canvas);
+  color: var(--soravo-ink);
+  border: 1px solid var(--soravo-canvas-soft);
   font-size: 12px;
   font-weight: 400;
   line-height: 1.45;
