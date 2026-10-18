@@ -6,6 +6,11 @@ import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
+  Dialog,
+  DialogContent,
+  DialogTitle
+} from '@/components/ui/dialog'
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -419,36 +424,43 @@ function Hint({ text }: { text: string }) {
 }
 
 function SubModal({
+  open,
   title,
   subtitle,
   onClose,
   children
 }: {
+  open: boolean
   title: string
   subtitle?: string
   onClose: () => void
   children: React.ReactNode
 }) {
   return (
-    <div className="modal-backdrop sub-backdrop" onClick={onClose}>
-      <div
-        className="modal-dialog sub-dialog"
-        role="dialog"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Button variant="ghost" size="icon-sm" className="modal-close" title="Close" onClick={onClose}>
+    // Controlled for the same reason as the settings dialog: Radix only restores
+    // <body> pointer-events when it observes open go true -> false.
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent showCloseButton={false} className="sub-dialog">
+        <DialogTitle className="sr-only">{title}</DialogTitle>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="modal-close"
+          title="Close"
+          onClick={onClose}
+        >
           <CloseIcon />
         </Button>
         <h2 className="modal-title">{title}</h2>
         {subtitle ? <p className="hub-note">{subtitle}</p> : null}
         {children}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
 function SettingsModal({
+  open,
   settings,
   historyCount,
   onSave,
@@ -456,6 +468,7 @@ function SettingsModal({
   onQuit,
   onClose
 }: {
+  open: boolean
   settings: SoravoSettings
   historyCount: number
   onSave: (patch: Partial<SoravoSettings>) => Promise<void>
@@ -542,8 +555,13 @@ function SettingsModal({
   ]
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-dialog" role="dialog" aria-label="Settings" onClick={(e) => e.stopPropagation()}>
+    // Controlled, not `open` hardcoded to true: Radix's modal Dialog sets
+    // pointer-events:none on <body> while open, and that is only released when
+    // it sees open go true -> false. Unmounting it instead leaves the whole
+    // app unclickable.
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent showCloseButton={false} className="settings-dialog">
+        <DialogTitle className="sr-only">Settings</DialogTitle>
         <aside className="modal-sidebar">
           <p className="modal-heading">Settings</p>
           {tabs.map((t) => (
@@ -614,7 +632,7 @@ function SettingsModal({
               </div>
 
               {sub === 'shortcuts' && (
-                <SubModal
+                <SubModal open 
                   title="Shortcuts"
                   subtitle="Choose your preferred shortcuts for using Soravo."
                   onClose={() => setSub(null)}
@@ -647,7 +665,7 @@ function SettingsModal({
                 </SubModal>
               )}
               {sub === 'microphone' && (
-                <SubModal title="Microphone" subtitle="Used for dictation." onClose={() => setSub(null)}>
+                <SubModal open title="Microphone" subtitle="Used for dictation." onClose={() => setSub(null)}>
                   <div className="row">
                     <label>Input</label>
                     <Select
@@ -674,7 +692,7 @@ function SettingsModal({
                 </SubModal>
               )}
               {sub === 'language' && (
-                <SubModal
+                <SubModal open 
                   title="Dictation language"
                   subtitle="Whisper language code, e.g. en, es, fr. Also tunes cleanup rules."
                   onClose={() => setSub(null)}
@@ -797,13 +815,13 @@ function SettingsModal({
             <Button variant="secondary" onClick={onClose}>
               Close
             </Button>
-            <Button  onClick={save}>
+            <Button onClick={save}>
               {savedTick ? 'Saved' : 'Save'}
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -1318,8 +1336,9 @@ export default function HubApp() {
            {page === 'models' && <ModelsPage />}
         </main>
       </div>
-      {settingsOpen && settings && (
+      {settings && (
         <SettingsModal
+          open={settingsOpen}
           settings={settings}
           historyCount={history.length}
           onSave={saveSettings}
