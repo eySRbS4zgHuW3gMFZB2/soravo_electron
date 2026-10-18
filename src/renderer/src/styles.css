@@ -58,8 +58,14 @@
 
   --destructive: var(--soravo-negative);
 
+  /* The old checkbox used accent-color: var(--soravo-positive), a medium
+     green rather than the lime brand accent. Keep it distinct. */
+  --positive: var(--soravo-positive);
+
   --border: #d3d8cd;
-  --input: #c6ccbe;
+  /* The old .row input/select used a full-strength ink border in light mode,
+     so --input must be near-black rather than a subtle grey. */
+  --input: #0e0f0c;
   --ring: var(--soravo-primary);
 }
 
@@ -78,7 +84,7 @@ html[data-theme='dark'] {
   --accent-foreground: #f0f3e6;
 
   --border: #3a4033;
-  --input: #454c3c;
+  --input: #3a3f30;
 }
 
 @theme inline {
@@ -97,6 +103,7 @@ html[data-theme='dark'] {
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-positive: var(--positive);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

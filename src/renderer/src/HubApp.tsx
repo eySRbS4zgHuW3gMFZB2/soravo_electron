@@ -3,6 +3,8 @@ import type { InsightsData, RecState, SoravoSettings, TranscriptEntry } from './
 import HotkeyCapture from './HotkeyCapture'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -330,7 +332,7 @@ function HistoryPage({
     <div className="hub-page">
       <h1 className="hub-greeting">History</h1>
       <div className="row">
-        <input
+        <Input
           placeholder="Search dictations…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
@@ -608,7 +610,7 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label>Sound effects</label>
-                <input type="checkbox" checked={sounds} onChange={(e) => setSounds(e.target.checked)} />
+                <Checkbox checked={sounds} onCheckedChange={(c) => setSounds(c === true)} />
               </div>
 
               {sub === 'shortcuts' && (
@@ -623,11 +625,7 @@ function SettingsModal({
                   </div>
                   <div className="row">
                     <label>Push to talk</label>
-                    <input
-                      type="checkbox"
-                      checked={holdToTalk}
-                      onChange={(e) => setHoldToTalk(e.target.checked)}
-                    />
+                    <Checkbox checked={holdToTalk} onCheckedChange={(c) => setHoldToTalk(c === true)} />
                   </div>
                   <p className="hub-note">
                     {holdToTalk
@@ -683,7 +681,7 @@ function SettingsModal({
                 >
                   <div className="row">
                     <label>Language</label>
-                    <input value={language} onChange={(e) => setLanguage(e.target.value)} spellCheck={false} />
+                    <Input value={language} onChange={(e) => setLanguage(e.target.value)} spellCheck={false} />
                   </div>
                 </SubModal>
               )}
@@ -698,28 +696,20 @@ function SettingsModal({
                   Smart cleanup
                   <Hint text="Strips filler words like um, uh, er, ah and hmm, then tidies spacing. Your custom vocabulary is always applied, whether this is on or off." />
                 </label>
-                <input
-                  type="checkbox"
-                  checked={smartCleanup}
-                  onChange={(e) => setSmartCleanup(e.target.checked)}
-                />
+                <Checkbox checked={smartCleanup} onCheckedChange={(c) => setSmartCleanup(c === true)} />
               </div>
               <div className="row">
                 <label>
                   Add punctuation
                   <Hint text="Adds a full stop when a dictation ends without a period, exclamation mark or question mark. Works on its own, even when Smart cleanup is off." />
                 </label>
-                <input
-                  type="checkbox"
-                  checked={addPunctuation}
-                  onChange={(e) => setAddPunctuation(e.target.checked)}
-                />
+                <Checkbox checked={addPunctuation} onCheckedChange={(c) => setAddPunctuation(c === true)} />
               </div>
               <h3 className="hub-section">Custom vocabulary ({vocabEntries.length})</h3>
               {vocabEntries.map(([from, to]) => (
                 <div className="row" key={from}>
                   <label>{from}</label>
-                  <input value={to} readOnly />
+                  <Input value={to} readOnly />
                   <Button variant="destructive" onClick={() => removeWord(from)}>
                     Remove
                   </Button>
@@ -727,7 +717,7 @@ function SettingsModal({
               ))}
               <div className="row">
                 <label>Heard as</label>
-                <input
+                <Input
                   value={newFrom}
                   onChange={(e) => setNewFrom(e.target.value)}
                   placeholder="e.g. sore avo"
@@ -736,7 +726,7 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label>Write as</label>
-                <input
+                <Input
                   value={newTo}
                   onChange={(e) => setNewTo(e.target.value)}
                   placeholder="e.g. Soravo"
@@ -753,11 +743,7 @@ function SettingsModal({
                 <label title="Registers Soravo in your Windows startup folder so it runs as soon as you sign in.">
                   Start at login
                 </label>
-                <input
-                  type="checkbox"
-                  checked={launchAtLogin}
-                  onChange={(e) => setLaunchAtLogin(e.target.checked)}
-                />
+                <Checkbox checked={launchAtLogin} onCheckedChange={(c) => setLaunchAtLogin(c === true)} />
               </div>
               <div className="row">
                 <Button variant="destructive" onClick={onQuit}>
