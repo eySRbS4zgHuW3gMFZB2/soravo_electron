@@ -156,57 +156,6 @@ body {
   -webkit-app-region: no-drag;
 }
 
-.mic-btn {
-  flex: none;
-  width: 52px;
-  height: 52px;
-  border: none;
-  border-radius: 9999px;
-  background: var(--soravo-primary);
-  color: var(--soravo-on-primary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mic-btn.recording {
-  background: var(--soravo-negative);
-  color: #fff;
-}
-
-.mic-btn svg {
-  width: 24px;
-  height: 24px;
-}
-
-.pill-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.pill-title {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 20px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pill-sub {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--soravo-mute);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pill-sub.error {
-  color: var(--soravo-negative);
-}
-
 .rec-dot {
   display: inline-block;
   width: 8px;
@@ -375,37 +324,6 @@ body {
   border: 1px solid var(--soravo-ink);
   border-radius: 12px;
   padding: 8px 12px;
-  min-width: 0;
-}
-
-.btn {
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  border: none;
-  border-radius: 12px;
-  padding: 8px 16px;
-  cursor: pointer;
-  background: var(--soravo-canvas-soft);
-  color: var(--soravo-ink);
-}
-
-.btn.primary {
-  background: var(--soravo-primary);
-  color: var(--soravo-on-primary);
-}
-
-.btn.danger {
-  background: var(--soravo-negative);
-  color: #fff;
-}
-
-.row-inline {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   min-width: 0;
 }
 

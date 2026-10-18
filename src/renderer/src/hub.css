@@ -415,15 +415,9 @@ html[data-theme='dark'] .hub-note {
   background: #22261e;
 }
 
-html[data-theme='dark'] .hub-mini-btn,
-html[data-theme='dark'] .btn {
+html[data-theme='dark'] .hub-mini-btn {
   background: #2c3125;
   color: var(--soravo-ink);
-}
-
-html[data-theme='dark'] .btn.primary {
-  background: var(--soravo-primary);
-  color: var(--soravo-on-primary);
 }
 
 .insights-page {
@@ -603,23 +597,6 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   margin-bottom: 12px;
 }
 
-.seg-btn {
-  border: none;
-  border-radius: 9999px;
-  background: transparent;
-  color: var(--soravo-ink);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 6px 16px;
-  cursor: pointer;
-}
-
-.seg-btn.active {
-  background: var(--soravo-primary);
-  color: #ffffff;
-}
-
 /* The rhythm chart keeps its original pill shape. ToggleGroup supplies the
    behaviour and the selected state; these rules restore the old appearance
    (9999px radius, no border, 13px semibold, lime pill when active).
@@ -631,7 +608,7 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   color: var(--soravo-ink);
   font-size: 13px;
   font-weight: 600;
-  /* The component pins h-8; the old .seg-btn sized itself from its padding. */
+  /* The component pins h-8; the original pill sized itself from its padding. */
   height: auto;
   padding: 6px 16px;
 }
@@ -832,27 +809,6 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   display: none;
 }
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(14, 15, 12, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-  -webkit-app-region: no-drag;
-}
-
-.modal-dialog {
-  display: flex;
-  width: min(960px, calc(100vw - 60px));
-  height: min(680px, calc(100vh - 60px));
-  background: var(--soravo-canvas-soft);
-  border-radius: var(--soravo-radius);
-  box-shadow: 0 24px 80px rgba(14, 15, 12, 0.35);
-  overflow: hidden;
-}
-
 .modal-sidebar {
   flex: none;
   width: 220px;
@@ -931,26 +887,6 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   justify-content: flex-end;
   gap: 8px;
   padding: 16px 0 4px;
-}
-
-.modal-backdrop.sub-backdrop {
-  z-index: 60;
-  background: rgba(14, 15, 12, 0.6);
-}
-
-.modal-dialog.sub-dialog {
-  width: min(560px, calc(100vw - 120px));
-  height: auto;
-  max-height: min(560px, calc(100vh - 120px));
-  overflow-y: auto;
-  scrollbar-width: none;
-  padding: 24px;
-  position: relative;
-  display: block;
-}
-
-.modal-dialog.sub-dialog::-webkit-scrollbar {
-  display: none;
 }
 
 .row-summary {
