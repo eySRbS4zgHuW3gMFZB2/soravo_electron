@@ -72,6 +72,7 @@ pub struct SoravoSettings {
     /// Hold the dictation hotkey to record; release to transcribe.
     /// When false the binding behaves as a press-to-toggle shortcut.
     pub hold_to_talk: bool,
+    /// Active model id (e.g. "tiny.en", "base.en"). Empty means no model.
     pub model: String,
     pub language: String,
     pub microphone_id: String,
@@ -81,6 +82,19 @@ pub struct SoravoSettings {
     pub launch_at_login: bool,
     pub theme: String,
     pub retention: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelInfo {
+    pub id: String,
+    pub name: String,
+    pub size_bytes: u64,
+    pub size_label: String,
+    pub license: String,
+    pub installed: bool,
+    pub active: bool,
+    pub url: String,
 }
 
 impl Default for SoravoSettings {
@@ -226,6 +240,150 @@ fn open_db(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
 }
 
 
+// Model catalog: MIT-licensed Whisper models available on HuggingFace.
+// CrispASR runs any of these directly (GGUF/BIN format).
+const MODEL_CATALOG: &[(&str, &str, u64, &str, &str)] = &[
+    // Whisper family (OpenAI, MIT) — ggerganov/whisper.cpp
+    ("tiny.en", "Whisper Tiny (English, Q5)", 77_700_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin", "MIT"),
+    ("tiny", "Whisper Tiny (Multilingual, Q5)", 77_700_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin", "MIT"),
+    ("tiny.en-q8", "Whisper Tiny (English, Q8)", 41_500_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q8_0.bin", "MIT"),
+    ("tiny.en-fp16", "Whisper Tiny (English, fp16)", 74_100_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin", "MIT"),
+    ("base.en", "Whisper Base (English, Q5)", 148_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin", "MIT"),
+    ("base", "Whisper Base (Multilingual, Q5)", 148_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin", "MIT"),
+    ("small.en", "Whisper Small (English, Q5)", 466_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin", "MIT"),
+    ("small", "Whisper Small (Multilingual, Q5)", 466_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin", "MIT"),
+    ("distil-large-v3", "Distil-Whisper Large v3 (Q5)", 513_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-distil-large-v3.bin", "MIT"),
+    ("medium.en", "Whisper Medium (English)", 1_500_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin", "MIT"),
+    ("medium", "Whisper Medium (Multilingual)", 1_500_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin", "MIT"),
+    ("large-v3", "Whisper Large v3", 3_000_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin", "MIT"),
+    ("large-v3-turbo", "Whisper Large v3 Turbo", 1_600_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin", "MIT"),
+    // Moonshine (UsefulSensors, MIT)
+    ("moonshine-tiny", "Moonshine Tiny (Q4_K)", 20_200_000, "https://huggingface.co/cstr/moonshine-tiny-GGUF/resolve/main/moonshine-tiny-q4_k.gguf", "MIT"),
+    ("moonshine-streaming-tiny", "Moonshine Streaming Tiny (Q4_K)", 30_600_000, "https://huggingface.co/cstr/moonshine-streaming-tiny-GGUF/resolve/main/moonshine-streaming-tiny-q4_k.gguf", "MIT"),
+    // Academic / research (MIT)
+    ("gigaam-v3", "GigaAM v3 (RNNT, Q8)", 249_000_000, "https://huggingface.co/cstr/gigaam-v3-GGUF/resolve/main/gigaam-v3-e2e-rnnt-q8_0.gguf", "MIT"),
+    ("kyutai-stt", "Kyutai STT 1B (Q4_K)", 636_000_000, "https://huggingface.co/cstr/kyutai-stt-1b-GGUF/resolve/main/kyutai-stt-1b-q4_k.gguf", "MIT"),
+    ("glm-asr-nano", "GLM-ASR Nano (Q4_K)", 1_200_000_000, "https://huggingface.co/cstr/glm-asr-nano-GGUF/resolve/main/glm-asr-nano-q4_k.gguf", "MIT"),
+    ("hikari-medium", "Hikari Medium (f16)", 1_500_000_000, "https://huggingface.co/cstr/hikari-medium-GGUF/resolve/main/hikari-medium-f16.gguf", "MIT"),
+    // MOSS (OpenMOSS, MIT)
+    ("moss-transcribe", "MOSS Transcribe Preview 2B (Q4_K)", 2_690_000_000, "https://huggingface.co/cstr/MOSS-Transcribe-preview-2B-GGUF/resolve/main/moss-transcribe-preview-2b-q4_k.gguf", "MIT"),
+    ("moss-diarize", "MOSS Transcribe + Diarize 0.9B (Q4_K)", 1_130_000_000, "https://huggingface.co/cstr/MOSS-Transcribe-Diarize-GGUF/resolve/main/moss-transcribe-diarize-0.9b-q4_k.gguf", "MIT"),
+    ("moss-audio", "MOSS Audio 4B Instruct (Q4_K)", 3_920_000_000, "https://huggingface.co/cstr/MOSS-Audio-4B-Instruct-GGUF/resolve/main/moss-audio-4b-instruct-q4_k.gguf", "MIT"),
+    // Industry (MIT)
+    ("mini-omni2", "minI-Omni2 (Q4_K)", 1_010_000_000, "https://huggingface.co/cstr/mini-omni2-GGUF/resolve/main/mini-omni2-q4_k.gguf", "MIT"),
+    ("vibevoice-streaming", "VibeVoice ASR Streaming 1.5B (Q4_K)", 1_770_000_000, "https://huggingface.co/cstr/vibevoice-asr-streaming-1.5b-GGUF/resolve/main/vibevoice-asr-streaming-1.5b-q4_k.gguf", "MIT"),
+    ("vibevoice-bitnet", "VibeVoice ASR BitNet (TQ2)", 1_550_000_000, "https://huggingface.co/cstr/vibevoice-asr-bitnet-GGUF/resolve/main/vibevoice-asr-bitnet-tq2.gguf", "MIT"),
+    ("vibevoice", "VibeVoice ASR (Q4_K)", 4_590_000_000, "https://huggingface.co/cstr/vibevoice-asr-GGUF/resolve/main/vibevoice-asr-q4_k.gguf", "MIT"),
+    ("mimo-asr", "MiMo ASR (Q4_K)", 4_310_000_000, "https://huggingface.co/cstr/mimo-asr-GGUF/resolve/main/mimo-asr-q4_k.gguf", "MIT"),
+    ("hojo-asr", "Hojo-ASR V1 (Q4_K)", 4_220_000_000, "https://huggingface.co/cstr/Hojo-ASR-Multi-V1-GGUF/resolve/main/hojo-asr-multi-v1-q4_k.gguf", "MIT"),
+];
+
+fn models_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
+    app.path().app_data_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .join("models")
+}
+
+fn model_path(app: &tauri::AppHandle, id: &str) -> std::path::PathBuf {
+    models_dir(app).join(format!("ggml-{}.bin", id))
+}
+
+fn size_label(bytes: u64) -> String {
+    if bytes >= 1_000_000_000 {
+        format!("{:.1} GB", bytes as f64 / 1_000_000_000.0)
+    } else {
+        format!("{:.0} MB", bytes as f64 / 1_000_000.0)
+    }
+}
+
+#[tauri::command]
+async fn list_models(app: tauri::AppHandle) -> Result<Vec<ModelInfo>, String> {
+    let settings = load_settings(&app);
+    let active = settings.model.clone();
+    let dir = models_dir(&app);
+    let _ = std::fs::create_dir_all(&dir);
+
+    let mut out = Vec::new();
+    for (id, name, size, url, license) in MODEL_CATALOG {
+        let path = dir.join(format!("ggml-{}.bin", id));
+        out.push(ModelInfo {
+            id: id.to_string(),
+            name: name.to_string(),
+            size_bytes: *size,
+            size_label: size_label(*size),
+            license: license.to_string(),
+            installed: path.exists(),
+            active: *id == active,
+            url: url.to_string(),
+        });
+    }
+    Ok(out)
+}
+
+#[tauri::command]
+async fn download_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let entry = MODEL_CATALOG.iter().find(|e| e.0 == id)
+        .ok_or_else(|| format!("Unknown model: {}", id))?;
+    let url = entry.3;
+    let dir = models_dir(&app);
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let dest = dir.join(format!("ggml-{}.bin", id));
+
+    // Stream the download with progress events.
+    let client = reqwest::Client::new();
+    let resp = client.get(url).send().await.map_err(|e| e.to_string())?;
+    if !resp.status().is_success() {
+        return Err(format!("Download failed: HTTP {}", resp.status()));
+    }
+    let total = resp.content_length().unwrap_or(0);
+    let mut file = tokio::fs::File::create(&dest).await.map_err(|e| e.to_string())?;
+    use tokio::io::AsyncWriteExt;
+    let mut stream = resp.bytes_stream();
+    use futures::StreamExt;
+    let mut received: u64 = 0;
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| e.to_string())?;
+        file.write_all(&chunk).await.map_err(|e| e.to_string())?;
+        received += chunk.len() as u64;
+        let pct = if total > 0 { (received as f64 / total as f64 * 100.0) as u32 } else { 0 };
+        app.emit("soravo:model-download-progress", serde_json::json!({
+            "id": id,
+            "received": received,
+            "total": total,
+            "percent": pct,
+        })).ok();
+    }
+    file.flush().await.map_err(|e| e.to_string())?;
+    app.emit("soravo:model-download-complete", serde_json::json!({ "id": id })).ok();
+    Ok(())
+}
+
+#[tauri::command]
+async fn delete_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let path = model_path(&app, &id);
+    if path.exists() {
+        std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+    }
+    // If the deleted model was active, clear the selection.
+    let mut settings = load_settings(&app);
+    if settings.model == id {
+        settings.model = String::new();
+        save_settings(&app, &settings)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn set_active_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let path = model_path(&app, &id);
+    if !path.exists() {
+        return Err(format!("Model not installed: {}", id));
+    }
+    let mut settings = load_settings(&app);
+    settings.model = id;
+    save_settings(&app, &settings)?;
+    Ok(())
+}
+
 // Settings helpers using tauri-plugin-store
 fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
     use tauri_plugin_store::StoreExt;
@@ -325,6 +483,7 @@ fn transcribe_wav(
     model: &str,
     language: &str,
     resource_dir: &std::path::Path,
+    models_dir: &std::path::Path,
 ) -> Result<String, String> {
     let crispasr_binary = if cfg!(target_os = "windows") {
         "crispasr.exe"
@@ -338,47 +497,47 @@ fn transcribe_wav(
     let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
     let model_file = format!("ggml-{}.bin", model);
 
-    let roots = [
-        current_dir.clone(),
-        project_root,
-        resource_dir.to_path_buf(),
-    ];
+    // CrispASR binary: look in third-party/bin first (dev), then bundled.
+    let current_dir = std::env::current_dir().unwrap_or_default();
+    let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
+    let roots = [current_dir.clone(), project_root.clone(), resource_dir.to_path_buf()];
 
-    let find = |rel: &str| -> Option<std::path::PathBuf> {
-        roots.iter().map(|r| r.join(rel)).find(|p| p.exists())
+    let find_binary = |name: &str| -> Option<std::path::PathBuf> {
+        roots.iter().map(|r| r.join("third-party/bin").join(name)).find(|p| p.exists())
     };
 
-    // Fail with something actionable instead of letting the spawn produce a
-    // bare "path not found".
-    let whisper_path = find(&format!("third-party/bin/{crispasr_binary}")).ok_or_else(|| {
-        format!(
-            "CrispASR is not installed. Run `npm run fetch:asr` to download it."
-        )
+    let whisper_path = find_binary(crispasr_binary).ok_or_else(|| {
+        "CrispASR is not installed. Run `npm run fetch:asr` to download it.".to_string()
     })?;
-    let model_path = find(&format!("third-party/models/{model_file}")).ok_or_else(|| {
-        let installed: Vec<String> = std::fs::read_dir(
-            roots
-                .iter()
-                .map(|r| r.join("third-party/models"))
-                .find(|p| p.is_dir())
-                .unwrap_or_else(|| current_dir.join("third-party/models")),
-        )
-        .map(|rd| {
-            rd.filter_map(|e| e.ok())
-                .map(|e| e.file_name().to_string_lossy().to_string())
-                .filter(|n| n.ends_with(".bin"))
-                .collect()
-        })
-        .unwrap_or_default();
-        if installed.is_empty() {
-            format!("No models installed. Run `npm run fetch:asr -- {model}` to download one.")
-        } else {
-            format!(
-                "Model \"{model}\" is not installed. Available: {}.",
-                installed.join(", ")
-            )
-        }
-    })?;
+
+    // Model: look in app data dir first (downloaded via Models tab), then third-party.
+    let model_candidates = [
+        models_dir.join(&model_file),
+        current_dir.join("third-party/models").join(&model_file),
+        project_root.join("third-party/models").join(&model_file),
+    ];
+
+    let model_path = model_candidates.iter().find(|p| p.exists()).cloned()
+        .ok_or_else(|| {
+            let installed: Vec<String> = std::fs::read_dir(models_dir)
+                .or_else(|_| std::fs::read_dir(current_dir.join("third-party/models")))
+                .map(|rd| {
+                    rd.filter_map(|e| e.ok())
+                        .map(|e| e.file_name().to_string_lossy().to_string())
+                        .filter(|n| n.ends_with(".bin"))
+                        .collect()
+                })
+                .unwrap_or_default();
+            if installed.is_empty() {
+                format!("No models installed. Open the Models tab to download one.")
+            } else {
+                format!(
+                    "Model \"{}\" is not installed. Available: {}.",
+                    model,
+                    installed.join(", ")
+                )
+            }
+        })?;
 
     let model_path_str = model_path.to_string_lossy().to_string();
 
@@ -609,12 +768,13 @@ async fn submit_audio(
 
     let wav_path_str = wav_path.to_string_lossy().to_string();
 
-    // Get resource directory before moving app into the closure
+    // Get resource directory and models dir before moving app into the closure
     let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
+    let models_dir = models_dir(&app);
 
     // Transcribe
     let result = tokio::task::spawn_blocking(move || {
-        transcribe_wav(&wav_path_str, &model, &language, &resource_dir)
+        transcribe_wav(&wav_path_str, &model, &language, &resource_dir, &models_dir)
     })
     .await
     .map_err(|e| e.to_string())?;
@@ -942,14 +1102,20 @@ async fn get_insights(app: tauri::AppHandle) -> Result<InsightsData, String> {
 async fn get_runtime_status(app: tauri::AppHandle, model: String) -> Result<serde_json::Value, String> {
     let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
     let whisper_path = resource_dir.join("third-party").join("bin").join("crispasr.exe");
-    let model_path = resource_dir
-        .join("third-party")
-        .join("models")
-        .join(format!("ggml-{}.bin", model));
+    // Also check current_dir and project_root for dev mode.
+    let current_dir = std::env::current_dir().unwrap_or_default();
+    let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
+    let binary_exists = [current_dir.join("third-party/bin/crispasr.exe"), project_root.join("third-party/bin/crispasr.exe"), whisper_path.clone()]
+        .iter().any(|p| p.exists());
+
+    let md = models_dir(&app);
+    let model_path = md.join(format!("ggml-{}.bin", model));
+    let model_exists = model_path.exists() || current_dir.join("third-party/models").join(format!("ggml-{}.bin", model)).exists() || project_root.join("third-party/models").join(format!("ggml-{}.bin", model)).exists();
+
     Ok(serde_json::json!({
-        "binary": whisper_path.exists(),
+        "binary": binary_exists,
         "model": model,
-        "modelPresent": model_path.exists()
+        "modelPresent": model_exists
     }))
 }
 
@@ -1196,6 +1362,10 @@ pub fn run() {
             get_runtime_status,
             get_settings,
             set_settings,
+            list_models,
+            download_model,
+            delete_model,
+            set_active_model,
             win_min,
             win_max,
             win_close,

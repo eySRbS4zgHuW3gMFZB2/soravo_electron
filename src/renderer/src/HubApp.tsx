@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { InsightsData, RecState, SoravoSettings, TranscriptEntry } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
 
-type Page = 'dictation' | 'history' | 'insights'
+type Page = 'dictation' | 'history' | 'insights' | 'models'
 type SettingsTab = 'general' | 'system' | 'privacy'
 
 function fmtHotkey(accelerator: string): string {
@@ -121,6 +121,15 @@ function ChartIcon() {
   )
 }
 
+function BrainIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a4 4 0 0 0-4 4v1a3 3 0 0 0-3 3 3 3 0 0 0 1 5.66V17a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1.34A3 3 0 0 0 20 11a3 3 0 0 0-3-3V6a4 4 0 0 0-4-4z" />
+      <path d="M9 9h.01M15 9h.01" />
+    </svg>
+  )
+}
+
 function Titlebar() {
   return (
     <div className="hub-titlebar">
@@ -165,6 +174,10 @@ function Sidebar({
       <button className={page === 'insights' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('insights')}>
         <ChartIcon />
         <span>Insights</span>
+      </button>
+      <button className={page === 'models' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('models')}>
+        <BrainIcon />
+        <span>Models</span>
       </button>
       <button className="hub-nav" onClick={onOpenSettings}>
         <SettingsIcon />
@@ -742,6 +755,104 @@ function WpmGauge({ avg, top }: { avg: number; top: number }) {
   )
 }
 
+function ModelsPage() {
+  const [models, setModels] = useState<ModelInfo[]>([])
+  const [downloading, setDownloading] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
+  const [error, setError] = useState('')
+
+  const refresh = () => {
+    window.soravo.listModels().then(setModels).catch(() => setModels([]))
+  }
+
+  useEffect(() => {
+    refresh()
+    const offProgress = window.soravo.onModelDownloadProgress((p) => {
+      if (p.id === downloading) setProgress(p.percent)
+    })
+    const offComplete = window.soravo.onModelDownloadComplete((p) => {
+      setDownloading(null)
+      setProgress(0)
+      refresh()
+      // Auto-activate if no active model
+      window.soravo.getSettings().then((s) => {
+        if (!s.model) void window.soravo.setActiveModel(p.id).then(refresh)
+      }).catch(() => {})
+    })
+    return () => { offProgress(); offComplete() }
+  }, [downloading])
+
+  const handleDownload = (id: string) => {
+    setDownloading(id)
+    setProgress(0)
+    setError('')
+    window.soravo.downloadModel(id).catch((e) => {
+      setError(String(e))
+      setDownloading(null)
+      setProgress(0)
+    })
+  }
+
+  const handleDelete = (id: string) => {
+    if (!confirm(`Delete model ${id}?`)) return
+    window.soravo.deleteModel(id).then(refresh).catch((e) => setError(String(e)))
+  }
+
+  const handleActivate = (id: string) => {
+    window.soravo.setActiveModel(id).then(refresh).catch((e) => setError(String(e)))
+  }
+
+  const formatBytes = (b: number) => {
+    if (b >= 1_000_000_000) return `${(b / 1_000_000_000).toFixed(1)} GB`
+    return `${(b / 1_000_000).toFixed(0)} MB`
+  }
+
+  return (
+    <div className="hub-page">
+      <h1 className="hub-greeting">Models</h1>
+      <p className="hub-sub">Download and manage transcription models. All models are MIT-licensed Whisper models.</p>
+      {error && <p className="hub-note" style={{ color: 'var(--soravo-negative)' }}>{error}</p>}
+      <div className="hub-card">
+        {models.map((m) => (
+          <div key={m.id} className="row" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--soravo-canvas-soft)' }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>{m.name}</div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>
+                {m.sizeLabel} · {m.license} license
+                {m.active && <span style={{ marginLeft: 8, color: 'var(--soravo-positive)', fontWeight: 600 }}>● Active</span>}
+                {m.installed && !m.active && <span style={{ marginLeft: 8, opacity: 0.5 }}>Installed</span>}
+              </div>
+              {downloading === m.id && (
+                <div style={{ marginTop: 8, width: 200 }}>
+                  <div style={{ height: 6, background: 'var(--soravo-canvas-soft)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${progress}%`, background: 'var(--soravo-primary)', transition: 'width 0.2s' }} />
+                  </div>
+                  <div style={{ fontSize: 11, marginTop: 2 }}>{progress}%</div>
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {!m.installed && downloading !== m.id && (
+                <button className="btn" onClick={() => handleDownload(m.id)}>Download</button>
+              )}
+              {downloading === m.id && (
+                <button className="btn" onClick={() => { setDownloading(null); setProgress(0) }}>Cancel</button>
+              )}
+              {m.installed && !m.active && (
+                <>
+                  <button className="btn" onClick={() => handleActivate(m.id)}>Set Active</button>
+                  <button className="btn" onClick={() => handleDelete(m.id)}>Delete</button>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="hub-note">Models are downloaded to %APPDATA%/soravo/models/. Larger models are more accurate but slower.</p>
+    </div>
+  )
+}
+
 function InsightsPage({ insights }: { insights: InsightsData | null }) {
   const [weekOffset, setWeekOffset] = useState(0)
   const [rhythm, setRhythm] = useState<'hour' | 'weekday'>('hour')
@@ -1054,6 +1165,7 @@ export default function HubApp() {
             />
           )}
           {page === 'insights' && <InsightsPage insights={insights} />}
+           {page === 'models' && <ModelsPage />}
         </main>
       </div>
       {settingsOpen && settings && (

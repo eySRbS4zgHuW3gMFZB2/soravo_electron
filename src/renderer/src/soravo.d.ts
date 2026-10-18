@@ -39,6 +39,17 @@ export interface InsightsData {
   topPhrases: Array<{ phrase: string; count: number }>
 }
 
+export interface ModelInfo {
+  id: string
+  name: string
+  sizeBytes: number
+  sizeLabel: string
+  license: string
+  installed: boolean
+  active: boolean
+  url: string
+}
+
 export interface SoravoAPI {
   toggle(): Promise<void>
   quit(): Promise<void>
@@ -56,6 +67,12 @@ export interface SoravoAPI {
   getInsights(): Promise<InsightsData>
   getSettings(): Promise<SoravoSettings>
   setSettings(patch: Partial<SoravoSettings>): Promise<SoravoSettings>
+  listModels(): Promise<ModelInfo[]>
+  downloadModel(id: string): Promise<void>
+  deleteModel(id: string): Promise<void>
+  setActiveModel(id: string): Promise<void>
+  onModelDownloadProgress(cb: (p: { id: string; received: number; total: number; percent: number }) => void): () => void
+  onModelDownloadComplete(cb: (p: { id: string }) => void): () => void
 }
 
 declare global {
