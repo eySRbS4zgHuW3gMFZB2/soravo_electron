@@ -64,7 +64,50 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - [x] Push-to-talk (toggle binding)
 - [x] Paste last transcript hotkey
 - [x] Copy last transcript hotkey
+
+### Global Input Hook (native)
+- [x] Low-level system-wide keyboard/mouse hook (rdev) replacing the global-shortcut plugin
+- [x] Push-to-talk: hold the shortcut to record, release to transcribe
+- [x] Bare-key hotkeys with no modifier (CapsLock, F-keys, letters, digits, punctuation)
+- [x] Mouse button hotkeys: left/right/middle/back(X1)/forward(X2), alone or with modifiers
+- [x] Mouse shortcut bindings: `Ctrl+Mouse1`, `Alt+Mouse4`, and so on
+- [x] Bare bindings require an exact modifier set, so `Ctrl+CapsLock` does not fire `CapsLock`
+- [x] Live reconfiguration — new shortcuts apply without a restart
+- [x] Works for all three actions: dictate, paste last, copy last
+- [x] Hook only observes input and never consumes it, so typing elsewhere is unaffected
 - [x] Insights: total words, dictations, avg wpm, day/longest streak, corrections, heatmap, top words, repeated phrases
+
+### Phase 8: Global Input Hooks
+- Created worktree `global-hotkeys` from the CrispASR checkpoint
+- Replaced `tauri-plugin-global-shortcut` with a low-level system hook (`rdev`)
+  - one code path for every binding type instead of two
+  - the plugin cannot see bare keys, mouse buttons, or key release
+- New `src-tauri/src/hotkeys.rs`: binding parser, matcher, hook thread, 10 unit tests
+  - accepts `CommandOrControl+Alt+Space`, bare `CapsLock`, `F5`, `A`, `7`, `Mouse4`, `Ctrl+Mouse1`
+  - bare bindings demand an exact modifier set so a stray Ctrl cannot fire them
+- Settings: added `holdToTalk` toggle in Settings → General → Shortcuts
+- Rewrote `HotkeyCapture.tsx` — captures mouse buttons, allows bare keys, commits on trigger release
+- Refactored dictation into `start_recording` / `stop_recording` / `toggle_recording`
+- Implemented `paste_last` / `copy_last` and a real `inject_text` (were stubs)
+- Rewrote the runtime fetcher as `scripts/fetch-asr.mjs` (CrispASR + pickable model, streamed)
+
+### Bugs found and fixed while building this
+- **App crashed on push-to-talk release** — the hook thread called `tokio::spawn` with no
+  Tokio runtime present (`STATUS_STACK_BUFFER_OVERRUN`). Replaced abortable task handles with
+  generation counters so timers work from any thread.
+- **Modifier tracking was dead** — `Modifiers` was re-created inside the per-event callback, so
+  held Ctrl/Alt/Shift were invisible and no combination shortcut could ever match.
+- **Mouse release was ignored** — only `ButtonPress` was wired up, so releasing a mouse button
+  never ended the recording.
+- **Releasing Ctrl before the trigger key hung the recording** — push-to-talk now remembers which
+  trigger started it and stops on that trigger's release regardless of modifier drift.
+- **CapsLock never worked** — rdev omits `VK_CAPITAL` from its key table, so presses arrive as
+  `Key::Unknown(0x14)` and could never equal a parsed `CapsLock`. Canonicalised both sides.
+- **Toggle mode silently broke** — both modes called `start_recording`, which no-ops when already
+  recording, so the second tap did nothing. Gave toggle its own handler.
+- **Toggle debounce was 800ms** — long enough to swallow a deliberate second tap; now 300ms.
+- **Missing runtime gave a cryptic error** — a missing binary/model fell back to a bogus path and
+  reported "path not found". Now names the fix: run `npm run fetch:asr`.
 
 ### Skipped (by design or platform limits)
 - [ ] Account/cloud/subscription (local-only by choice)
@@ -156,10 +199,11 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - Pushed to GitHub as `crispasr-migration` branch
 
 ## Known Issues
-1. **Push-to-talk (hold)**: Tauri global shortcut only fires key-down, so true hold-to-talk isn't possible. Current binding is toggle (press to start, press to stop).
-2. **CapsLock hotkey**: Tauri can't bind bare CapsLock. Needs native hook.
-3. **Mouse button hotkeys**: Need native hook, not implemented.
-4. **Text injection**: Clipboard + SendKeys implementation exists but needs end-to-end testing.
+1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
+   push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.
+2. **Injection uses SendKeys**: text is pasted via clipboard + a PowerShell `SendKeys` call, so it
+   lands in whichever window had focus at that moment. Games and elevated apps may ignore it.
+3. **Windows only**: the input hook and the text injection path are Windows-specific.
 
 ## Environment
 - **OS**: Windows 10 Enterprise LTSC 2021 (64-bit)

@@ -389,6 +389,7 @@ function SettingsModal({
   const [hotkey, setHotkey] = useState(settings.hotkey)
   const [pasteHotkey, setPasteHotkey] = useState(settings.pasteHotkey)
   const [copyHotkey, setCopyHotkey] = useState(settings.copyHotkey)
+  const [holdToTalk, setHoldToTalk] = useState(settings.holdToTalk)
   const [model, setModel] = useState(settings.model)
   const [language, setLanguage] = useState(settings.language)
   const [microphoneId, setMicrophoneId] = useState(settings.microphoneId)
@@ -441,6 +442,7 @@ function SettingsModal({
       hotkey: hotkey.trim() || 'CommandOrControl+Alt+Space',
       pasteHotkey: pasteHotkey.trim(),
       copyHotkey: copyHotkey.trim(),
+      holdToTalk,
       model: model.trim() || 'base.en',
       language: language.trim() || 'en',
       microphoneId,
@@ -533,7 +535,19 @@ function SettingsModal({
                     <label>Dictate</label>
                     <HotkeyCapture value={hotkey} onCommit={setHotkey} />
                   </div>
-                  <p className="hub-note">Press to start, press again to stop and transcribe.</p>
+                  <div className="row">
+                    <label>Push to talk</label>
+                    <input
+                      type="checkbox"
+                      checked={holdToTalk}
+                      onChange={(e) => setHoldToTalk(e.target.checked)}
+                    />
+                  </div>
+                  <p className="hub-note">
+                    {holdToTalk
+                      ? 'Hold the dictate shortcut to record. Release to transcribe.'
+                      : 'Press to start, press again to stop and transcribe.'}
+                  </p>
                   <div className="row">
                     <label>Paste last</label>
                     <HotkeyCapture value={pasteHotkey} allowEmpty onCommit={setPasteHotkey} />
@@ -542,6 +556,10 @@ function SettingsModal({
                     <label>Copy last</label>
                     <HotkeyCapture value={copyHotkey} allowEmpty onCommit={setCopyHotkey} />
                   </div>
+                  <p className="hub-note">
+                    Shortcuts accept any key on its own (CapsLock, F-keys, letters) or any mouse
+                    button, with or without Ctrl, Alt, Shift or Win.
+                  </p>
                 </SubModal>
               )}
               {sub === 'microphone' && (

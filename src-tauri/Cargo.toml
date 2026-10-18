@@ -33,3 +33,4 @@ regex = "1"
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "5"
 uuid = { version = "1", features = ["v4"] }
+rdev = "0.5"

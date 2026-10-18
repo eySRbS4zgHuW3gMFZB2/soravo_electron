@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
 use chrono::Datelike;
 use chrono::Timelike;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Emitter, Manager, State};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+
+mod hotkeys;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -67,6 +69,9 @@ pub struct SoravoSettings {
     pub hotkey: String,
     pub paste_hotkey: String,
     pub copy_hotkey: String,
+    /// Hold the dictation hotkey to record; release to transcribe.
+    /// When false the binding behaves as a press-to-toggle shortcut.
+    pub hold_to_talk: bool,
     pub model: String,
     pub language: String,
     pub microphone_id: String,
@@ -84,6 +89,7 @@ impl Default for SoravoSettings {
             hotkey: "CommandOrControl+Alt+Space".to_string(),
             paste_hotkey: "CommandOrControl+Alt+V".to_string(),
             copy_hotkey: "CommandOrControl+Alt+C".to_string(),
+            hold_to_talk: false,
             model: "base.en".to_string(),
             language: "en".to_string(),
             microphone_id: "".to_string(),
@@ -101,8 +107,15 @@ pub struct AppState {
     pub state: Mutex<RecState>,
     pub db: Mutex<Option<rusqlite::Connection>>,
     pub last_toggle_at: Mutex<i64>,
-    pub hide_timer: Mutex<Option<tokio::task::JoinHandle<()>>>,
-    pub audio_timer: Mutex<Option<tokio::task::JoinHandle<()>>>,
+    /// Generation counters for the pending pill-hide and audio timeouts. Timers
+    /// are plain threads (the input hook thread has no async runtime), so a
+    /// timer detects that it was superseded by comparing tickets instead of
+    /// being aborted.
+    pub hide_gen: Arc<AtomicU64>,
+    pub audio_gen: Arc<AtomicU64>,
+    /// Live bindings for the global input hook. Replaced when settings change so
+    /// the running hook picks up new shortcuts without a restart.
+    pub hook_config: Arc<RwLock<hotkeys::HookConfig>>,
 }
 
 impl Default for AppState {
@@ -111,9 +124,56 @@ impl Default for AppState {
             state: Mutex::new(RecState::Idle),
             db: Mutex::new(None),
             last_toggle_at: Mutex::new(0),
-            hide_timer: Mutex::new(None),
-            audio_timer: Mutex::new(None),
+            hide_gen: Arc::new(AtomicU64::new(0)),
+            audio_gen: Arc::new(AtomicU64::new(0)),
+            hook_config: Arc::new(RwLock::new(hotkeys::HookConfig::default())),
         }
+    }
+}
+
+/// Hide the pill after `delay_ms`, unless a newer hide or a new recording
+/// supersedes it.
+fn schedule_pill_hide(app: &tauri::AppHandle, state: &AppState, delay_ms: u64) {
+    spawn_timer(
+        app,
+        &state.hide_gen,
+        std::time::Duration::from_millis(delay_ms),
+        |app| {
+            if let Some(win) = app.get_webview_window("pill") {
+                win.hide().ok();
+            }
+        },
+    );
+}
+
+/// Run `action` after `delay` unless a newer timer of the same kind started.
+///
+/// Callable from any thread, including the input hook thread which has no
+/// Tokio runtime context.
+fn spawn_timer(
+    app: &tauri::AppHandle,
+    gen: &Arc<AtomicU64>,
+    delay: std::time::Duration,
+    action: impl Fn(&tauri::AppHandle) + Send + 'static,
+) {
+    let ticket = gen.fetch_add(1, Ordering::SeqCst) + 1;
+    let gen = Arc::clone(gen);
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(delay);
+        if gen.load(Ordering::SeqCst) == ticket {
+            action(&app);
+        }
+    });
+}
+
+/// Translate settings into the hook's runtime configuration.
+fn hook_config_from_settings(settings: &SoravoSettings) -> hotkeys::HookConfig {
+    hotkeys::HookConfig {
+        dictation: hotkeys::parse_binding(&settings.hotkey),
+        paste_last: hotkeys::parse_binding(&settings.paste_hotkey),
+        copy_last: hotkeys::parse_binding(&settings.copy_hotkey),
+        hold_to_talk: settings.hold_to_talk,
     }
 }
 
@@ -165,18 +225,6 @@ fn open_db(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
     Ok(conn)
 }
 
-fn get_db(app: &tauri::AppHandle, state: &State<AppState>) -> Result<rusqlite::Connection, String> {
-    let mut db_lock = state.db.lock().map_err(|e| e.to_string())?;
-    if db_lock.is_none() {
-        let conn = open_db(app)?;
-        *db_lock = Some(conn);
-    }
-    // We need to return a connection. Since rusqlite::Connection isn't Clone,
-    // we'll use a different approach: store the path and reopen each time.
-    // Actually, let's just reopen each time for simplicity.
-    drop(db_lock);
-    open_db(app)
-}
 
 // Settings helpers using tauri-plugin-store
 fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
@@ -187,6 +235,7 @@ fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
         if let Some(v) = s.get("hotkey") { if let Some(s) = v.as_str() { settings.hotkey = s.to_string(); } }
         if let Some(v) = s.get("pasteHotkey") { if let Some(s) = v.as_str() { settings.paste_hotkey = s.to_string(); } }
         if let Some(v) = s.get("copyHotkey") { if let Some(s) = v.as_str() { settings.copy_hotkey = s.to_string(); } }
+        if let Some(v) = s.get("holdToTalk") { if let Some(b) = v.as_bool() { settings.hold_to_talk = b; } }
         if let Some(v) = s.get("model") { if let Some(s) = v.as_str() { settings.model = s.to_string(); } }
         if let Some(v) = s.get("language") { if let Some(s) = v.as_str() { settings.language = s.to_string(); } }
         if let Some(v) = s.get("microphoneId") { if let Some(s) = v.as_str() { settings.microphone_id = s.to_string(); } }
@@ -208,6 +257,7 @@ fn save_settings(app: &tauri::AppHandle, settings: &SoravoSettings) -> Result<()
     store.set("hotkey", serde_json::json!(settings.hotkey));
     store.set("pasteHotkey", serde_json::json!(settings.paste_hotkey));
     store.set("copyHotkey", serde_json::json!(settings.copy_hotkey));
+    store.set("holdToTalk", serde_json::json!(settings.hold_to_talk));
     store.set("model", serde_json::json!(settings.model));
     store.set("language", serde_json::json!(settings.language));
     store.set("microphoneId", serde_json::json!(settings.microphone_id));
@@ -222,7 +272,7 @@ fn save_settings(app: &tauri::AppHandle, settings: &SoravoSettings) -> Result<()
 }
 
 // Cleanup functions
-fn cleanup_text(text: &str, language: &str) -> (String, i64) {
+fn cleanup_text(text: &str, _language: &str) -> (String, i64) {
     let mut result = text.to_string();
     let mut fillers_removed: i64 = 0;
 
@@ -282,47 +332,59 @@ fn transcribe_wav(
         "crispasr"
     };
 
-    // In dev mode, current_dir is src-tauri/, so project root is parent
+    // In dev mode current_dir is src-tauri/, so the project root is its parent.
+    // In a bundle the files sit next to the executable instead.
     let current_dir = std::env::current_dir().unwrap_or_default();
     let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
-
     let model_file = format!("ggml-{}.bin", model);
 
-    let whisper_candidates = [
-        current_dir.join("third-party/bin").join(crispasr_binary),
-        project_root.join("third-party/bin").join(crispasr_binary),
-        std::path::Path::new("third-party/bin").join(crispasr_binary),
+    let roots = [
+        current_dir.clone(),
+        project_root,
+        resource_dir.to_path_buf(),
     ];
 
-    let model_candidates = [
-        current_dir.join("third-party/models").join(&model_file),
-        project_root.join("third-party/models").join(&model_file),
-        std::path::Path::new("third-party/models").join(&model_file),
-    ];
+    let find = |rel: &str| -> Option<std::path::PathBuf> {
+        roots.iter().map(|r| r.join(rel)).find(|p| p.exists())
+    };
 
-    let mut whisper_path = whisper_candidates[0].clone();
-    for p in &whisper_candidates {
-        if p.exists() {
-            whisper_path = p.clone();
-            break;
+    // Fail with something actionable instead of letting the spawn produce a
+    // bare "path not found".
+    let whisper_path = find(&format!("third-party/bin/{crispasr_binary}")).ok_or_else(|| {
+        format!(
+            "CrispASR is not installed. Run `npm run fetch:asr` to download it."
+        )
+    })?;
+    let model_path = find(&format!("third-party/models/{model_file}")).ok_or_else(|| {
+        let installed: Vec<String> = std::fs::read_dir(
+            roots
+                .iter()
+                .map(|r| r.join("third-party/models"))
+                .find(|p| p.is_dir())
+                .unwrap_or_else(|| current_dir.join("third-party/models")),
+        )
+        .map(|rd| {
+            rd.filter_map(|e| e.ok())
+                .map(|e| e.file_name().to_string_lossy().to_string())
+                .filter(|n| n.ends_with(".bin"))
+                .collect()
+        })
+        .unwrap_or_default();
+        if installed.is_empty() {
+            format!("No models installed. Run `npm run fetch:asr -- {model}` to download one.")
+        } else {
+            format!(
+                "Model \"{model}\" is not installed. Available: {}.",
+                installed.join(", ")
+            )
         }
-    }
+    })?;
 
-    let mut model_path_str = model_candidates[0].to_string_lossy().to_string();
-    for p in &model_candidates {
-        if p.exists() {
-            model_path_str = p.to_string_lossy().to_string();
-            break;
-        }
-    }
+    let model_path_str = model_path.to_string_lossy().to_string();
 
-    eprintln!("[soravo] current_dir: {}", current_dir.display());
-    eprintln!("[soravo] project_root: {}", project_root.display());
-    eprintln!("[soravo] crispasr path: {}", whisper_path.display());
-    eprintln!("[soravo] model path: {}", model_path_str);
-    eprintln!("[soravo] wav path: {}", wav_path);
-    eprintln!("[soravo] crispasr exists: {}", whisper_path.exists());
-    eprintln!("[soravo] model exists: {}", std::path::Path::new(&model_path_str).exists());
+    eprintln!("[soravo] crispasr: {}", whisper_path.display());
+    eprintln!("[soravo] model: {}", model_path_str);
+    eprintln!("[soravo] wav: {}", wav_path);
 
     let output = std::process::Command::new(&whisper_path)
         .arg("-m")
@@ -349,10 +411,80 @@ fn transcribe_wav(
 
 // Text injection via clipboard + SendKeys (Windows)
 #[cfg(target_os = "windows")]
-fn inject_text(text: &str) -> Result<(), String> {
+fn inject_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
     use tauri_plugin_clipboard_manager::ClipboardExt;
-    // This is handled in the command function instead
+    let previous = app.clipboard().read_text().unwrap_or_default();
+    app.clipboard().write_text(text.to_string()).map_err(|e| e.to_string())?;
+
+    // Give the focused window a moment to see the new clipboard content, then
+    // synthesize Ctrl+V into whatever window currently has focus.
+    std::thread::sleep(std::time::Duration::from_millis(60));
+    let status = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')",
+        ])
+        .status()
+        .map_err(|e| format!("failed to run sendkeys: {e}"))?;
+    if !status.success() {
+        return Err("sendkeys paste failed".to_string());
+    }
+
+    // Restore whatever the user had copied before, once the paste has landed.
+    let app_clone = app.clone();
+    let restore = previous.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
+        app_clone.clipboard().write_text(restore).ok();
+    });
     Ok(())
+}
+
+/// Copy text to the clipboard without injecting it.
+#[cfg(target_os = "windows")]
+fn copy_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+    app.clipboard().write_text(text.to_string()).map_err(|e| e.to_string())
+}
+
+/// Re-inject the most recent transcript into the focused window.
+fn paste_last(app: &tauri::AppHandle) -> Result<(), String> {
+    let conn = open_db(app)?;
+    let text: Option<String> = conn
+        .query_row(
+            "SELECT text FROM transcriptions ORDER BY id DESC LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .ok();
+    match text {
+        Some(t) if !t.is_empty() => inject_text(app, &t),
+        _ => {
+            app.emit("soravo:error", "No dictations yet to paste").ok();
+            Ok(())
+        }
+    }
+}
+
+/// Copy the most recent transcript to the clipboard.
+fn copy_last(app: &tauri::AppHandle) -> Result<(), String> {
+    let conn = open_db(app)?;
+    let text: Option<String> = conn
+        .query_row(
+            "SELECT text FROM transcriptions ORDER BY id DESC LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .ok();
+    match text {
+        Some(t) if !t.is_empty() => copy_text(app, &t),
+        _ => {
+            app.emit("soravo:error", "No dictations yet to copy").ok();
+            Ok(())
+        }
+    }
 }
 
 // Tauri commands
@@ -366,44 +498,70 @@ async fn toggle(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let now = chrono::Utc::now().timestamp_millis();
-    let mut last_toggle = state.last_toggle_at.lock().map_err(|e| e.to_string())?;
-    if now - *last_toggle < 800 {
-        return Ok(());
-    }
-    *last_toggle = now;
-    drop(last_toggle);
+    toggle_recording(&app, &state)
+}
 
-    let current_state = *state.state.lock().map_err(|e| e.to_string())?;
-    match current_state {
+/// Toggle mode: start when idle, stop when recording.
+///
+/// Push-to-talk deliberately does not use this — it drives `start_recording`
+/// and `stop_recording` from the press and release edges instead.
+fn toggle_recording(app: &tauri::AppHandle, state: &AppState) -> Result<(), String> {
+    // Filter auto-repeat and double-fire. Kept short so a deliberate second
+    // tap still stops the recording; the OS repeat delay is ~500ms.
+    const DEBOUNCE_MS: i64 = 300;
+    let now = chrono::Utc::now().timestamp_millis();
+    {
+        let mut last = state.last_toggle_at.lock().map_err(|e| e.to_string())?;
+        if now - *last < DEBOUNCE_MS {
+            return Ok(());
+        }
+        *last = now;
+    }
+
+    let current = *state.state.lock().map_err(|e| e.to_string())?;
+    match current {
+        RecState::Idle | RecState::Error => start_recording(app, state),
+        RecState::Recording => stop_recording(app, state),
+        // Transcribing: ignore extra presses.
+        RecState::Transcribing => Ok(()),
+    }
+}
+
+/// Begin a dictation. No-op unless we are idle (or recovering from an error).
+fn start_recording(app: &tauri::AppHandle, state: &AppState) -> Result<(), String> {
+    let current = *state.state.lock().map_err(|e| e.to_string())?;
+    match current {
         RecState::Idle | RecState::Error => {
-            // Start recording
+            // Supersede any pill-hide that was still pending.
+            state.hide_gen.fetch_add(1, Ordering::SeqCst);
             *state.state.lock().unwrap() = RecState::Recording;
             app.emit("soravo:state", RecState::Recording).ok();
-            // Show pill window
             if let Some(win) = app.get_webview_window("pill") {
                 win.show().ok();
             }
             app.emit("soravo:record-command", "start").ok();
+            Ok(())
         }
+        _ => Ok(()),
+    }
+}
+
+/// End a dictation and kick off transcription.
+fn stop_recording(app: &tauri::AppHandle, state: &AppState) -> Result<(), String> {
+    let current = *state.state.lock().map_err(|e| e.to_string())?;
+    match current {
         RecState::Recording => {
             *state.state.lock().unwrap() = RecState::Transcribing;
             app.emit("soravo:state", RecState::Transcribing).ok();
             app.emit("soravo:record-command", "stop").ok();
-            // Set audio timeout
-            let app_clone = app.clone();
-            let handle = tokio::spawn(async move {
-                tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
-                app_clone.emit("soravo:error", "No audio arrived from the recorder").ok();
-                // Set state to error then idle
+            // Bail out if the recorder never hands us any audio.
+            spawn_timer(app, &state.audio_gen, std::time::Duration::from_secs(15), |app| {
+                app.emit("soravo:error", "No audio arrived from the recorder").ok();
             });
-            *state.audio_timer.lock().unwrap() = Some(handle);
+            Ok(())
         }
-        RecState::Transcribing => {
-            // Ignore
-        }
+        _ => Ok(()),
     }
-    Ok(())
 }
 
 #[tauri::command]
@@ -411,22 +569,12 @@ async fn cancel(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    // Clear audio timer
-    if let Some(handle) = state.audio_timer.lock().unwrap().take() {
-        handle.abort();
-    }
+    // Cancel the pending audio timeout.
+    state.audio_gen.fetch_add(1, Ordering::SeqCst);
     app.emit("soravo:record-command", "cancel").ok();
     *state.state.lock().unwrap() = RecState::Idle;
     app.emit("soravo:state", RecState::Idle).ok();
-    // Schedule hide
-    let app_clone = app.clone();
-    let handle = tokio::spawn(async move {
-        tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
-        if let Some(win) = app_clone.get_webview_window("pill") {
-            win.hide().ok();
-        }
-    });
-    *state.hide_timer.lock().unwrap() = Some(handle);
+    schedule_pill_hide(&app, &state, 2500);
     Ok(())
 }
 
@@ -437,10 +585,8 @@ async fn submit_audio(
     wav: Vec<u8>,
     duration_ms: i64,
 ) -> Result<(), String> {
-    // Clear audio timer
-    if let Some(handle) = state.audio_timer.lock().unwrap().take() {
-        handle.abort();
-    }
+    // Audio arrived in time; cancel the timeout.
+    state.audio_gen.fetch_add(1, Ordering::SeqCst);
 
     if wav.is_empty() {
         app.emit("soravo:error", "Recording produced no audio").ok();
@@ -520,36 +666,14 @@ async fn submit_audio(
             // Inject text
             #[cfg(target_os = "windows")]
             {
-                // Use clipboard + SendKeys
-                use tauri_plugin_clipboard_manager::ClipboardExt;
-                let old_clipboard = app.clipboard().read_text().unwrap_or_default();
-                app.clipboard().write_text(text.clone()).ok();
-                // Send Ctrl+V via PowerShell
-                let _ = std::process::Command::new("powershell")
-                    .args([
-                        "-Command",
-                        "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^v')",
-                    ])
-                    .output();
-                // Restore clipboard after delay
-                let text_clone = text.clone();
-                let app_clone = app.clone();
-                tokio::spawn(async move {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-                    app_clone.clipboard().write_text(old_clipboard).ok();
-                });
+                if let Err(err) = inject_text(&app, &text) {
+                    app.emit("soravo:error", format!("Paste failed: {err}")).ok();
+                }
             }
 
             app.emit("soravo:transcript", &text).ok();
 
-            // Schedule hide
-            let app_clone = app.clone();
-            tokio::spawn(async move {
-                tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
-                if let Some(win) = app_clone.get_webview_window("pill") {
-                    win.hide().ok();
-                }
-            });
+            schedule_pill_hide(&app, &state, 2500);
 
             *state.state.lock().unwrap() = RecState::Idle;
             app.emit("soravo:state", RecState::Idle).ok();
@@ -558,15 +682,18 @@ async fn submit_audio(
             app.emit("soravo:error", &e).ok();
             *state.state.lock().unwrap() = RecState::Error;
             app.emit("soravo:state", RecState::Error).ok();
-            // Schedule hide + idle
-            let app_clone = app.clone();
-            tokio::spawn(async move {
-                tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
-                if let Some(win) = app_clone.get_webview_window("pill") {
-                    win.hide().ok();
-                }
-                app_clone.emit("soravo:state", RecState::Idle).ok();
-            });
+            // Show the error briefly, then hide the pill and go back to idle.
+            spawn_timer(
+                &app,
+                &state.hide_gen,
+                std::time::Duration::from_secs(4),
+                |app| {
+                    if let Some(win) = app.get_webview_window("pill") {
+                        win.hide().ok();
+                    }
+                    app.emit("soravo:state", RecState::Idle).ok();
+                },
+            );
         }
     }
 
@@ -848,6 +975,9 @@ async fn set_settings(
     if let Some(v) = patch.get("copyHotkey").and_then(|v| v.as_str()) {
         settings.copy_hotkey = v.to_string();
     }
+    if let Some(v) = patch.get("holdToTalk").and_then(|v| v.as_bool()) {
+        settings.hold_to_talk = v;
+    }
     if let Some(v) = patch.get("model").and_then(|v| v.as_str()) {
         settings.model = v.to_string();
     }
@@ -905,8 +1035,12 @@ async fn set_settings(
     save_settings(&app, &settings)?;
     app.emit("soravo:data-changed", ()).ok();
 
-    // Re-register hotkeys would go here, but Tauri global shortcut
-    // re-registration requires more setup. For now, just save.
+    // Push the new bindings into the running hook so changes take effect
+    // immediately without restarting the app.
+    {
+        let mut cfg = state.hook_config.write().map_err(|e| e.to_string())?;
+        *cfg = hook_config_from_settings(&settings);
+    }
 
     Ok(settings)
 }
@@ -965,7 +1099,6 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -978,20 +1111,66 @@ pub fn run() {
                 *state.db.lock().unwrap() = Some(conn);
             }
 
-            // Register global shortcuts
+            // Start the system-wide input hook. Unlike the global-shortcut
+            // plugin it can observe bare keys (CapsLock), mouse buttons, and
+            // key release events, which is what hold-to-talk needs.
             let settings = load_settings(app.handle());
-            let app_handle = app.handle().clone();
+            {
+                let mut cfg = state.hook_config.write().unwrap();
+                *cfg = hook_config_from_settings(&settings);
+            }
 
-            // Dictate hotkey
-            let app_clone = app_handle.clone();
-            app
-                .global_shortcut()
-                .on_shortcut(settings.hotkey.as_str(), move |_app, _shortcut, event| {
-                    if event.state == ShortcutState::Pressed {
-                        let _ = app_clone.emit("soravo:toggle-hotkey", ());
-                    }
-                })
-                .ok();
+            let app_handle = app.handle().clone();
+            let handles = hotkeys::HookHandles {
+                dictate_start: {
+                    let app = app_handle.clone();
+                    Arc::new(move || {
+                        let state = app.state::<AppState>();
+                        if let Err(err) = start_recording(&app, &state) {
+                            log::error!("[soravo] start_recording: {err}");
+                        }
+                    })
+                },
+                dictate_stop: {
+                    let app = app_handle.clone();
+                    Arc::new(move || {
+                        let state = app.state::<AppState>();
+                        if let Err(err) = stop_recording(&app, &state) {
+                            log::error!("[soravo] stop_recording: {err}");
+                        }
+                    })
+                },
+                dictate_toggle: {
+                    let app = app_handle.clone();
+                    Arc::new(move || {
+                        let state = app.state::<AppState>();
+                        if let Err(err) = toggle_recording(&app, &state) {
+                            log::error!("[soravo] toggle_recording: {err}");
+                        }
+                    })
+                },
+                paste_last: {
+                    let app = app_handle.clone();
+                    Arc::new(move || {
+                        if let Err(err) = paste_last(&app) {
+                            log::error!("[soravo] paste_last: {err}");
+                        }
+                    })
+                },
+                copy_last: {
+                    let app = app_handle.clone();
+                    Arc::new(move || {
+                        if let Err(err) = copy_last(&app) {
+                            log::error!("[soravo] copy_last: {err}");
+                        }
+                    })
+                },
+            };
+
+            if let Err(err) = hotkeys::spawn_hook(state.hook_config.clone(), handles) {
+                log::error!("[soravo] {err}");
+                app.emit("soravo:error", format!("Global hotkeys unavailable: {err}")).ok();
+            }
 
             // Pill stays hidden on startup - only shows during dictation
 
@@ -1021,7 +1200,9 @@ pub fn run() {
             win_max,
             win_close,
             show_hub,
-            quit
+            quit,
+            hotkeys::validate_binding,
+            hotkeys::binding_help
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

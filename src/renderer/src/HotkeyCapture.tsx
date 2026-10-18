@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 
 /**
- * Wispr-style hotkey capture: click the field, press the key combination,
- * release to commit. Escape cancels. Commits Electron accelerator strings
- * (e.g. CommandOrControl+Alt+Space). Single keys are rejected unless they
- * are function or media keys, which is all Electron globalShortcut supports.
+ * Hotkey capture: click the field, press the combination (or just the key /
+ * mouse button), release to commit. Escape cancels.
+ *
+ * The app binds input through a low-level system hook rather than the platform
+ * shortcut API, so every key is bindable on its own — including CapsLock —
+ * and any mouse button can be used, alone or with modifiers. That means we do
+ * not reject single-key bindings the way the old capture had to.
+ *
+ * Commits accelerator strings understood by the Rust parser, e.g.
+ * `CommandOrControl+Alt+Space`, `CapsLock`, `K`, `F5`, `Ctrl+Mouse4`.
  */
 
 interface PressedKey {
@@ -14,6 +20,34 @@ interface PressedKey {
 
 const MODIFIER_ORDER = ['CommandOrControl', 'Alt', 'Shift', 'Super']
 
+const MODIFIER_CODES = new Set([
+  'ControlLeft',
+  'ControlRight',
+  'AltLeft',
+  'AltRight',
+  'ShiftLeft',
+  'ShiftRight',
+  'MetaLeft',
+  'MetaRight'
+])
+
+/** DOM `MouseEvent.button` values that we allow as bindings. */
+const MOUSE_BUTTONS: Record<number, string> = {
+  0: 'Mouse1',
+  1: 'Mouse3',
+  2: 'Mouse2',
+  3: 'Mouse4',
+  4: 'Mouse5'
+}
+
+const MOUSE_LABELS: Record<string, string> = {
+  Mouse1: 'Mouse left',
+  Mouse2: 'Mouse right',
+  Mouse3: 'Mouse middle',
+  Mouse4: 'Mouse back',
+  Mouse5: 'Mouse forward'
+}
+
 export function codeToName(code: string, key: string): string | null {
   if (code === 'ControlLeft' || code === 'ControlRight') return 'CommandOrControl'
   if (code === 'AltLeft' || code === 'AltRight') return 'Alt'
@@ -21,7 +55,7 @@ export function codeToName(code: string, key: string): string | null {
   if (code === 'MetaLeft' || code === 'MetaRight') return 'Super'
   if (/^Key[A-Z]$/.test(code)) return code.slice(3)
   if (/^Digit[0-9]$/.test(code)) return code.slice(5)
-  if (/^F([1-9]|1[0-9]|2[0-4])$/.test(code)) return code
+  if (/^F([1-9]|1[0-2])$/.test(code)) return code
   const map: Record<string, string> = {
     Space: 'Space',
     Tab: 'Tab',
@@ -63,22 +97,27 @@ export function codeToName(code: string, key: string): string | null {
     NumpadSubtract: 'numsub',
     NumpadMultiply: 'nummult',
     NumpadDivide: 'numdiv',
-    MediaPlayPause: 'MediaPlayPause',
     CapsLock: 'CapsLock',
     PrintScreen: 'PrintScreen',
+    ScrollLock: 'ScrollLock',
     Pause: 'Pause',
-    ScrollLock: 'ScrollLock',    MediaTrackNext: 'MediaNextTrack',
-    MediaTrackPrevious: 'MediaPreviousTrack',
-    MediaStop: 'MediaStop'
+    NumLock: 'NumLock',
+    Escape: 'Escape'
   }
   if (code in map) return map[code]
   if (key.length === 1) return key.toUpperCase()
   return null
 }
 
-export function toAccelerator(pressed: PressedKey[]): string | null {
+/**
+ * Build the accelerator string for the current set of pressed keys.
+ * Modifiers are ordered canonically and the single non-modifier key (or mouse
+ * button) becomes the main trigger.
+ */
+export function toAccelerator(pressed: PressedKey[], mouseButton?: string): string | null {
   const modifiers: string[] = []
   let main: string | null = null
+
   for (const { code, key } of pressed) {
     const name = codeToName(code, key)
     if (!name) continue
@@ -88,22 +127,30 @@ export function toAccelerator(pressed: PressedKey[]): string | null {
       main = name
     }
   }
+
+  if (main === null && mouseButton) main = mouseButton
   if (!main) return null
+
   modifiers.sort((a, b) => MODIFIER_ORDER.indexOf(a) - MODIFIER_ORDER.indexOf(b))
   return [...modifiers, main].join('+')
 }
 
+/**
+ * Kept for backwards compatibility with callers that used to reject bare keys.
+ * Every trigger is bindable now, so this always succeeds for a non-empty
+ * accelerator produced by {@link toAccelerator}.
+ */
 export function isRegisterable(accelerator: string): boolean {
-  const parts = accelerator.split('+')
-  const main = parts[parts.length - 1]
-  if (/^F([1-9]|1[0-9]|2[0-4])$/.test(main)) return true
-  if (main.startsWith('Media')) return true
-  return parts.length > 1
+  return accelerator.length > 0
 }
 
 export function prettyHotkey(accelerator: string): string {
   if (!accelerator) return 'Not set'
-  return accelerator.replace(/CommandOrControl/g, 'Ctrl').split('+').join(' + ')
+  return accelerator
+    .replace(/CommandOrControl/g, 'Ctrl')
+    .split('+')
+    .map((part) => MOUSE_LABELS[part] ?? part)
+    .join(' + ')
 }
 
 export default function HotkeyCapture({
@@ -120,11 +167,13 @@ export default function HotkeyCapture({
   const [error, setError] = useState('')
   const pressedRef = useRef<PressedKey[]>([])
   const snapshotRef = useRef<PressedKey[]>([])
+  const mouseRef = useRef<string | undefined>(undefined)
   const boxRef = useRef<HTMLDivElement>(null)
 
-  const cancel = () => {
+  const reset = () => {
     pressedRef.current = []
     snapshotRef.current = []
+    mouseRef.current = undefined
     setLive('')
     setError('')
     setListening(false)
@@ -134,47 +183,67 @@ export default function HotkeyCapture({
     if (listening) boxRef.current?.focus()
   }, [listening])
 
+  const commit = () => {
+    const acc = toAccelerator(snapshotRef.current, mouseRef.current)
+    reset()
+    if (!acc) return
+    onCommit(acc)
+  }
+
   const onKeyDown = (e: React.KeyboardEvent) => {
+    // Keep the capture focused: Tab and the Windows key would otherwise move
+    // focus or open the Start menu mid-capture.
     e.preventDefault()
     e.stopPropagation()
-    if (e.key === 'Escape') {
-      cancel()
+    if (e.key === 'Escape' && pressedRef.current.length === 0) {
+      reset()
       return
     }
     if (e.repeat) return
+
     const pressed = pressedRef.current
     if (!pressed.some((k) => k.code === e.code)) {
       pressed.push({ code: e.code, key: e.key })
     }
     snapshotRef.current = [...pressed]
-    const acc = toAccelerator(pressed)
+    const acc = toAccelerator(pressed, mouseRef.current)
     setLive(acc ? prettyHotkey(acc) : '')
     setError('')
   }
 
   const onKeyUp = (e: React.KeyboardEvent) => {
     e.preventDefault()
+    const wasMain = !MODIFIER_CODES.has(e.code)
     pressedRef.current = pressedRef.current.filter((k) => k.code !== e.code)
-    if (pressedRef.current.length > 0) return
-    const acc = toAccelerator(snapshotRef.current)
-    snapshotRef.current = []
-    if (!acc) {
-      cancel()
-      return
+
+    // Commit as soon as the trigger key is released. If only modifiers are
+    // still held (or nothing is), the capture is also complete.
+    if (wasMain || pressedRef.current.length === 0) {
+      if (snapshotRef.current.length > 0) commit()
+      else reset()
     }
-    if (!isRegisterable(acc)) {
-      setLive('')
-      setError('Add a modifier (Ctrl, Alt or Shift). Function keys work alone.')
-      return
-    }
-    onCommit(acc)
-    cancel()
   }
 
   const onMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
-    setError('Mouse buttons need a system hook — keyboard combos only for now.')
+    e.stopPropagation()
+    const name = MOUSE_BUTTONS[e.button]
+    if (!name) return
+    setListening(true)
+    mouseRef.current = name
+    snapshotRef.current = [...pressedRef.current]
+    const acc = toAccelerator(pressedRef.current, name)
+    setLive(acc ? prettyHotkey(acc) : '')
+    setError('')
   }
+
+  const onMouseUp = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!mouseRef.current) return
+    if (MOUSE_BUTTONS[e.button]) commit()
+  }
+
+  const onContextMenu = (e: React.MouseEvent) => e.preventDefault()
 
   if (!listening) {
     return (
@@ -196,13 +265,17 @@ export default function HotkeyCapture({
       <div
         ref={boxRef}
         tabIndex={0}
+        role="textbox"
+        aria-label="Press a key or mouse button"
         className="hotkey-field listening"
         onKeyDown={onKeyDown}
         onKeyUp={onKeyUp}
         onMouseDown={onMouseDown}
-        onBlur={cancel}
+        onMouseUp={onMouseUp}
+        onContextMenu={onContextMenu}
+        onBlur={reset}
       >
-        {live || 'Press key or mouse button'}
+        {live || 'Press a key or mouse button'}
       </div>
       {error ? <p className="hotkey-error">{error}</p> : null}
     </div>
