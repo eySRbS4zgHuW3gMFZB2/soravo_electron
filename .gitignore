@@ -6,3 +6,6 @@ dist/
 third-party/bin/
 third-party/models/
 *.tsbuildinfo
+
+# local git worktrees
+.worktrees/

@@ -16,6 +16,7 @@ export interface SoravoSettings {
   microphoneId: string
   sounds: boolean
   smartCleanup: boolean
+  addPunctuation: boolean
   vocabulary: Record<string, string>
   launchAtLogin: boolean
   theme: 'light' | 'dark'
@@ -35,6 +36,8 @@ export interface InsightsData {
   perDay: Array<{ date: string; words: number }>
   perHour: number[]
   perWeekday: number[]
+  perMonth: number[]
+  perYear: Array<{ year: number; words: number }>
   topWords: Array<{ word: string; count: number }>
   topPhrases: Array<{ phrase: string; count: number }>
 }

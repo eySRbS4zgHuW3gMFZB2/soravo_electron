@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { RecState } from './soravo'
 import { blobToWav16k } from './audio'
 import { playBlip } from './sounds'
+import { Button } from '@/components/ui/button'
+import { CheckIcon, CloseIcon, MicIcon } from '@/components/icons'
 
 interface Recorder {
   mr: MediaRecorder
@@ -10,32 +12,7 @@ interface Recorder {
   startedAt: number
 }
 
-function XIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
-  )
-}
 
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  )
-}
-
-function MicIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-      <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-      <path d="M12 18v4" />
-    </svg>
-  )
-}
 
 async function soundsEnabled(): Promise<boolean> {
   try {
@@ -137,9 +114,9 @@ export default function App() {
 
   return (
     <div className="soravo-mini">
-      <button className="mini-x" title="Cancel" onClick={() => void window.soravo.cancel()}>
-        <XIcon />
-      </button>
+      <Button variant="ghost" size="icon" className="mini-x" title="Cancel" onClick={() => void window.soravo.cancel()}>
+        <CloseIcon />
+      </Button>
       <div className="mini-status">
         {state === 'recording' && (
           <span className="live-bars" title="Recording">
@@ -156,18 +133,20 @@ export default function App() {
         {state === 'idle' && <span className="mini-hint">Soravo</span>}
       </div>
       {state === 'idle' ? (
-        <button className="mini-ok" title="Dictate" onClick={() => void window.soravo.toggle()}>
+        <Button variant="ghost" size="icon" className="mini-ok" title="Dictate" onClick={() => void window.soravo.toggle()}>
           <MicIcon />
-        </button>
+        </Button>
       ) : (
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           className="mini-ok"
           title="Finish"
           disabled={state !== 'recording'}
           onClick={() => void window.soravo.toggle()}
         >
           <CheckIcon />
-        </button>
+        </Button>
       )}
     </div>
   )

@@ -1,6 +1,39 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { InsightsData, RecState, SoravoSettings, TranscriptEntry } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
+import {
+  BrainIcon,
+  ChartIcon,
+  CloseIcon,
+  CopyIcon,
+  HistoryIcon,
+  MaximizeIcon,
+  MicIcon,
+  MinimizeIcon,
+  SettingsIcon,
+  TrashIcon
+} from '@/components/icons'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Progress } from '@/components/ui/progress'
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 type Page = 'dictation' | 'history' | 'insights' | 'models'
 type SettingsTab = 'general' | 'system' | 'privacy'
@@ -55,98 +88,31 @@ function useStats(history: TranscriptEntry[]) {
   }, [history])
 }
 
-function MicIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-      <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-      <path d="M12 18v4" />
-    </svg>
-  )
-}
-
-function HistoryIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
-      <path d="M3 3v5h5" />
-      <path d="M12 7v5l4 2" />
-    </svg>
-  )
-}
-
-function SettingsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" />
-    </svg>
-  )
-}
-
-function CopyIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="9" y="9" width="12" height="12" rx="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  )
-}
-
-function TrashIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 6h18" />
-      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-    </svg>
-  )
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
-  )
-}
-
-function ChartIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
-      <path d="M7 14l4-4 3 3 5-6" />
-    </svg>
-  )
-}
-
-function BrainIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a4 4 0 0 0-4 4v1a3 3 0 0 0-3 3 3 3 0 0 0 1 5.66V17a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1.34A3 3 0 0 0 20 11a3 3 0 0 0-3-3V6a4 4 0 0 0-4-4z" />
-      <path d="M9 9h.01M15 9h.01" />
-    </svg>
-  )
-}
-
 function Titlebar() {
   return (
     <div className="hub-titlebar">
       <div className="hub-titlebar-left">
         <span className="hub-wordmark">Soravo</span>
-        <span className="hub-badge">Local</span>
+        {/* h-auto: the registry's Badge pins h-5, but this pill is sized by its own
+            padding. inline-block: Badge defaults to inline-flex, which changes
+            the line box and made the titlebar 3px taller, shifting every page
+            below it. */}
+        {/* h-auto drops the registry's fixed h-5, inline-block restores the original
+            inline-block box, and border-0 drops its 1px transparent border -
+            that border alone made the titlebar 2px taller and shifted every
+            page below it. */}
+        <Badge className="hub-badge h-auto inline-block border-0">Local</Badge>
       </div>
       <div className="hub-titlebar-right">
-        <button className="hub-winbtn" title="Minimize" onClick={() => void window.soravo.winMin()}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14" /></svg>
-        </button>
-        <button className="hub-winbtn" title="Maximize" onClick={() => void window.soravo.winMax()}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
-        </button>
-        <button className="hub-winbtn close" title="Close to tray" onClick={() => void window.soravo.winClose()}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-        </button>
+        <Button variant="ghost" size="icon-sm" className="hub-winbtn" title="Minimize" onClick={() => void window.soravo.winMin()}>
+          <MinimizeIcon />
+        </Button>
+        <Button variant="ghost" size="icon-sm" className="hub-winbtn" title="Maximize" onClick={() => void window.soravo.winMax()}>
+          <MaximizeIcon />
+        </Button>
+        <Button variant="ghost" size="icon-sm" className="hub-winbtn close" title="Close to tray" onClick={() => void window.soravo.winClose()}>
+          <CloseIcon />
+        </Button>
       </div>
     </div>
   )
@@ -161,28 +127,29 @@ function Sidebar({
   go: (p: Page) => void
   onOpenSettings: () => void
 }) {
+  // Nav items are full-bleed rows, so they must not inherit the button's
+  // default centring or inset padding.
+  const navItem = (target: Page, label: string, icon: React.ReactNode) => (
+    <Button
+      variant="ghost"
+      className={cn('hub-nav w-full justify-start', page === target && 'active')}
+      onClick={() => go(target)}
+    >
+      {icon}
+      <span>{label}</span>
+    </Button>
+  )
+
   return (
     <aside className="hub-sidebar">
-      <button className={page === 'dictation' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('dictation')}>
-        <MicIcon />
-        <span>Dictation</span>
-      </button>
-      <button className={page === 'history' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('history')}>
-        <HistoryIcon />
-        <span>History</span>
-      </button>
-      <button className={page === 'insights' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('insights')}>
-        <ChartIcon />
-        <span>Insights</span>
-      </button>
-      <button className={page === 'models' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('models')}>
-        <BrainIcon />
-        <span>Models</span>
-      </button>
-      <button className="hub-nav" onClick={onOpenSettings}>
+      {navItem('dictation', 'Dictation', <MicIcon />)}
+      {navItem('history', 'History', <HistoryIcon />)}
+      {navItem('insights', 'Insights', <ChartIcon />)}
+      {navItem('models', 'Models', <BrainIcon />)}
+      <Button variant="ghost" className="hub-nav w-full justify-start" onClick={onOpenSettings}>
         <SettingsIcon />
         <span>Settings</span>
-      </button>
+      </Button>
       <div className="hub-sidebar-foot">
         <div className="hub-local-card">
           <p className="hub-local-title">Local &amp; private</p>
@@ -219,13 +186,13 @@ function EntryRow({
       <div className="hub-entry-time">{timeHM(entry.createdAt)}</div>
       <p className="hub-entry-text">{entry.text}</p>
       <div className="hub-entry-actions">
-        <button className="hub-mini-btn" title="Copy text" onClick={onCopy}>
+        <Button variant="ghost" size="icon" className="hub-mini-btn" title="Copy text" onClick={onCopy}>
           {copied ? 'Copied' : <CopyIcon />}
-        </button>
+        </Button>
         {onDelete && (
-          <button className="hub-mini-btn danger" title="Delete" onClick={onDelete}>
+          <Button variant="ghost" size="icon" className="hub-mini-btn danger" title="Delete" onClick={onDelete}>
             <TrashIcon />
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -271,9 +238,9 @@ function DictationPage({
           <div>
             <h2>Try Soravo in another app</h2>
             <p>Soravo works anywhere you type.</p>
-            <button className="btn primary" onClick={onToggle}>
+            <Button  onClick={onToggle}>
               {state === 'recording' ? 'Stop dictating' : 'Dictate now'}
-            </button>
+            </Button>
           </div>
           <div className="hub-hero-mark">S</div>
         </div>
@@ -318,18 +285,18 @@ function HistoryPage({
     <div className="hub-page">
       <h1 className="hub-greeting">History</h1>
       <div className="row">
-        <input
+        <Input
           placeholder="Search dictations…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <button className="btn" onClick={onRefresh}>
+        <Button variant="secondary" onClick={onRefresh}>
           Refresh
-        </button>
+        </Button>
         {history.length > 0 && (
-          <button className="btn danger" onClick={onClear}>
+          <Button variant="destructive" onClick={onClear}>
             Clear all
-          </button>
+          </Button>
         )}
       </div>
       <div className="hub-entries">
@@ -353,37 +320,71 @@ interface MicDevice {
   label: string
 }
 
+/**
+ * Small "i" affordance that reveals an explanatory bubble on hover or focus.
+ * The bubble is position:fixed and measured from the trigger, because the
+ * settings body scrolls and would otherwise clip an absolutely-ploned tooltip.
+ */
+/**
+ * Explanatory "i" affordance beside a label. The bubble keeps the app's own
+ * look via .hint-bubble; Radix supplies the positioning, collision handling
+ * and keyboard wiring.
+ */
+function Hint({ text }: { text: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" className="hint-dot" aria-label={text}>
+          i
+        </button>
+      </TooltipTrigger>
+      {/* side/align reproduce the old hand-rolled placement, which put the
+          bubble 8px below the dot and left-aligned to it. */}
+      <TooltipContent className="hint-bubble" side="bottom" align="start" sideOffset={8}>
+        {text}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 function SubModal({
+  open,
   title,
   subtitle,
   onClose,
   children
 }: {
+  open: boolean
   title: string
   subtitle?: string
   onClose: () => void
   children: React.ReactNode
 }) {
   return (
-    <div className="modal-backdrop sub-backdrop" onClick={onClose}>
-      <div
-        className="modal-dialog sub-dialog"
-        role="dialog"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button className="modal-close" title="Close" onClick={onClose}>
+    // Controlled for the same reason as the settings dialog: Radix only restores
+    // <body> pointer-events when it observes open go true -> false.
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent showCloseButton={false} className="sub-dialog">
+        <DialogTitle className="sr-only">{title}</DialogTitle>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="modal-close"
+          title="Close"
+          onClick={onClose}
+        >
           <CloseIcon />
-        </button>
+        </Button>
         <h2 className="modal-title">{title}</h2>
         {subtitle ? <p className="hub-note">{subtitle}</p> : null}
         {children}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
 function SettingsModal({
+  open,
   settings,
   historyCount,
   onSave,
@@ -391,6 +392,7 @@ function SettingsModal({
   onQuit,
   onClose
 }: {
+  open: boolean
   settings: SoravoSettings
   historyCount: number
   onSave: (patch: Partial<SoravoSettings>) => Promise<void>
@@ -403,11 +405,11 @@ function SettingsModal({
   const [pasteHotkey, setPasteHotkey] = useState(settings.pasteHotkey)
   const [copyHotkey, setCopyHotkey] = useState(settings.copyHotkey)
   const [holdToTalk, setHoldToTalk] = useState(settings.holdToTalk)
-  const [model, setModel] = useState(settings.model)
   const [language, setLanguage] = useState(settings.language)
   const [microphoneId, setMicrophoneId] = useState(settings.microphoneId)
   const [sounds, setSounds] = useState(settings.sounds)
   const [smartCleanup, setSmartCleanup] = useState(settings.smartCleanup)
+  const [addPunctuation, setAddPunctuation] = useState(settings.addPunctuation)
   const [vocabulary, setVocabulary] = useState<Record<string, string>>(settings.vocabulary)
   const [newFrom, setNewFrom] = useState('')
   const [newTo, setNewTo] = useState('')
@@ -416,11 +418,9 @@ function SettingsModal({
   const [retention, setRetention] = useState<'all' | '30days' | 'session'>(settings.retention)
   const [devices, setDevices] = useState<MicDevice[]>([])
   const [sub, setSub] = useState<null | 'shortcuts' | 'microphone' | 'language'>(null)
-  const [runtime, setRuntime] = useState<{ binary: boolean; model: string; modelPresent: boolean } | null>(null)
   const [savedTick, setSavedTick] = useState(false)
 
   useEffect(() => {
-    window.soravo.getRuntimeStatus().then(setRuntime).catch(() => setRuntime(null))
     navigator.mediaDevices
       .enumerateDevices()
       .then((all) =>
@@ -432,6 +432,34 @@ function SettingsModal({
       )
       .catch(() => setDevices([]))
   }, [])
+
+  // This dialog has to stay mounted so Radix can see open go true -> false,
+  // which means its local state survives a close. Previously the whole
+  // component unmounted, so every reopen started from a fresh copy of the
+  // saved settings on the General tab. Re-seed on open to keep that.
+  useEffect(() => {
+    if (!open) return
+    setTab('general')
+    setHotkey(settings.hotkey)
+    setPasteHotkey(settings.pasteHotkey)
+    setCopyHotkey(settings.copyHotkey)
+    setHoldToTalk(settings.holdToTalk)
+    setLanguage(settings.language)
+    setMicrophoneId(settings.microphoneId)
+    setSounds(settings.sounds)
+    setSmartCleanup(settings.smartCleanup)
+    setAddPunctuation(settings.addPunctuation)
+    setVocabulary(settings.vocabulary)
+    setNewFrom('')
+    setNewTo('')
+    setLaunchAtLogin(settings.launchAtLogin)
+    setTheme(settings.theme)
+    setRetention(settings.retention)
+    setSub(null)
+    setSavedTick(false)
+    // Only on the open transition: settings must not clobber in-progress edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const addWord = () => {
     const from = newFrom.trim()
@@ -456,11 +484,11 @@ function SettingsModal({
       pasteHotkey: pasteHotkey.trim(),
       copyHotkey: copyHotkey.trim(),
       holdToTalk,
-      model: model.trim() || 'base.en',
       language: language.trim() || 'en',
       microphoneId,
       sounds,
       smartCleanup,
+      addPunctuation,
       vocabulary,
       launchAtLogin,
       theme,
@@ -479,24 +507,30 @@ function SettingsModal({
   ]
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-dialog" role="dialog" aria-label="Settings" onClick={(e) => e.stopPropagation()}>
+    // Controlled, not `open` hardcoded to true: Radix's modal Dialog sets
+    // pointer-events:none on <body> while open, and that is only released when
+    // it sees open go true -> false. Unmounting it instead leaves the whole
+    // app unclickable.
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent showCloseButton={false} className="settings-dialog">
+        <DialogTitle className="sr-only">Settings</DialogTitle>
         <aside className="modal-sidebar">
           <p className="modal-heading">Settings</p>
           {tabs.map((t) => (
-            <button
+            <Button
               key={t.id}
-              className={tab === t.id ? 'modal-tab active' : 'modal-tab'}
+              variant="ghost"
+              className={cn('modal-tab w-full justify-start', tab === t.id && 'active')}
               onClick={() => setTab(t.id)}
             >
               {t.label}
-            </button>
+            </Button>
           ))}
         </aside>
         <div className="modal-content">
-          <button className="modal-close" title="Close without saving" onClick={onClose}>
+          <Button variant="ghost" size="icon-sm" className="modal-close" title="Close without saving" onClick={onClose}>
             <CloseIcon />
-          </button>
+          </Button>
 
           {tab === 'general' && (
             <div>
@@ -504,9 +538,9 @@ function SettingsModal({
               <div className="row">
                 <label>Shortcuts</label>
                 <span className="row-summary">{fmtHotkey(hotkey)}</span>
-                <button className="btn" onClick={() => setSub('shortcuts')}>
+                <Button variant="secondary" onClick={() => setSub('shortcuts')}>
                   Change
-                </button>
+                </Button>
               </div>
               <div className="row">
                 <label>Microphone</label>
@@ -515,31 +549,45 @@ function SettingsModal({
                     ? (devices.find((d) => d.deviceId === microphoneId)?.label ?? 'Custom device')
                     : 'Auto-detect'}
                 </span>
-                <button className="btn" onClick={() => setSub('microphone')}>
+                <Button variant="secondary" onClick={() => setSub('microphone')}>
                   Change
-                </button>
+                </Button>
               </div>
               <div className="row">
                 <label>Dictation language</label>
                 <span className="row-summary">{language || 'en'}</span>
-                <button className="btn" onClick={() => setSub('language')}>
+                <Button variant="secondary" onClick={() => setSub('language')}>
                   Change
-                </button>
+                </Button>
               </div>
               <div className="row">
                 <label>Theme</label>
-                <select value={theme} onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
+                {/* className="seg" is the app's pill treatment: canvas-soft track, 9999px
+                      radius, 13px semibold, lime fill with white text when on.
+                      The bare ToggleGroup drew a bordered box with black text
+                      instead. */}
+                <ToggleGroup
+                  type="single"
+                  value={theme}
+                  onValueChange={(v) => v && setTheme(v as 'light' | 'dark')}
+                  spacing={0}
+                  className="seg w-full"
+                >
+                  <ToggleGroupItem value="light" className="flex-1">
+                    Light
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="dark" className="flex-1">
+                    Dark
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
               <div className="row">
                 <label>Sound effects</label>
-                <input type="checkbox" checked={sounds} onChange={(e) => setSounds(e.target.checked)} />
+                <Checkbox checked={sounds} onCheckedChange={(c) => setSounds(c === true)} />
               </div>
 
               {sub === 'shortcuts' && (
-                <SubModal
+                <SubModal open 
                   title="Shortcuts"
                   subtitle="Choose your preferred shortcuts for using Soravo."
                   onClose={() => setSub(null)}
@@ -550,11 +598,7 @@ function SettingsModal({
                   </div>
                   <div className="row">
                     <label>Push to talk</label>
-                    <input
-                      type="checkbox"
-                      checked={holdToTalk}
-                      onChange={(e) => setHoldToTalk(e.target.checked)}
-                    />
+                    <Checkbox checked={holdToTalk} onCheckedChange={(c) => setHoldToTalk(c === true)} />
                   </div>
                   <p className="hub-note">
                     {holdToTalk
@@ -576,29 +620,41 @@ function SettingsModal({
                 </SubModal>
               )}
               {sub === 'microphone' && (
-                <SubModal title="Microphone" subtitle="Used for dictation." onClose={() => setSub(null)}>
+                <SubModal open title="Microphone" subtitle="Used for dictation." onClose={() => setSub(null)}>
                   <div className="row">
                     <label>Input</label>
-                    <select value={microphoneId} onChange={(e) => setMicrophoneId(e.target.value)}>
-                      <option value="">Auto-detect</option>
-                      {devices.map((d) => (
-                        <option key={d.deviceId} value={d.deviceId}>
-                          {d.label}
-                        </option>
-                      ))}
-                    </select>
+                    <Select
+                      // Radix rejects an empty-string item value, so map
+                      // auto-detect onto a sentinel and back on the way out.
+                      value={microphoneId === '' ? 'auto' : microphoneId}
+                      onValueChange={(v) => setMicrophoneId(v === 'auto' ? '' : v)}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Auto-detect" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="auto">Auto-detect</SelectItem>
+                          {devices.map((d) => (
+                            <SelectItem key={d.deviceId} value={d.deviceId}>
+                              {d.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </SubModal>
               )}
               {sub === 'language' && (
-                <SubModal
+                <SubModal open 
                   title="Dictation language"
                   subtitle="Whisper language code, e.g. en, es, fr. Also tunes cleanup rules."
                   onClose={() => setSub(null)}
                 >
                   <div className="row">
                     <label>Language</label>
-                    <input value={language} onChange={(e) => setLanguage(e.target.value)} spellCheck={false} />
+                    <Input value={language} onChange={(e) => setLanguage(e.target.value)} spellCheck={false} />
                   </div>
                 </SubModal>
               )}
@@ -609,41 +665,32 @@ function SettingsModal({
             <div>
               <h2 className="modal-title">System</h2>
               <div className="row">
-                <label>Model</label>
-                <select value={model} onChange={(e) => setModel(e.target.value)}>
-                  <option value="base.en">base.en (fast, ~150MB)</option>
-                  <option value="small.en">small.en (better, ~500MB)</option>
-                </select>
+                <label>
+                  Smart cleanup
+                  <Hint text="Strips filler words like um, uh, er, ah and hmm, then tidies spacing. Your custom vocabulary is always applied, whether this is on or off." />
+                </label>
+                <Checkbox checked={smartCleanup} onCheckedChange={(c) => setSmartCleanup(c === true)} />
               </div>
-              <p className="hub-note">
-                {runtime === null
-                  ? 'Checking transcription engine…'
-                  : runtime.binary && runtime.modelPresent
-                    ? `Engine ready — whisper.cpp binary + model ${runtime.model} present.`
-                    : 'Engine incomplete — run `npm run fetch:whisper` in the Soravo project, then restart.'}
-              </p>
               <div className="row">
-                <label>Smart cleanup</label>
-                <input
-                  type="checkbox"
-                  checked={smartCleanup}
-                  onChange={(e) => setSmartCleanup(e.target.checked)}
-                />
+                <label>
+                  Add punctuation
+                  <Hint text="Adds a full stop when a dictation ends without a period, exclamation mark or question mark. Works on its own, even when Smart cleanup is off." />
+                </label>
+                <Checkbox checked={addPunctuation} onCheckedChange={(c) => setAddPunctuation(c === true)} />
               </div>
-              <p className="hub-note">Removes filler words, fixes spacing, and capitalizes sentences before pasting.</p>
               <h3 className="hub-section">Custom vocabulary ({vocabEntries.length})</h3>
               {vocabEntries.map(([from, to]) => (
                 <div className="row" key={from}>
                   <label>{from}</label>
-                  <input value={to} readOnly />
-                  <button className="btn danger" onClick={() => removeWord(from)}>
+                  <Input value={to} readOnly />
+                  <Button variant="destructive" onClick={() => removeWord(from)}>
                     Remove
-                  </button>
+                  </Button>
                 </div>
               ))}
               <div className="row">
                 <label>Heard as</label>
-                <input
+                <Input
                   value={newFrom}
                   onChange={(e) => setNewFrom(e.target.value)}
                   placeholder="e.g. sore avo"
@@ -652,7 +699,7 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label>Write as</label>
-                <input
+                <Input
                   value={newTo}
                   onChange={(e) => setNewTo(e.target.value)}
                   placeholder="e.g. Soravo"
@@ -661,22 +708,20 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label />
-                <button className="btn" onClick={addWord}>
+                <Button variant="secondary" onClick={addWord}>
                   Add word
-                </button>
+                </Button>
               </div>
               <div className="row">
-                <label>Start at login</label>
-                <input
-                  type="checkbox"
-                  checked={launchAtLogin}
-                  onChange={(e) => setLaunchAtLogin(e.target.checked)}
-                />
+                <label title="Registers Soravo in your Windows startup folder so it runs as soon as you sign in.">
+                  Start at login
+                </label>
+                <Checkbox checked={launchAtLogin} onCheckedChange={(c) => setLaunchAtLogin(c === true)} />
               </div>
               <div className="row">
-                <button className="btn danger" onClick={onQuit}>
+                <Button variant="destructive" onClick={onQuit}>
                   Quit Soravo
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -693,35 +738,45 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label>History keeps</label>
-                <select
+                {/* Same pill treatment as Theme, for the same reason. */}
+                <ToggleGroup
+                  type="single"
                   value={retention}
-                  onChange={(e) => setRetention(e.target.value as 'all' | '30days' | 'session')}
+                  onValueChange={(v) => v && setRetention(v as 'all' | '30days' | 'session')}
+                  spacing={0}
+                  className="seg w-full"
                 >
-                  <option value="all">Everything</option>
-                  <option value="30days">Last 30 days</option>
-                  <option value="session">This session only</option>
-                </select>
+                  <ToggleGroupItem value="all" className="flex-1">
+                    Everything
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="30days" className="flex-1">
+                    30 days
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="session" className="flex-1">
+                    Session
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
               <div className="row">
                 <label>{historyCount} saved</label>
-                <button className="btn danger" onClick={onClearHistory}>
+                <Button variant="destructive" onClick={onClearHistory}>
                   Delete all transcripts
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
           <div className="modal-foot">
-            <button className="btn" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose}>
               Close
-            </button>
-            <button className="btn primary" onClick={save}>
+            </Button>
+            <Button onClick={save}>
               {savedTick ? 'Saved' : 'Save'}
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -760,9 +815,11 @@ function ModelsPage() {
   const [downloading, setDownloading] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState('')
+  const [runtime, setRuntime] = useState<{ binary: boolean; model: string; modelPresent: boolean } | null>(null)
 
   const refresh = () => {
     window.soravo.listModels().then(setModels).catch(() => setModels([]))
+    window.soravo.getRuntimeStatus().then(setRuntime).catch(() => setRuntime(null))
   }
 
   useEffect(() => {
@@ -811,11 +868,25 @@ function ModelsPage() {
     <div className="hub-page">
       <h1 className="hub-greeting">Models</h1>
       <p className="hub-sub">Download and manage transcription models. All models are MIT-licensed Whisper models.</p>
+      {runtime !== null && (
+        <p className="hub-note" style={{ color: runtime.binary && runtime.modelPresent ? 'var(--soravo-positive)' : 'var(--soravo-negative)' }}>
+          {runtime.binary && runtime.modelPresent
+            ? `Transcription engine ready — using ${runtime.model}.`
+            : !runtime.binary
+              ? 'Transcription engine missing. Reinstall Soravo or re-run the bundled fetch:asr script.'
+              : `Transcription engine is installed, but the active model "${runtime.model}" is not. Download it below or pick another.`}
+        </p>
+      )}
       {error && <p className="hub-note" style={{ color: 'var(--soravo-negative)' }}>{error}</p>}
       <div className="hub-card">
         {models.map((m) => (
           <div key={m.id} className="row" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--soravo-canvas-soft)' }}>
-            <div>
+            {/* flex:1/minWidth:0 holds the text column at a fixed width, and the
+                action column below is a fixed 184px, so neither the wrapping
+                nor the row height changes when a row gains or loses its
+                Download / Set Active / Delete buttons. Without this, pressing
+                Set Active made the whole list re-space itself. */}
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{m.name}</div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>
                 {m.sizeLabel} · {m.license} license
@@ -824,24 +895,22 @@ function ModelsPage() {
               </div>
               {downloading === m.id && (
                 <div style={{ marginTop: 8, width: 200 }}>
-                  <div style={{ height: 6, background: 'var(--soravo-canvas-soft)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${progress}%`, background: 'var(--soravo-primary)', transition: 'width 0.2s' }} />
-                  </div>
+                  <Progress value={progress} />
                   <div style={{ fontSize: 11, marginTop: 2 }}>{progress}%</div>
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flex: 'none', width: 184, justifyContent: 'flex-end' }}>
               {!m.installed && downloading !== m.id && (
-                <button className="btn" onClick={() => handleDownload(m.id)}>Download</button>
+                <Button variant="secondary" onClick={() => handleDownload(m.id)}>Download</Button>
               )}
               {downloading === m.id && (
-                <button className="btn" onClick={() => { setDownloading(null); setProgress(0) }}>Cancel</button>
+                <Button variant="secondary" onClick={() => { setDownloading(null); setProgress(0) }}>Cancel</Button>
               )}
               {m.installed && !m.active && (
                 <>
-                  <button className="btn" onClick={() => handleActivate(m.id)}>Set Active</button>
-                  <button className="btn" onClick={() => handleDelete(m.id)}>Delete</button>
+                  <Button variant="secondary" onClick={() => handleActivate(m.id)}>Set Active</Button>
+                  <Button variant="secondary" onClick={() => handleDelete(m.id)}>Delete</Button>
                 </>
               )}
             </div>
@@ -855,7 +924,7 @@ function ModelsPage() {
 
 function InsightsPage({ insights }: { insights: InsightsData | null }) {
   const [weekOffset, setWeekOffset] = useState(0)
-  const [rhythm, setRhythm] = useState<'hour' | 'weekday'>('hour')
+  const [rhythm, setRhythm] = useState<'hour' | 'weekday' | 'month' | 'year'>('hour')
   if (!insights) {
     return (
       <div className="hub-page">
@@ -899,15 +968,36 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
     }
     weeks.push(col)
   }
-  const monthLabels = weeks.map((col) => {
-    for (const cell of col) {
-      if (cell && cell.date.getDate() <= 7) return monthNames[cell.date.getMonth()]
-    }
-    return ''
-  }).map((label, i, all) => (label !== '' && i > 0 && all[i - 1] === label ? '' : label))
+  // A week column belongs to the month of its last day, which is what GitHub-style
+  // graphs do: the column that straddles a month boundary is labelled with the
+  // month that owns most of it.
+  const monthSections: { label: string; m: number; y: number; start: number; end: number; span: number }[] = []
+  for (let i = 0; i < weeks.length; i++) {
+    const cells = weeks[i].filter((c) => c !== null)
+    if (cells.length === 0) continue
+    const last = cells[cells.length - 1].date
+    const m = last.getMonth()
+    const y = last.getFullYear()
+    const prev = monthSections[monthSections.length - 1]
+    if (prev && prev.m === m && prev.y === y) prev.end = i + 1
+    else monthSections.push({ label: monthNames[m], m, y, start: i, end: i + 1, span: 1 })
+  }
+  for (const s of monthSections) s.span = s.end - s.start
+  const gridYear =
+    gridStart.getFullYear() === endSunday.getFullYear()
+      ? String(gridStart.getFullYear())
+      : `${gridStart.getFullYear()}–${endSunday.getFullYear()}`
 
   const maxHour = Math.max(1, ...insights.perHour)
   const maxWeekday = Math.max(1, ...insights.perWeekday)
+  const maxMonth = Math.max(1, ...insights.perMonth)
+  const maxYear = Math.max(1, ...insights.perYear.map((e) => e.words))
+  // Always render at least one year column so the axis is never blank.
+  const yearData =
+    insights.perYear.length > 0
+      ? insights.perYear
+      : [{ year: new Date().getFullYear(), words: 0 }]
+  const yearCaption = yearData.map((e) => e.year).join('–')
   const hourLabel = (h: number) => {
     if (h === 0) return '12a'
     if (h === 12) return '12p'
@@ -954,27 +1044,37 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
           </span>
         </div>
         <div className="heatmap-navrow">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             className="heatmap-nav"
             title="Earlier"
             disabled={!canEarlier}
             onClick={() => setWeekOffset((o) => o + 8)}
           >
             ‹
-          </button>
+          </Button>
           <div className="heatmap-months">
-            {monthLabels.map((label, i) => (
-              <span key={i}>{label}</span>
+            {monthSections.map((sec, i) => (
+              <span
+                key={i}
+                style={{ width: `${sec.span * 13 + (sec.span - 1) * 3}px`, textAlign: 'center' }}
+              >
+                {sec.label}
+              </span>
             ))}
           </div>
-          <button
+          <span className="heatmap-year">{gridYear}</span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             className="heatmap-nav"
             title="Later"
             disabled={weekOffset === 0}
             onClick={() => setWeekOffset((o) => Math.max(0, o - 8))}
           >
             ›
-          </button>
+          </Button>
         </div>
         <div className="heatmap-body">
           <div className="heatmap-days">
@@ -1013,20 +1113,19 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
 
       <h3 className="hub-section">When you dictate</h3>
       <div className="hub-rhythm-card">
-        <div className="seg">
-          <button
-            className={rhythm === 'hour' ? 'seg-btn active' : 'seg-btn'}
-            onClick={() => setRhythm('hour')}
-          >
-            Hour
-          </button>
-          <button
-            className={rhythm === 'weekday' ? 'seg-btn active' : 'seg-btn'}
-            onClick={() => setRhythm('weekday')}
-          >
-            Weekday
-          </button>
-        </div>
+        <ToggleGroup
+          type="single"
+          value={rhythm}
+          onValueChange={(v) => v && setRhythm(v as typeof rhythm)}
+          variant="outline"
+          spacing={0}
+          className="seg"
+        >
+          <ToggleGroupItem value="hour">Hour</ToggleGroupItem>
+          <ToggleGroupItem value="weekday">Week</ToggleGroupItem>
+          <ToggleGroupItem value="month">Month</ToggleGroupItem>
+          <ToggleGroupItem value="year">Year</ToggleGroupItem>
+        </ToggleGroup>
         {rhythm === 'hour' ? (
           <div className="hub-bars">
             {insights.perHour.map((w, h) => (
@@ -1036,7 +1135,7 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
               </div>
             ))}
           </div>
-        ) : (
+        ) : rhythm === 'weekday' ? (
           <div className="hub-bars">
             {insights.perWeekday.map((w, i) => (
               <div className="hub-bar-col" key={weekdays[i]} title={`${weekdays[i]}: ${w} words`}>
@@ -1044,6 +1143,33 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
                 <span>{weekdays[i]}</span>
               </div>
             ))}
+          </div>
+        ) : rhythm === 'month' ? (
+          <div className="chart">
+            <span className="chart-caption">{yearCaption}</span>
+            <div className="hub-bars">
+              {insights.perMonth.map((w, i) => (
+                <div className="hub-bar-col" key={monthNames[i]} title={`${monthNames[i]}: ${w} words`}>
+                  <div className="hub-bar" style={{ height: `${Math.max(3, Math.round((w / maxMonth) * 72))}px` }} />
+                  <span>{monthNames[i]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="chart">
+            <span className="chart-caption">{yearCaption}</span>
+            <div className="hub-bars compact">
+              {yearData.map((e) => (
+                <div className="hub-bar-col" key={e.year} title={`${e.year}: ${e.words} words`}>
+                  <div
+                    className="hub-bar"
+                    style={{ height: `${Math.max(3, Math.round((e.words / maxYear) * 72))}px` }}
+                  />
+                  <span>{e.year}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -1138,7 +1264,8 @@ export default function HubApp() {
   }
 
   return (
-    <div className="hub-root">
+    <TooltipProvider delayDuration={200}>
+      <div className="hub-root">
       <Titlebar />
       <div className="hub-body">
         <Sidebar page={page} go={setPage} onOpenSettings={() => setSettingsOpen(true)} />
@@ -1168,8 +1295,9 @@ export default function HubApp() {
            {page === 'models' && <ModelsPage />}
         </main>
       </div>
-      {settingsOpen && settings && (
+      {settings && (
         <SettingsModal
+          open={settingsOpen}
           settings={settings}
           historyCount={history.length}
           onSave={saveSettings}
@@ -1178,6 +1306,7 @@ export default function HubApp() {
           onClose={() => setSettingsOpen(false)}
         />
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }

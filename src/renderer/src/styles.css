@@ -1,3 +1,16 @@
+/* Tailwind v4 WITHOUT preflight.
+   Preflight resets margins/borders/buttons app-wide, which would regress the
+   hand-written styles in this file. We only need the theme layer and the
+   utility layer for the shadcn components to work. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import 'tw-animate-css';
+
+/* This app toggles dark mode with html[data-theme='dark'], not a .dark class,
+   so point the dark: variant at the existing attribute. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 :root {
   --soravo-primary: #9fe870;
   --soravo-on-primary: #0e0f0c;
@@ -12,8 +25,117 @@
   --soravo-font: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/* ---------------------------------------------------------------------------
+   shadcn/ui semantic tokens.
+
+   Every token is derived from a --soravo-* variable rather than hard-coded.
+   The dark theme already flips the --soravo-* variables on
+   html[data-theme='dark'], so these tokens need no separate dark block.
+   --------------------------------------------------------------------------- */
+:root {
+  --radius: 0.75rem;
+
+  --background: var(--soravo-canvas);
+  --foreground: var(--soravo-ink);
+
+  --card: var(--soravo-canvas);
+  --card-foreground: var(--soravo-ink);
+
+  --popover: var(--soravo-canvas);
+  --popover-foreground: var(--soravo-ink);
+
+  --primary: var(--soravo-primary);
+  --primary-foreground: var(--soravo-on-primary);
+
+  --secondary: #e8ebe6;
+  --secondary-foreground: #0e0f0c;
+
+  --muted: #eef0ea;
+  --muted-foreground: #6b7069;
+
+  --accent: #e4e8dd;
+  --accent-foreground: #0e0f0c;
+
+  --destructive: var(--soravo-negative);
+
+  /* The old checkbox used accent-color: var(--soravo-positive), a medium
+     green rather than the lime brand accent. Keep it distinct. */
+  --positive: var(--soravo-positive);
+
+  --border: #d3d8cd;
+  /* The old .row input/select used a full-strength ink border in light mode,
+     so --input must be near-black rather than a subtle grey. */
+  --input: #0e0f0c;
+  --ring: var(--soravo-primary);
+}
+
+/* Border / muted / accent need real contrast against the surface. Mapping them
+   onto --soravo-canvas-soft made them invisible: in dark mode #22261e sits
+   almost exactly on the #1a1d16 panel, so control outlines and selected
+   states disappeared. These are explicit instead. */
+html[data-theme='dark'] {
+  --secondary: #2c3125;
+  --secondary-foreground: #f0f3e6;
+
+  --muted: #2a2f23;
+  --muted-foreground: #9aa08e;
+
+  --accent: #333a2b;
+  --accent-foreground: #f0f3e6;
+
+  --border: #3a4033;
+  --input: #3a3f30;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-positive: var(--positive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
 * {
   box-sizing: border-box;
+}
+
+/* Hide scrollbar chrome everywhere without disabling scrolling. The Settings
+   and sub-dialogs already hid theirs individually; this generalises that to
+   the main pane, the model list and anything Radix scrolls internally.
+
+   Nothing here touches overflow, so wheel, trackpad, touch, keyboard and
+   programmatic scrolling all still work - there is simply no drawn bar.
+
+   WebView2 is Chromium and honours `scrollbar-width: none`; the ::-webkit
+   rule covers older engines and the two together are what the app needs on
+   both Windows WebView2 and the browser preview. */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 html,
@@ -51,57 +173,6 @@ body {
 .soravo-pill input,
 .soravo-pill select {
   -webkit-app-region: no-drag;
-}
-
-.mic-btn {
-  flex: none;
-  width: 52px;
-  height: 52px;
-  border: none;
-  border-radius: 9999px;
-  background: var(--soravo-primary);
-  color: var(--soravo-on-primary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mic-btn.recording {
-  background: var(--soravo-negative);
-  color: #fff;
-}
-
-.mic-btn svg {
-  width: 24px;
-  height: 24px;
-}
-
-.pill-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.pill-title {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 20px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pill-sub {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--soravo-mute);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pill-sub.error {
-  color: var(--soravo-negative);
 }
 
 .rec-dot {
@@ -216,9 +287,55 @@ body {
 
 .row label {
   flex: none;
-  width: 88px;
+  width: 132px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
   font-weight: 600;
+}
+
+.hint-dot {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--soravo-mute);
+  color: var(--soravo-canvas);
+  font-size: 10px;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 15px;
+  text-align: center;
+  cursor: help;
+  user-select: none;
+}
+
+.hint-dot:hover,
+.hint-dot:focus {
+  background: var(--soravo-ink);
+  outline: none;
+}
+
+/* The bubble now renders through Radix's Tooltip portal, which positions it
+   itself, so the old position: fixed / inline top+left are dropped. */
+/* Fills from the shadcn Tooltip are left at the registry defaults, so the
+   bubble takes its colours from the app's surface tokens instead. Using
+   --soravo-ink as the background made it render as a white box with black
+   text in dark mode, which sat badly against the rest of the UI. */
+.hint-bubble {
+  z-index: 300;
+  width: 250px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--soravo-canvas);
+  color: var(--soravo-ink);
+  border: 1px solid var(--soravo-canvas-soft);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  box-shadow: 0 8px 24px rgba(14, 15, 12, 0.24);
+  pointer-events: none;
 }
 
 .row input,
@@ -234,26 +351,13 @@ body {
   min-width: 0;
 }
 
-.btn {
-  font: inherit;
+.model-active-name {
   font-size: 14px;
   font-weight: 600;
-  border: none;
-  border-radius: 12px;
-  padding: 8px 16px;
-  cursor: pointer;
-  background: var(--soravo-canvas-soft);
-  color: var(--soravo-ink);
-}
-
-.btn.primary {
-  background: var(--soravo-primary);
-  color: var(--soravo-on-primary);
-}
-
-.btn.danger {
-  background: var(--soravo-negative);
-  color: #fff;
+  color: var(--soravo-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .soravo-mini {

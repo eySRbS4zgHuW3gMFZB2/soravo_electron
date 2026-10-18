@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 /**
  * Hotkey capture: click the field, press the combination (or just the key /
@@ -252,9 +253,9 @@ export default function HotkeyCapture({
           {prettyHotkey(value)}
         </button>
         {allowEmpty && value && (
-          <button className="btn" onClick={() => onCommit('')}>
+          <Button type="button" onClick={() => onCommit('')}>
             Clear
-          </button>
+          </Button>
         )}
       </div>
     )

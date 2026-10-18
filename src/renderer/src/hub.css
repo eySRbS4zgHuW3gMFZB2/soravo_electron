@@ -39,6 +39,11 @@
   color: var(--soravo-on-primary);
   border-radius: 9999px;
   vertical-align: 3px;
+  /* shadcn's Badge sets overflow-hidden, which changes an inline-block's
+     baseline from its last line box to its bottom margin edge. Combined with
+     the vertical-align above, that parked the pill 5px higher than it was and
+     grew the titlebar. Nothing here needs clipping. */
+  overflow: visible;
 }
 
 .hub-titlebar-right {
@@ -410,15 +415,9 @@ html[data-theme='dark'] .hub-note {
   background: #22261e;
 }
 
-html[data-theme='dark'] .hub-mini-btn,
-html[data-theme='dark'] .btn {
+html[data-theme='dark'] .hub-mini-btn {
   background: #2c3125;
   color: var(--soravo-ink);
-}
-
-html[data-theme='dark'] .btn.primary {
-  background: var(--soravo-primary);
-  color: var(--soravo-on-primary);
 }
 
 .insights-page {
@@ -446,6 +445,13 @@ html[data-theme='dark'] .btn.primary {
   display: flex;
   flex-direction: column;
   gap: 3px;
+}
+
+.heatmap-year {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--soravo-mute);
+  margin-left: 4px;
 }
 
 .heatmap-cell {
@@ -591,21 +597,29 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   margin-bottom: 12px;
 }
 
-.seg-btn {
+/* The rhythm chart keeps its original pill shape. ToggleGroup supplies the
+   behaviour and the selected state; these rules restore the old appearance
+   (9999px radius, no border, 13px semibold, lime pill when active).
+   They live unlayered, so they win over the component's Tailwind classes. */
+.seg [data-slot='toggle-group-item'] {
   border: none;
   border-radius: 9999px;
   background: transparent;
   color: var(--soravo-ink);
-  font: inherit;
   font-size: 13px;
   font-weight: 600;
+  /* The component pins h-8; the original pill sized itself from its padding. */
+  height: auto;
   padding: 6px 16px;
-  cursor: pointer;
 }
 
-.seg-btn.active {
-  background: var(--soravo-ink);
-  color: var(--soravo-primary);
+.seg [data-slot='toggle-group-item'][data-state='on'] {
+  background: var(--soravo-primary);
+  color: #ffffff;
+}
+
+.seg [data-slot='toggle-group-item']:focus-visible {
+  box-shadow: none;
 }
 
 .insights-duo {
@@ -650,6 +664,27 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
 .hub-rhythm-card .hub-bars {
   background: transparent;
   padding: 4px 0 0;
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chart-caption {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--soravo-mute);
+  letter-spacing: 0.4px;
+}
+
+.hub-bars.compact {
+  justify-content: flex-start;
+}
+
+.hub-bars.compact .hub-bar-col {
+  flex: 0 0 44px;
 }
 
 .hub-bars {
@@ -729,25 +764,44 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   text-align: right;
 }
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
+/* --- Dialog ---------------------------------------------------------------
+   The Settings and sub-dialogs now render through shadcn's Dialog, which
+   brings its own overlay/box classes. These rules re-apply the old .modal-*
+   box so the result is unchanged. Kept unlayered so they win over the
+   component's Tailwind utilities. */
+[data-slot='dialog-overlay'] {
   background: rgba(14, 15, 12, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
   -webkit-app-region: no-drag;
 }
 
-.modal-dialog {
+[data-slot='dialog-content'].settings-dialog {
   display: flex;
   width: min(960px, calc(100vw - 60px));
   height: min(680px, calc(100vh - 60px));
+  max-width: none;
   background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
   border-radius: var(--soravo-radius);
   box-shadow: 0 24px 80px rgba(14, 15, 12, 0.35);
   overflow: hidden;
+  gap: 0;
+  padding: 0;
+  border: none;
+}
+
+[data-slot='dialog-content'].sub-dialog {
+  display: block;
+  width: min(560px, calc(100vw - 120px));
+  height: auto;
+  max-width: none;
+  max-height: min(560px, calc(100vh - 120px));
+  overflow-y: auto;
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
+  border-radius: var(--soravo-radius);
+  box-shadow: 0 24px 80px rgba(14, 15, 12, 0.35);
+  padding: 24px;
+  border: none;
 }
 
 .modal-sidebar {
@@ -789,11 +843,6 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   padding: 20px 24px 16px;
   overflow-y: auto;
   position: relative;
-  scrollbar-width: none;
-}
-
-.modal-content::-webkit-scrollbar {
-  display: none;
 }
 
 .modal-title {
@@ -828,26 +877,6 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   justify-content: flex-end;
   gap: 8px;
   padding: 16px 0 4px;
-}
-
-.modal-backdrop.sub-backdrop {
-  z-index: 60;
-  background: rgba(14, 15, 12, 0.6);
-}
-
-.modal-dialog.sub-dialog {
-  width: min(560px, calc(100vw - 120px));
-  height: auto;
-  max-height: min(560px, calc(100vh - 120px));
-  overflow-y: auto;
-  scrollbar-width: none;
-  padding: 24px;
-  position: relative;
-  display: block;
-}
-
-.modal-dialog.sub-dialog::-webkit-scrollbar {
-  display: none;
 }
 
 .row-summary {
