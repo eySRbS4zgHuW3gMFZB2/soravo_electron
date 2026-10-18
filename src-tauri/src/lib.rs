@@ -40,6 +40,8 @@ pub struct InsightsData {
     pub per_day: Vec<PerDayEntry>,
     pub per_hour: Vec<i64>,
     pub per_weekday: Vec<i64>,
+    pub per_month: Vec<i64>,
+    pub per_year: Vec<YearEntry>,
     pub top_words: Vec<WordCount>,
     pub top_phrases: Vec<PhraseCount>,
 }
@@ -48,6 +50,13 @@ pub struct InsightsData {
 #[serde(rename_all = "camelCase")]
 pub struct PerDayEntry {
     pub date: String,
+    pub words: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YearEntry {
+    pub year: i32,
     pub words: i64,
 }
 
@@ -78,6 +87,9 @@ pub struct SoravoSettings {
     pub microphone_id: String,
     pub sounds: bool,
     pub smart_cleanup: bool,
+    /// Append a trailing period when the transcript has no ending punctuation.
+    /// Independent of `smart_cleanup`.
+    pub add_punctuation: bool,
     pub vocabulary: std::collections::HashMap<String, String>,
     pub launch_at_login: bool,
     pub theme: String,
@@ -109,8 +121,9 @@ impl Default for SoravoSettings {
             microphone_id: "".to_string(),
             sounds: true,
             smart_cleanup: true,
+            add_punctuation: true,
             vocabulary: std::collections::HashMap::new(),
-            launch_at_login: false,
+            launch_at_login: true,
             theme: "light".to_string(),
             retention: "all".to_string(),
         }
@@ -399,6 +412,7 @@ fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
         if let Some(v) = s.get("microphoneId") { if let Some(s) = v.as_str() { settings.microphone_id = s.to_string(); } }
         if let Some(v) = s.get("sounds") { if let Some(b) = v.as_bool() { settings.sounds = b; } }
         if let Some(v) = s.get("smartCleanup") { if let Some(b) = v.as_bool() { settings.smart_cleanup = b; } }
+        if let Some(v) = s.get("addPunctuation") { if let Some(b) = v.as_bool() { settings.add_punctuation = b; } }
         if let Some(v) = s.get("vocabulary") { if let Some(o) = v.as_object() { for (k, val) in o { if let Some(s) = val.as_str() { settings.vocabulary.insert(k.clone(), s.to_string()); } } } }
         if let Some(v) = s.get("launchAtLogin") { if let Some(b) = v.as_bool() { settings.launch_at_login = b; } }
         if let Some(v) = s.get("theme") { if let Some(s) = v.as_str() { settings.theme = s.to_string(); } }
@@ -421,6 +435,7 @@ fn save_settings(app: &tauri::AppHandle, settings: &SoravoSettings) -> Result<()
     store.set("microphoneId", serde_json::json!(settings.microphone_id));
     store.set("sounds", serde_json::json!(settings.sounds));
     store.set("smartCleanup", serde_json::json!(settings.smart_cleanup));
+    store.set("addPunctuation", serde_json::json!(settings.add_punctuation));
     store.set("vocabulary", serde_json::json!(settings.vocabulary));
     store.set("launchAtLogin", serde_json::json!(settings.launch_at_login));
     store.set("theme", serde_json::json!(settings.theme));
@@ -430,12 +445,13 @@ fn save_settings(app: &tauri::AppHandle, settings: &SoravoSettings) -> Result<()
 }
 
 // Cleanup functions
-fn cleanup_text(text: &str, _language: &str) -> (String, i64) {
+fn cleanup_text(text: &str, add_punctuation: bool) -> (String, i64) {
     let mut result = text.to_string();
     let mut fillers_removed: i64 = 0;
 
-    // Remove filler words
-    let fillers = ["um", "uh", "er", "ah", "hmm", "like", "you know", "i mean"];
+    // Remove filler words. "like" is deliberately excluded: it is a common
+    // English word, so stripping it destroys real sentences.
+    let fillers = ["um", "uh", "er", "ah", "hmm", "you know", "i mean"];
     for filler in &fillers {
         let re = regex::Regex::new(&format!(r"(?i)\b{}\b", regex::escape(filler))).unwrap();
         let count = re.find_iter(&result).count() as i64;
@@ -443,8 +459,22 @@ fn cleanup_text(text: &str, _language: &str) -> (String, i64) {
         result = re.replace_all(&result, "").to_string();
     }
 
-    // Fix spacing
-    result = result.replace("  ", " ").trim().to_string();
+    // Collapse runs of whitespace. A single pass leaves residue behind for
+    // runs of 3+ spaces, so loop until stable.
+    while result.contains("  ") {
+        result = result.replace("  ", " ");
+    }
+    result = result.trim().to_string();
+
+    // Removing a filler orphans the punctuation around it ("so, um, yes" ->
+    // "so, , yes"), so merge separator runs and trim any left at the edges.
+    let re_commas = regex::Regex::new(r"(?:\s*,\s*){2,}").unwrap();
+    result = re_commas.replace_all(&result, ", ").to_string();
+    const SEPARATORS: &str = r"[\s,;:\-\u{2013}\u{2014}]";
+    let re_leading = regex::Regex::new(&format!(r"^{}+", SEPARATORS)).unwrap();
+    result = re_leading.replace_all(&result, "").to_string();
+    let re_trailing = regex::Regex::new(&format!(r"{}+$", SEPARATORS)).unwrap();
+    result = re_trailing.replace_all(&result, "").to_string();
 
     // Capitalize first letter
     if !result.is_empty() {
@@ -456,24 +486,76 @@ fn cleanup_text(text: &str, _language: &str) -> (String, i64) {
     }
 
     // Add period if missing
-    if !result.is_empty() && !result.ends_with('.') && !result.ends_with('!') && !result.ends_with('?') {
+    if add_punctuation && !result.is_empty() && !result.ends_with('.') && !result.ends_with('!') && !result.ends_with('?') {
         result.push('.');
     }
 
     (result, fillers_removed)
 }
 
-fn apply_vocabulary(text: &str, vocab: &std::collections::HashMap<String, String>) -> (String, i64) {
-    let mut result = text.to_string();
-    let mut applied: i64 = 0;
-    for (spoken, written) in vocab {
-        if result.to_lowercase().contains(&spoken.to_lowercase()) {
-            let re = regex::Regex::new(&format!(r"(?i)\b{}\b", regex::escape(spoken))).unwrap();
-            let count = re.find_iter(&result).count() as i64;
-            applied += count;
-            result = re.replace_all(&result, written.as_str()).to_string();
-        }
+/// Capitalize the first letter and append a trailing period when missing.
+/// Used when smart cleanup is off but punctuation is on, so the toggle is
+/// independent of the filler-removal toggle.
+fn capitalize_and_punctuate(text: &str) -> String {
+    let mut result = text.trim().to_string();
+    if result.is_empty() {
+        return result;
     }
+    let mut chars: Vec<char> = result.chars().collect();
+    if let Some(first) = chars.first_mut() {
+        *first = first.to_uppercase().next().unwrap_or(*first);
+    }
+    result = chars.into_iter().collect();
+    if !result.ends_with('.') && !result.ends_with('!') && !result.ends_with('?') {
+        result.push('.');
+    }
+    result
+}
+
+fn apply_vocabulary(text: &str, vocab: &std::collections::HashMap<String, String>) -> (String, i64) {
+    if vocab.is_empty() {
+        return (text.to_string(), 0);
+    }
+    // Longest phrases first so "sore avo" wins over a bare "sore", then
+    // alphabetically for a stable order. A HashMap would iterate in an
+    // arbitrary order, which made overlapping entries non-deterministic.
+    let mut keys: Vec<&String> = vocab.keys().collect();
+    keys.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()).then_with(|| a.cmp(b)));
+
+    // One combined alternation so each position in the text matches at most
+    // one entry, and a replacement can never be rewritten by a later pass.
+    let is_word = |c: char| c.is_alphanumeric() || c == '_';
+    let alternatives: Vec<String> = keys
+        .iter()
+        .map(|k| {
+            let lead = k.chars().next().map(is_word).unwrap_or(false);
+            let trail = k.chars().last().map(is_word).unwrap_or(false);
+            format!(
+                "{}{}{}",
+                if lead { r"\b" } else { "" },
+                regex::escape(k),
+                if trail { r"\b" } else { "" }
+            )
+        })
+        .collect();
+    let pattern = format!("(?i)(?:{})", alternatives.join("|"));
+    let re = match regex::Regex::new(&pattern) {
+        Ok(r) => r,
+        // A malformed entry must not break dictation.
+        Err(_) => return (text.to_string(), 0),
+    };
+
+    let mut applied: i64 = 0;
+    let result = re
+        .replace_all(text, |caps: &regex::Captures| {
+            let matched = caps.get(0).map(|m| m.as_str()).unwrap_or("");
+            applied += 1;
+            keys.iter()
+                .find(|k| k.eq_ignore_ascii_case(matched))
+                .map(|k| vocab[*k].clone())
+                .unwrap_or_else(|| matched.to_string())
+        })
+        .to_string();
     (result, applied)
 }
 
@@ -762,8 +844,8 @@ async fn submit_audio(
     let settings = load_settings(&app);
     let model = settings.model.clone();
     let language = settings.language.clone();
-    let language_for_cleanup = language.clone();
     let smart_cleanup = settings.smart_cleanup;
+    let add_punctuation = settings.add_punctuation;
     let vocabulary = settings.vocabulary.clone();
 
     let wav_path_str = wav_path.to_string_lossy().to_string();
@@ -793,16 +875,15 @@ async fn submit_audio(
             }
 
             let (text, fillers_removed) = if smart_cleanup {
-                cleanup_text(&raw, &language_for_cleanup)
+                cleanup_text(&raw, add_punctuation)
+            } else if add_punctuation {
+                (capitalize_and_punctuate(&raw), 0)
             } else {
                 (raw.clone(), 0)
             };
 
-            let (text, vocab_applied) = if smart_cleanup {
-                apply_vocabulary(&text, &vocabulary)
-            } else {
-                (text, 0)
-            };
+            // Custom vocabulary is a separate feature and always applies.
+            let (text, vocab_applied) = apply_vocabulary(&text, &vocabulary);
 
             let text = text.trim().to_string();
             if text.is_empty() {
@@ -948,6 +1029,8 @@ async fn get_insights(app: tauri::AppHandle) -> Result<InsightsData, String> {
     let mut per_day: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
     let mut per_hour = vec![0i64; 24];
     let mut per_weekday = vec![0i64; 7];
+    let mut per_month = vec![0i64; 12];
+    let mut per_year: std::collections::HashMap<i32, i64> = std::collections::HashMap::new();
     let mut word_counts: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
     let mut phrase_counts: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
     let mut words: i64 = 0;
@@ -985,6 +1068,8 @@ async fn get_insights(app: tauri::AppHandle) -> Result<InsightsData, String> {
             *per_day.entry(day).or_insert(0) += count;
             per_hour[local.hour() as usize] += count;
             per_weekday[(local.weekday().num_days_from_monday()) as usize] += count;
+            per_month[(local.month() as usize) - 1] += count;
+    *per_year.entry(local.year()).or_insert(0) += count;
         }
 
         // Tokenize
@@ -1093,6 +1178,15 @@ async fn get_insights(app: tauri::AppHandle) -> Result<InsightsData, String> {
         per_day: per_day_sorted,
         per_hour,
         per_weekday,
+        per_month,
+        per_year: {
+            let mut v: Vec<YearEntry> = per_year
+                .into_iter()
+                .map(|(year, words)| YearEntry { year, words })
+                .collect();
+            v.sort_by_key(|e| e.year);
+            v
+        },
         top_words,
         top_phrases,
     })
@@ -1158,6 +1252,9 @@ async fn set_settings(
     }
     if let Some(v) = patch.get("smartCleanup").and_then(|v| v.as_bool()) {
         settings.smart_cleanup = v;
+    }
+    if let Some(v) = patch.get("addPunctuation").and_then(|v| v.as_bool()) {
+        settings.add_punctuation = v;
     }
     if let Some(v) = patch.get("vocabulary") {
         if let Some(obj) = v.as_object() {
@@ -1376,4 +1473,114 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cleanup_keeps_the_word_like() {
+        let (text, removed) = cleanup_text("I like this very much", false);
+        assert_eq!(text, "I like this very much");
+        assert_eq!(removed, 0);
+    }
+
+    #[test]
+    fn cleanup_removes_real_fillers() {
+        let (text, removed) = cleanup_text("Um, I uh think so", false);
+        assert_eq!(text, "I think so");
+        assert_eq!(removed, 2);
+    }
+
+    #[test]
+    fn cleanup_drops_orphaned_punctuation() {
+        // Removing a leading filler must not leave a dangling separator.
+        assert_eq!(cleanup_text("Um, hello", false).0, "Hello");
+        assert_eq!(cleanup_text("hello, uh", false).0, "Hello");
+        assert_eq!(cleanup_text("so, um, I mean, yes", false).0, "So, yes");
+    }
+
+    #[test]
+    fn cleanup_collapses_long_space_runs() {
+        let (text, _) = cleanup_text("a     b", false);
+        assert_eq!(text, "A b");
+    }
+
+    #[test]
+    fn cleanup_punctuation_is_opt_in() {
+        assert_eq!(cleanup_text("hello", false).0, "Hello");
+        assert_eq!(cleanup_text("hello", true).0, "Hello.");
+    }
+
+    #[test]
+    fn cleanup_respects_existing_punctuation() {
+        assert_eq!(cleanup_text("really?", true).0, "Really?");
+        assert_eq!(cleanup_text("wow!", true).0, "Wow!");
+    }
+
+    #[test]
+    fn punctuation_helper_matches_cleanup_behaviour() {
+        assert_eq!(capitalize_and_punctuate("oh"), "Oh.");
+        assert_eq!(capitalize_and_punctuate("oh"), capitalize_and_punctuate("oh"));
+        assert_eq!(capitalize_and_punctuate(""), "");
+    }
+
+    #[test]
+    fn vocabulary_handles_multiword_case_and_boundaries() {
+        let mut v = std::collections::HashMap::new();
+        v.insert("sore avo".to_string(), "Soravo".to_string());
+        v.insert("kubernetes".to_string(), "Kubernetes".to_string());
+        // Multi-word entries match literally.
+        assert_eq!(apply_vocabulary("built with sore avo", &v), ("built with Soravo".into(), 1));
+        // Matching is case-insensitive.
+        assert_eq!(apply_vocabulary("deployed to KUBERNETES", &v).1, 1);
+        // Substrings of a longer word are not touched.
+        assert_eq!(apply_vocabulary("the kubernetes operator", &v).0, "the Kubernetes operator");
+        // Nothing to do when the phrase is absent.
+        assert_eq!(apply_vocabulary("plain text", &v).1, 0);
+    }
+
+    #[test]
+    fn vocabulary_applies_independently_of_cleanup() {
+        let mut vocab = std::collections::HashMap::new();
+        vocab.insert("soravo".to_string(), "Soravo".to_string());
+        let (text, applied) = apply_vocabulary("sore avo rocks", &vocab);
+        assert_eq!(applied, 0); // exact token sequence only
+        let (text, applied) = apply_vocabulary("soravo rocks", &vocab);
+        assert_eq!(text, "Soravo rocks");
+        assert_eq!(applied, 1);
+    }
+
+    #[test]
+    fn vocabulary_is_case_insensitive_and_word_bounded() {
+        let mut vocab = std::collections::HashMap::new();
+        vocab.insert("soravo".to_string(), "Soravo".to_string());
+        assert_eq!(apply_vocabulary("Soravo SORAVO", &vocab).0, "Soravo Soravo");
+        // Must not match inside a longer word.
+        assert_eq!(apply_vocabulary("soravos", &vocab).0, "soravos");
+    }
+
+    #[test]
+    fn vocabulary_prefers_longer_phrases() {
+        let mut vocab = std::collections::HashMap::new();
+        vocab.insert("sore".to_string(), "SORE".to_string());
+        vocab.insert("sore avo".to_string(), "Soravo".to_string());
+        // The phrase must win over the single word regardless of map order.
+        assert_eq!(apply_vocabulary("sore avo", &vocab).0, "Soravo");
+        assert_eq!(apply_vocabulary("sore", &vocab).0, "SORE");
+    }
+
+    #[test]
+    fn vocabulary_handles_keys_with_symbols() {
+        let mut vocab = std::collections::HashMap::new();
+        vocab.insert("c++".to_string(), "CSharpPlusPlus".to_string());
+        assert_eq!(apply_vocabulary("i love c++", &vocab).0, "i love CSharpPlusPlus");
+    }
+
+    #[test]
+    fn vocabulary_with_no_entries_is_a_noop() {
+        let empty = std::collections::HashMap::new();
+        assert_eq!(apply_vocabulary("hello world", &empty).0, "hello world");
+    }
 }

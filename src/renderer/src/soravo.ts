@@ -23,6 +23,7 @@ export interface SoravoSettings {
   microphoneId: string
   sounds: boolean
   smartCleanup: boolean
+  addPunctuation: boolean
   vocabulary: Record<string, string>
   launchAtLogin: boolean
   theme: Theme
@@ -42,6 +43,7 @@ export interface ModelInfo {
   microphoneId: string
   sounds: boolean
   smartCleanup: boolean
+  addPunctuation: boolean
   vocabulary: Record<string, string>
   launchAtLogin: boolean
   theme: Theme
@@ -61,6 +63,8 @@ export interface InsightsData {
   perDay: Array<{ date: string; words: number }>
   perHour: number[]
   perWeekday: number[]
+  perMonth: number[]
+  perYear: Array<{ year: number; words: number }>
   topWords: Array<{ word: string; count: number }>
   topPhrases: Array<{ phrase: string; count: number }>
 }
@@ -108,6 +112,7 @@ function settingsToTauri(s: SoravoSettings): Record<string, unknown> {
     microphoneId: s.microphoneId,
     sounds: s.sounds,
     smartCleanup: s.smartCleanup,
+    addPunctuation: s.addPunctuation,
     vocabulary: s.vocabulary,
     launchAtLogin: s.launchAtLogin,
     theme: s.theme,
@@ -126,8 +131,9 @@ function settingsFromTauri(s: any): SoravoSettings {
     microphoneId: s.microphoneId ?? s.microphone_id ?? '',
     sounds: s.sounds ?? true,
     smartCleanup: s.smartCleanup ?? s.smart_cleanup ?? true,
+    addPunctuation: s.addPunctuation ?? s.add_punctuation ?? true,
     vocabulary: s.vocabulary ?? {},
-    launchAtLogin: s.launchAtLogin ?? s.launch_at_login ?? false,
+    launchAtLogin: s.launchAtLogin ?? s.launch_at_login ?? true,
     theme: s.theme ?? 'light',
     retention: s.retention ?? 'all',
   }
@@ -227,6 +233,7 @@ export const soravo: SoravoAPI = {
     if (patch.microphoneId !== undefined) tauriPatch.microphoneId = patch.microphoneId
     if (patch.sounds !== undefined) tauriPatch.sounds = patch.sounds
     if (patch.smartCleanup !== undefined) tauriPatch.smartCleanup = patch.smartCleanup
+    if (patch.addPunctuation !== undefined) tauriPatch.addPunctuation = patch.addPunctuation
     if (patch.vocabulary !== undefined) tauriPatch.vocabulary = patch.vocabulary
     if (patch.launchAtLogin !== undefined) tauriPatch.launchAtLogin = patch.launchAtLogin
     if (patch.theme !== undefined) tauriPatch.theme = patch.theme

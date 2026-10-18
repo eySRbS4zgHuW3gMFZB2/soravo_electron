@@ -448,6 +448,13 @@ html[data-theme='dark'] .btn.primary {
   gap: 3px;
 }
 
+.heatmap-year {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--soravo-mute);
+  margin-left: 4px;
+}
+
 .heatmap-cell {
   width: 13px;
   height: 13px;
@@ -604,8 +611,8 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
 }
 
 .seg-btn.active {
-  background: var(--soravo-ink);
-  color: var(--soravo-primary);
+  background: var(--soravo-primary);
+  color: #ffffff;
 }
 
 .insights-duo {
@@ -650,6 +657,27 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
 .hub-rhythm-card .hub-bars {
   background: transparent;
   padding: 4px 0 0;
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chart-caption {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--soravo-mute);
+  letter-spacing: 0.4px;
+}
+
+.hub-bars.compact {
+  justify-content: flex-start;
+}
+
+.hub-bars.compact .hub-bar-col {
+  flex: 0 0 44px;
 }
 
 .hub-bars {

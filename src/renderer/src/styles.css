@@ -216,9 +216,49 @@ body {
 
 .row label {
   flex: none;
-  width: 88px;
+  width: 132px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
   font-weight: 600;
+}
+
+.hint-dot {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--soravo-mute);
+  color: var(--soravo-canvas);
+  font-size: 10px;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 15px;
+  text-align: center;
+  cursor: help;
+  user-select: none;
+}
+
+.hint-dot:hover,
+.hint-dot:focus {
+  background: var(--soravo-ink);
+  outline: none;
+}
+
+.hint-bubble {
+  position: fixed;
+  z-index: 300;
+  width: 250px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--soravo-ink);
+  color: var(--soravo-canvas);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  box-shadow: 0 8px 24px rgba(14, 15, 12, 0.24);
+  pointer-events: none;
 }
 
 .row input,
@@ -254,6 +294,24 @@ body {
 .btn.danger {
   background: var(--soravo-negative);
   color: #fff;
+}
+
+.row-inline {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.model-active-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--soravo-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .soravo-mini {

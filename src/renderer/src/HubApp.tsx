@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { InsightsData, RecState, SoravoSettings, TranscriptEntry } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
 
@@ -353,6 +353,57 @@ interface MicDevice {
   label: string
 }
 
+/**
+ * Small "i" affordance that reveals an explanatory bubble on hover or focus.
+ * The bubble is position:fixed and measured from the trigger, because the
+ * settings body scrolls and would otherwise clip an absolutely-ploned tooltip.
+ */
+function Hint({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const dot = useRef<HTMLSpanElement>(null)
+
+  const show = () => {
+    const el = dot.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const width = 250
+    setPos({
+      top: r.bottom + 8,
+      left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8))
+    })
+    setOpen(true)
+  }
+  const hide = () => setOpen(false)
+
+  return (
+    <>
+      <span
+        ref={dot}
+        className="hint-dot"
+        role="button"
+        tabIndex={0}
+        aria-label={text}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        onClick={(e) => {
+          e.preventDefault()
+          open ? hide() : show()
+        }}
+      >
+        i
+      </span>
+      {open && (
+        <div className="hint-bubble" role="tooltip" style={{ top: pos.top, left: pos.left }}>
+          {text}
+        </div>
+      )}
+    </>
+  )
+}
+
 function SubModal({
   title,
   subtitle,
@@ -403,11 +454,11 @@ function SettingsModal({
   const [pasteHotkey, setPasteHotkey] = useState(settings.pasteHotkey)
   const [copyHotkey, setCopyHotkey] = useState(settings.copyHotkey)
   const [holdToTalk, setHoldToTalk] = useState(settings.holdToTalk)
-  const [model, setModel] = useState(settings.model)
   const [language, setLanguage] = useState(settings.language)
   const [microphoneId, setMicrophoneId] = useState(settings.microphoneId)
   const [sounds, setSounds] = useState(settings.sounds)
   const [smartCleanup, setSmartCleanup] = useState(settings.smartCleanup)
+  const [addPunctuation, setAddPunctuation] = useState(settings.addPunctuation)
   const [vocabulary, setVocabulary] = useState<Record<string, string>>(settings.vocabulary)
   const [newFrom, setNewFrom] = useState('')
   const [newTo, setNewTo] = useState('')
@@ -416,11 +467,9 @@ function SettingsModal({
   const [retention, setRetention] = useState<'all' | '30days' | 'session'>(settings.retention)
   const [devices, setDevices] = useState<MicDevice[]>([])
   const [sub, setSub] = useState<null | 'shortcuts' | 'microphone' | 'language'>(null)
-  const [runtime, setRuntime] = useState<{ binary: boolean; model: string; modelPresent: boolean } | null>(null)
   const [savedTick, setSavedTick] = useState(false)
 
   useEffect(() => {
-    window.soravo.getRuntimeStatus().then(setRuntime).catch(() => setRuntime(null))
     navigator.mediaDevices
       .enumerateDevices()
       .then((all) =>
@@ -456,11 +505,11 @@ function SettingsModal({
       pasteHotkey: pasteHotkey.trim(),
       copyHotkey: copyHotkey.trim(),
       holdToTalk,
-      model: model.trim() || 'base.en',
       language: language.trim() || 'en',
       microphoneId,
       sounds,
       smartCleanup,
+      addPunctuation,
       vocabulary,
       launchAtLogin,
       theme,
@@ -609,28 +658,27 @@ function SettingsModal({
             <div>
               <h2 className="modal-title">System</h2>
               <div className="row">
-                <label>Model</label>
-                <select value={model} onChange={(e) => setModel(e.target.value)}>
-                  <option value="base.en">base.en (fast, ~150MB)</option>
-                  <option value="small.en">small.en (better, ~500MB)</option>
-                </select>
-              </div>
-              <p className="hub-note">
-                {runtime === null
-                  ? 'Checking transcription engine…'
-                  : runtime.binary && runtime.modelPresent
-                    ? `Engine ready — whisper.cpp binary + model ${runtime.model} present.`
-                    : 'Engine incomplete — run `npm run fetch:whisper` in the Soravo project, then restart.'}
-              </p>
-              <div className="row">
-                <label>Smart cleanup</label>
+                <label>
+                  Smart cleanup
+                  <Hint text="Strips filler words like um, uh, er, ah and hmm, then tidies spacing. Your custom vocabulary is always applied, whether this is on or off." />
+                </label>
                 <input
                   type="checkbox"
                   checked={smartCleanup}
                   onChange={(e) => setSmartCleanup(e.target.checked)}
                 />
               </div>
-              <p className="hub-note">Removes filler words, fixes spacing, and capitalizes sentences before pasting.</p>
+              <div className="row">
+                <label>
+                  Add punctuation
+                  <Hint text="Adds a full stop when a dictation ends without a period, exclamation mark or question mark. Works on its own, even when Smart cleanup is off." />
+                </label>
+                <input
+                  type="checkbox"
+                  checked={addPunctuation}
+                  onChange={(e) => setAddPunctuation(e.target.checked)}
+                />
+              </div>
               <h3 className="hub-section">Custom vocabulary ({vocabEntries.length})</h3>
               {vocabEntries.map(([from, to]) => (
                 <div className="row" key={from}>
@@ -666,7 +714,9 @@ function SettingsModal({
                 </button>
               </div>
               <div className="row">
-                <label>Start at login</label>
+                <label title="Registers Soravo in your Windows startup folder so it runs as soon as you sign in.">
+                  Start at login
+                </label>
                 <input
                   type="checkbox"
                   checked={launchAtLogin}
@@ -760,9 +810,11 @@ function ModelsPage() {
   const [downloading, setDownloading] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState('')
+  const [runtime, setRuntime] = useState<{ binary: boolean; model: string; modelPresent: boolean } | null>(null)
 
   const refresh = () => {
     window.soravo.listModels().then(setModels).catch(() => setModels([]))
+    window.soravo.getRuntimeStatus().then(setRuntime).catch(() => setRuntime(null))
   }
 
   useEffect(() => {
@@ -811,6 +863,15 @@ function ModelsPage() {
     <div className="hub-page">
       <h1 className="hub-greeting">Models</h1>
       <p className="hub-sub">Download and manage transcription models. All models are MIT-licensed Whisper models.</p>
+      {runtime !== null && (
+        <p className="hub-note" style={{ color: runtime.binary && runtime.modelPresent ? 'var(--soravo-positive)' : 'var(--soravo-negative)' }}>
+          {runtime.binary && runtime.modelPresent
+            ? `Transcription engine ready — using ${runtime.model}.`
+            : !runtime.binary
+              ? 'Transcription engine missing. Reinstall Soravo or re-run the bundled fetch:asr script.'
+              : `Transcription engine is installed, but the active model "${runtime.model}" is not. Download it below or pick another.`}
+        </p>
+      )}
       {error && <p className="hub-note" style={{ color: 'var(--soravo-negative)' }}>{error}</p>}
       <div className="hub-card">
         {models.map((m) => (
@@ -855,7 +916,7 @@ function ModelsPage() {
 
 function InsightsPage({ insights }: { insights: InsightsData | null }) {
   const [weekOffset, setWeekOffset] = useState(0)
-  const [rhythm, setRhythm] = useState<'hour' | 'weekday'>('hour')
+  const [rhythm, setRhythm] = useState<'hour' | 'weekday' | 'month' | 'year'>('hour')
   if (!insights) {
     return (
       <div className="hub-page">
@@ -899,15 +960,36 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
     }
     weeks.push(col)
   }
-  const monthLabels = weeks.map((col) => {
-    for (const cell of col) {
-      if (cell && cell.date.getDate() <= 7) return monthNames[cell.date.getMonth()]
-    }
-    return ''
-  }).map((label, i, all) => (label !== '' && i > 0 && all[i - 1] === label ? '' : label))
+  // A week column belongs to the month of its last day, which is what GitHub-style
+  // graphs do: the column that straddles a month boundary is labelled with the
+  // month that owns most of it.
+  const monthSections: { label: string; m: number; y: number; start: number; end: number; span: number }[] = []
+  for (let i = 0; i < weeks.length; i++) {
+    const cells = weeks[i].filter((c) => c !== null)
+    if (cells.length === 0) continue
+    const last = cells[cells.length - 1].date
+    const m = last.getMonth()
+    const y = last.getFullYear()
+    const prev = monthSections[monthSections.length - 1]
+    if (prev && prev.m === m && prev.y === y) prev.end = i + 1
+    else monthSections.push({ label: monthNames[m], m, y, start: i, end: i + 1, span: 1 })
+  }
+  for (const s of monthSections) s.span = s.end - s.start
+  const gridYear =
+    gridStart.getFullYear() === endSunday.getFullYear()
+      ? String(gridStart.getFullYear())
+      : `${gridStart.getFullYear()}–${endSunday.getFullYear()}`
 
   const maxHour = Math.max(1, ...insights.perHour)
   const maxWeekday = Math.max(1, ...insights.perWeekday)
+  const maxMonth = Math.max(1, ...insights.perMonth)
+  const maxYear = Math.max(1, ...insights.perYear.map((e) => e.words))
+  // Always render at least one year column so the axis is never blank.
+  const yearData =
+    insights.perYear.length > 0
+      ? insights.perYear
+      : [{ year: new Date().getFullYear(), words: 0 }]
+  const yearCaption = yearData.map((e) => e.year).join('–')
   const hourLabel = (h: number) => {
     if (h === 0) return '12a'
     if (h === 12) return '12p'
@@ -963,10 +1045,16 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
             ‹
           </button>
           <div className="heatmap-months">
-            {monthLabels.map((label, i) => (
-              <span key={i}>{label}</span>
+            {monthSections.map((sec, i) => (
+              <span
+                key={i}
+                style={{ width: `${sec.span * 13 + (sec.span - 1) * 3}px`, textAlign: 'center' }}
+              >
+                {sec.label}
+              </span>
             ))}
           </div>
+          <span className="heatmap-year">{gridYear}</span>
           <button
             className="heatmap-nav"
             title="Later"
@@ -1024,7 +1112,19 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
             className={rhythm === 'weekday' ? 'seg-btn active' : 'seg-btn'}
             onClick={() => setRhythm('weekday')}
           >
-            Weekday
+            Week
+          </button>
+          <button
+            className={rhythm === 'month' ? 'seg-btn active' : 'seg-btn'}
+            onClick={() => setRhythm('month')}
+          >
+            Month
+          </button>
+          <button
+            className={rhythm === 'year' ? 'seg-btn active' : 'seg-btn'}
+            onClick={() => setRhythm('year')}
+          >
+            Year
           </button>
         </div>
         {rhythm === 'hour' ? (
@@ -1036,7 +1136,7 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
               </div>
             ))}
           </div>
-        ) : (
+        ) : rhythm === 'weekday' ? (
           <div className="hub-bars">
             {insights.perWeekday.map((w, i) => (
               <div className="hub-bar-col" key={weekdays[i]} title={`${weekdays[i]}: ${w} words`}>
@@ -1044,6 +1144,33 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
                 <span>{weekdays[i]}</span>
               </div>
             ))}
+          </div>
+        ) : rhythm === 'month' ? (
+          <div className="chart">
+            <span className="chart-caption">{yearCaption}</span>
+            <div className="hub-bars">
+              {insights.perMonth.map((w, i) => (
+                <div className="hub-bar-col" key={monthNames[i]} title={`${monthNames[i]}: ${w} words`}>
+                  <div className="hub-bar" style={{ height: `${Math.max(3, Math.round((w / maxMonth) * 72))}px` }} />
+                  <span>{monthNames[i]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="chart">
+            <span className="chart-caption">{yearCaption}</span>
+            <div className="hub-bars compact">
+              {yearData.map((e) => (
+                <div className="hub-bar-col" key={e.year} title={`${e.year}: ${e.words} words`}>
+                  <div
+                    className="hub-bar"
+                    style={{ height: `${Math.max(3, Math.round((e.words / maxYear) * 72))}px` }}
+                  />
+                  <span>{e.year}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
