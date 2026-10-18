@@ -119,6 +119,25 @@ html[data-theme='dark'] {
   box-sizing: border-box;
 }
 
+/* Hide scrollbar chrome everywhere without disabling scrolling. The Settings
+   and sub-dialogs already hid theirs individually; this generalises that to
+   the main pane, the model list and anything Radix scrolls internally.
+
+   Nothing here touches overflow, so wheel, trackpad, touch, keyboard and
+   programmatic scrolling all still work - there is simply no drawn bar.
+
+   WebView2 is Chromium and honours `scrollbar-width: none`; the ::-webkit
+   rule covers older engines and the two together are what the app needs on
+   both Windows WebView2 and the browser preview. */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 html,
 body {
   margin: 0;
