@@ -16,7 +16,9 @@ import {
   SettingsIcon,
   TrashIcon
 } from '@/components/icons'
+import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Progress } from '@/components/ui/progress'
 import {
   Dialog,
   DialogContent,
@@ -91,7 +93,15 @@ function Titlebar() {
     <div className="hub-titlebar">
       <div className="hub-titlebar-left">
         <span className="hub-wordmark">Soravo</span>
-        <span className="hub-badge">Local</span>
+        {/* h-auto: the registry's Badge pins h-5, but this pill is sized by its own
+            padding. inline-block: Badge defaults to inline-flex, which changes
+            the line box and made the titlebar 3px taller, shifting every page
+            below it. */}
+        {/* h-auto drops the registry's fixed h-5, inline-block restores the original
+            inline-block box, and border-0 drops its 1px transparent border -
+            that border alone made the titlebar 2px taller and shifted every
+            page below it. */}
+        <Badge className="hub-badge h-auto inline-block border-0">Local</Badge>
       </div>
       <div className="hub-titlebar-right">
         <Button variant="ghost" size="icon-sm" className="hub-winbtn" title="Minimize" onClick={() => void window.soravo.winMin()}>
@@ -877,9 +887,7 @@ function ModelsPage() {
               </div>
               {downloading === m.id && (
                 <div style={{ marginTop: 8, width: 200 }}>
-                  <div style={{ height: 6, background: 'var(--soravo-canvas-soft)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${progress}%`, background: 'var(--soravo-primary)', transition: 'width 0.2s' }} />
-                  </div>
+                  <Progress value={progress} />
                   <div style={{ fontSize: 11, marginTop: 2 }}>{progress}%</div>
                 </div>
               )}

@@ -13,7 +13,9 @@ function Progress({
     <ProgressPrimitive.Root
       data-slot="progress"
       className={cn(
-        "relative flex h-1 w-full items-center overflow-x-hidden rounded-full bg-muted",
+        // Tuned to the model-download bar this replaces: a 6px track (h-1.5, not
+        // shadcn's h-1) filled with the lime brand accent over canvas-soft.
+        "relative flex h-1.5 w-full items-center overflow-hidden rounded-full bg-[var(--soravo-canvas-soft)]",
         className
       )}
       {...props}

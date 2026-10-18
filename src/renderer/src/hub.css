@@ -39,6 +39,11 @@
   color: var(--soravo-on-primary);
   border-radius: 9999px;
   vertical-align: 3px;
+  /* shadcn's Badge sets overflow-hidden, which changes an inline-block's
+     baseline from its last line box to its bottom margin edge. Combined with
+     the vertical-align above, that parked the pill 5px higher than it was and
+     grew the titlebar. Nothing here needs clipping. */
+  overflow: visible;
 }
 
 .hub-titlebar-right {
