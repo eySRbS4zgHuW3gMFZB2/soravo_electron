@@ -615,6 +615,31 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   color: #ffffff;
 }
 
+/* The rhythm chart keeps its original pill shape. ToggleGroup supplies the
+   behaviour and the selected state; these rules restore the old appearance
+   (9999px radius, no border, 13px semibold, lime pill when active).
+   They live unlayered, so they win over the component's Tailwind classes. */
+.seg [data-slot='toggle-group-item'] {
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--soravo-ink);
+  font-size: 13px;
+  font-weight: 600;
+  /* The component pins h-8; the old .seg-btn sized itself from its padding. */
+  height: auto;
+  padding: 6px 16px;
+}
+
+.seg [data-slot='toggle-group-item'][data-state='on'] {
+  background: var(--soravo-primary);
+  color: #ffffff;
+}
+
+.seg [data-slot='toggle-group-item']:focus-visible {
+  box-shadow: none;
+}
+
 .insights-duo {
   display: grid;
   grid-template-columns: 280px 1fr;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { RecState } from './soravo'
 import { blobToWav16k } from './audio'
 import { playBlip } from './sounds'
+import { Button } from '@/components/ui/button'
 
 interface Recorder {
   mr: MediaRecorder
@@ -137,9 +138,9 @@ export default function App() {
 
   return (
     <div className="soravo-mini">
-      <button className="mini-x" title="Cancel" onClick={() => void window.soravo.cancel()}>
+      <Button variant="ghost" size="icon" className="mini-x" title="Cancel" onClick={() => void window.soravo.cancel()}>
         <XIcon />
-      </button>
+      </Button>
       <div className="mini-status">
         {state === 'recording' && (
           <span className="live-bars" title="Recording">
@@ -156,18 +157,20 @@ export default function App() {
         {state === 'idle' && <span className="mini-hint">Soravo</span>}
       </div>
       {state === 'idle' ? (
-        <button className="mini-ok" title="Dictate" onClick={() => void window.soravo.toggle()}>
+        <Button variant="ghost" size="icon" className="mini-ok" title="Dictate" onClick={() => void window.soravo.toggle()}>
           <MicIcon />
-        </button>
+        </Button>
       ) : (
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           className="mini-ok"
           title="Finish"
           disabled={state !== 'recording'}
           onClick={() => void window.soravo.toggle()}
         >
           <CheckIcon />
-        </button>
+        </Button>
       )}
     </div>
   )

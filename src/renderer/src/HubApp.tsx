@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { InsightsData, RecState, SoravoSettings, TranscriptEntry } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
   Select,
   SelectContent,
@@ -147,15 +149,15 @@ function Titlebar() {
         <span className="hub-badge">Local</span>
       </div>
       <div className="hub-titlebar-right">
-        <button className="hub-winbtn" title="Minimize" onClick={() => void window.soravo.winMin()}>
+        <Button variant="ghost" size="icon-sm" className="hub-winbtn" title="Minimize" onClick={() => void window.soravo.winMin()}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14" /></svg>
-        </button>
-        <button className="hub-winbtn" title="Maximize" onClick={() => void window.soravo.winMax()}>
+        </Button>
+        <Button variant="ghost" size="icon-sm" className="hub-winbtn" title="Maximize" onClick={() => void window.soravo.winMax()}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
-        </button>
-        <button className="hub-winbtn close" title="Close to tray" onClick={() => void window.soravo.winClose()}>
+        </Button>
+        <Button variant="ghost" size="icon-sm" className="hub-winbtn close" title="Close to tray" onClick={() => void window.soravo.winClose()}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -170,28 +172,29 @@ function Sidebar({
   go: (p: Page) => void
   onOpenSettings: () => void
 }) {
+  // Nav items are full-bleed rows, so they must not inherit the button's
+  // default centring or inset padding.
+  const navItem = (target: Page, label: string, icon: React.ReactNode) => (
+    <Button
+      variant="ghost"
+      className={cn('hub-nav w-full justify-start', page === target && 'active')}
+      onClick={() => go(target)}
+    >
+      {icon}
+      <span>{label}</span>
+    </Button>
+  )
+
   return (
     <aside className="hub-sidebar">
-      <button className={page === 'dictation' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('dictation')}>
-        <MicIcon />
-        <span>Dictation</span>
-      </button>
-      <button className={page === 'history' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('history')}>
-        <HistoryIcon />
-        <span>History</span>
-      </button>
-      <button className={page === 'insights' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('insights')}>
-        <ChartIcon />
-        <span>Insights</span>
-      </button>
-      <button className={page === 'models' ? 'hub-nav active' : 'hub-nav'} onClick={() => go('models')}>
-        <BrainIcon />
-        <span>Models</span>
-      </button>
-      <button className="hub-nav" onClick={onOpenSettings}>
+      {navItem('dictation', 'Dictation', <MicIcon />)}
+      {navItem('history', 'History', <HistoryIcon />)}
+      {navItem('insights', 'Insights', <ChartIcon />)}
+      {navItem('models', 'Models', <BrainIcon />)}
+      <Button variant="ghost" className="hub-nav w-full justify-start" onClick={onOpenSettings}>
         <SettingsIcon />
         <span>Settings</span>
-      </button>
+      </Button>
       <div className="hub-sidebar-foot">
         <div className="hub-local-card">
           <p className="hub-local-title">Local &amp; private</p>
@@ -228,13 +231,13 @@ function EntryRow({
       <div className="hub-entry-time">{timeHM(entry.createdAt)}</div>
       <p className="hub-entry-text">{entry.text}</p>
       <div className="hub-entry-actions">
-        <button className="hub-mini-btn" title="Copy text" onClick={onCopy}>
+        <Button variant="ghost" size="icon" className="hub-mini-btn" title="Copy text" onClick={onCopy}>
           {copied ? 'Copied' : <CopyIcon />}
-        </button>
+        </Button>
         {onDelete && (
-          <button className="hub-mini-btn danger" title="Delete" onClick={onDelete}>
+          <Button variant="ghost" size="icon" className="hub-mini-btn danger" title="Delete" onClick={onDelete}>
             <TrashIcon />
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -280,9 +283,9 @@ function DictationPage({
           <div>
             <h2>Try Soravo in another app</h2>
             <p>Soravo works anywhere you type.</p>
-            <button className="btn primary" onClick={onToggle}>
+            <Button  onClick={onToggle}>
               {state === 'recording' ? 'Stop dictating' : 'Dictate now'}
-            </button>
+            </Button>
           </div>
           <div className="hub-hero-mark">S</div>
         </div>
@@ -332,13 +335,13 @@ function HistoryPage({
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <button className="btn" onClick={onRefresh}>
+        <Button variant="secondary" onClick={onRefresh}>
           Refresh
-        </button>
+        </Button>
         {history.length > 0 && (
-          <button className="btn danger" onClick={onClear}>
+          <Button variant="destructive" onClick={onClear}>
             Clear all
-          </button>
+          </Button>
         )}
       </div>
       <div className="hub-entries">
@@ -432,9 +435,9 @@ function SubModal({
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
       >
-        <button className="modal-close" title="Close" onClick={onClose}>
+        <Button variant="ghost" size="icon-sm" className="modal-close" title="Close" onClick={onClose}>
           <CloseIcon />
-        </button>
+        </Button>
         <h2 className="modal-title">{title}</h2>
         {subtitle ? <p className="hub-note">{subtitle}</p> : null}
         {children}
@@ -542,19 +545,20 @@ function SettingsModal({
         <aside className="modal-sidebar">
           <p className="modal-heading">Settings</p>
           {tabs.map((t) => (
-            <button
+            <Button
               key={t.id}
-              className={tab === t.id ? 'modal-tab active' : 'modal-tab'}
+              variant="ghost"
+              className={cn('modal-tab w-full justify-start', tab === t.id && 'active')}
               onClick={() => setTab(t.id)}
             >
               {t.label}
-            </button>
+            </Button>
           ))}
         </aside>
         <div className="modal-content">
-          <button className="modal-close" title="Close without saving" onClick={onClose}>
+          <Button variant="ghost" size="icon-sm" className="modal-close" title="Close without saving" onClick={onClose}>
             <CloseIcon />
-          </button>
+          </Button>
 
           {tab === 'general' && (
             <div>
@@ -562,9 +566,9 @@ function SettingsModal({
               <div className="row">
                 <label>Shortcuts</label>
                 <span className="row-summary">{fmtHotkey(hotkey)}</span>
-                <button className="btn" onClick={() => setSub('shortcuts')}>
+                <Button variant="secondary" onClick={() => setSub('shortcuts')}>
                   Change
-                </button>
+                </Button>
               </div>
               <div className="row">
                 <label>Microphone</label>
@@ -573,16 +577,16 @@ function SettingsModal({
                     ? (devices.find((d) => d.deviceId === microphoneId)?.label ?? 'Custom device')
                     : 'Auto-detect'}
                 </span>
-                <button className="btn" onClick={() => setSub('microphone')}>
+                <Button variant="secondary" onClick={() => setSub('microphone')}>
                   Change
-                </button>
+                </Button>
               </div>
               <div className="row">
                 <label>Dictation language</label>
                 <span className="row-summary">{language || 'en'}</span>
-                <button className="btn" onClick={() => setSub('language')}>
+                <Button variant="secondary" onClick={() => setSub('language')}>
                   Change
-                </button>
+                </Button>
               </div>
               <div className="row">
                 <label>Theme</label>
@@ -716,9 +720,9 @@ function SettingsModal({
                 <div className="row" key={from}>
                   <label>{from}</label>
                   <input value={to} readOnly />
-                  <button className="btn danger" onClick={() => removeWord(from)}>
+                  <Button variant="destructive" onClick={() => removeWord(from)}>
                     Remove
-                  </button>
+                  </Button>
                 </div>
               ))}
               <div className="row">
@@ -741,9 +745,9 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label />
-                <button className="btn" onClick={addWord}>
+                <Button variant="secondary" onClick={addWord}>
                   Add word
-                </button>
+                </Button>
               </div>
               <div className="row">
                 <label title="Registers Soravo in your Windows startup folder so it runs as soon as you sign in.">
@@ -756,9 +760,9 @@ function SettingsModal({
                 />
               </div>
               <div className="row">
-                <button className="btn danger" onClick={onQuit}>
+                <Button variant="destructive" onClick={onQuit}>
                   Quit Soravo
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -796,20 +800,20 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label>{historyCount} saved</label>
-                <button className="btn danger" onClick={onClearHistory}>
+                <Button variant="destructive" onClick={onClearHistory}>
                   Delete all transcripts
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
           <div className="modal-foot">
-            <button className="btn" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose}>
               Close
-            </button>
-            <button className="btn primary" onClick={save}>
+            </Button>
+            <Button  onClick={save}>
               {savedTick ? 'Saved' : 'Save'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -936,15 +940,15 @@ function ModelsPage() {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               {!m.installed && downloading !== m.id && (
-                <button className="btn" onClick={() => handleDownload(m.id)}>Download</button>
+                <Button variant="secondary" onClick={() => handleDownload(m.id)}>Download</Button>
               )}
               {downloading === m.id && (
-                <button className="btn" onClick={() => { setDownloading(null); setProgress(0) }}>Cancel</button>
+                <Button variant="secondary" onClick={() => { setDownloading(null); setProgress(0) }}>Cancel</Button>
               )}
               {m.installed && !m.active && (
                 <>
-                  <button className="btn" onClick={() => handleActivate(m.id)}>Set Active</button>
-                  <button className="btn" onClick={() => handleDelete(m.id)}>Delete</button>
+                  <Button variant="secondary" onClick={() => handleActivate(m.id)}>Set Active</Button>
+                  <Button variant="secondary" onClick={() => handleDelete(m.id)}>Delete</Button>
                 </>
               )}
             </div>
@@ -1078,14 +1082,16 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
           </span>
         </div>
         <div className="heatmap-navrow">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             className="heatmap-nav"
             title="Earlier"
             disabled={!canEarlier}
             onClick={() => setWeekOffset((o) => o + 8)}
           >
             ‹
-          </button>
+          </Button>
           <div className="heatmap-months">
             {monthSections.map((sec, i) => (
               <span
@@ -1097,14 +1103,16 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
             ))}
           </div>
           <span className="heatmap-year">{gridYear}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             className="heatmap-nav"
             title="Later"
             disabled={weekOffset === 0}
             onClick={() => setWeekOffset((o) => Math.max(0, o - 8))}
           >
             ›
-          </button>
+          </Button>
         </div>
         <div className="heatmap-body">
           <div className="heatmap-days">
@@ -1143,32 +1151,19 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
 
       <h3 className="hub-section">When you dictate</h3>
       <div className="hub-rhythm-card">
-        <div className="seg">
-          <button
-            className={rhythm === 'hour' ? 'seg-btn active' : 'seg-btn'}
-            onClick={() => setRhythm('hour')}
-          >
-            Hour
-          </button>
-          <button
-            className={rhythm === 'weekday' ? 'seg-btn active' : 'seg-btn'}
-            onClick={() => setRhythm('weekday')}
-          >
-            Week
-          </button>
-          <button
-            className={rhythm === 'month' ? 'seg-btn active' : 'seg-btn'}
-            onClick={() => setRhythm('month')}
-          >
-            Month
-          </button>
-          <button
-            className={rhythm === 'year' ? 'seg-btn active' : 'seg-btn'}
-            onClick={() => setRhythm('year')}
-          >
-            Year
-          </button>
-        </div>
+        <ToggleGroup
+          type="single"
+          value={rhythm}
+          onValueChange={(v) => v && setRhythm(v as typeof rhythm)}
+          variant="outline"
+          spacing={0}
+          className="seg"
+        >
+          <ToggleGroupItem value="hour">Hour</ToggleGroupItem>
+          <ToggleGroupItem value="weekday">Week</ToggleGroupItem>
+          <ToggleGroupItem value="month">Month</ToggleGroupItem>
+          <ToggleGroupItem value="year">Year</ToggleGroupItem>
+        </ToggleGroup>
         {rhythm === 'hour' ? (
           <div className="hub-bars">
             {insights.perHour.map((w, h) => (
