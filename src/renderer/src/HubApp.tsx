@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogTitle
 } from '@/components/ui/dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
@@ -377,49 +378,25 @@ interface MicDevice {
  * The bubble is position:fixed and measured from the trigger, because the
  * settings body scrolls and would otherwise clip an absolutely-ploned tooltip.
  */
+/**
+ * Explanatory "i" affordance beside a label. The bubble keeps the app's own
+ * look via .hint-bubble; Radix supplies the positioning, collision handling
+ * and keyboard wiring.
+ */
 function Hint({ text }: { text: string }) {
-  const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ top: 0, left: 0 })
-  const dot = useRef<HTMLSpanElement>(null)
-
-  const show = () => {
-    const el = dot.current
-    if (!el) return
-    const r = el.getBoundingClientRect()
-    const width = 250
-    setPos({
-      top: r.bottom + 8,
-      left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8))
-    })
-    setOpen(true)
-  }
-  const hide = () => setOpen(false)
-
   return (
-    <>
-      <span
-        ref={dot}
-        className="hint-dot"
-        role="button"
-        tabIndex={0}
-        aria-label={text}
-        onMouseEnter={show}
-        onMouseLeave={hide}
-        onFocus={show}
-        onBlur={hide}
-        onClick={(e) => {
-          e.preventDefault()
-          open ? hide() : show()
-        }}
-      >
-        i
-      </span>
-      {open && (
-        <div className="hint-bubble" role="tooltip" style={{ top: pos.top, left: pos.left }}>
-          {text}
-        </div>
-      )}
-    </>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" className="hint-dot" aria-label={text}>
+          i
+        </button>
+      </TooltipTrigger>
+      {/* side/align reproduce the old hand-rolled placement, which put the
+          bubble 8px below the dot and left-aligned to it. */}
+      <TooltipContent className="hint-bubble" side="bottom" align="start" sideOffset={8}>
+        {text}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -508,6 +485,34 @@ function SettingsModal({
       )
       .catch(() => setDevices([]))
   }, [])
+
+  // This dialog has to stay mounted so Radix can see open go true -> false,
+  // which means its local state survives a close. Previously the whole
+  // component unmounted, so every reopen started from a fresh copy of the
+  // saved settings on the General tab. Re-seed on open to keep that.
+  useEffect(() => {
+    if (!open) return
+    setTab('general')
+    setHotkey(settings.hotkey)
+    setPasteHotkey(settings.pasteHotkey)
+    setCopyHotkey(settings.copyHotkey)
+    setHoldToTalk(settings.holdToTalk)
+    setLanguage(settings.language)
+    setMicrophoneId(settings.microphoneId)
+    setSounds(settings.sounds)
+    setSmartCleanup(settings.smartCleanup)
+    setAddPunctuation(settings.addPunctuation)
+    setVocabulary(settings.vocabulary)
+    setNewFrom('')
+    setNewTo('')
+    setLaunchAtLogin(settings.launchAtLogin)
+    setTheme(settings.theme)
+    setRetention(settings.retention)
+    setSub(null)
+    setSavedTick(false)
+    // Only on the open transition: settings must not clobber in-progress edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const addWord = () => {
     const from = newFrom.trim()
@@ -1306,7 +1311,8 @@ export default function HubApp() {
   }
 
   return (
-    <div className="hub-root">
+    <TooltipProvider delayDuration={200}>
+      <div className="hub-root">
       <Titlebar />
       <div className="hub-body">
         <Sidebar page={page} go={setPage} onOpenSettings={() => setSettingsOpen(true)} />
@@ -1347,6 +1353,7 @@ export default function HubApp() {
           onClose={() => setSettingsOpen(false)}
         />
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }

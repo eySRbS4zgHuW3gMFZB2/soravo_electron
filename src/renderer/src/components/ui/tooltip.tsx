@@ -45,7 +45,10 @@ function TooltipContent({
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground" />
+        {/* The registry's <Arrow> is intentionally omitted. Radix renders it as
+            an unstyled <span> with no data attribute, so it cannot be hidden
+            from CSS, and the app's only tooltip (the settings Hint bubble)
+            never had an arrow. Re-add it here if a tooltip needs one. */}
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   )
