@@ -300,6 +300,39 @@ fn model_path(app: &tauri::AppHandle, id: &str) -> std::path::PathBuf {
     models_dir(app).join(format!("ggml-{}.bin", id))
 }
 
+/// Locate the CrispASR executable.
+///
+/// `npm run fetch:asr` normally relocates the exe into `third-party/bin/`,
+/// which is git-ignored. But the archive it downloads from is committed under
+/// `third-party/crispasr/extracted/<build>/`, so a fresh clone has the binary
+/// in one place while the lookup expects the other. Search both, preferring
+/// `bin/` because that is what a completed fetch produces.
+fn find_crispasr_binary(roots: &[std::path::PathBuf]) -> Option<std::path::PathBuf> {
+    let name = if cfg!(target_os = "windows") { "crispasr.exe" } else { "crispasr" };
+
+    for root in roots {
+        let in_bin = root.join("third-party").join("bin").join(name);
+        if in_bin.exists() {
+            return Some(in_bin);
+        }
+    }
+
+    // Fall back to the committed, not-yet-relocated copy. The versioned
+    // directory name changes per release, so probe the immediate children.
+    for root in roots {
+        let extracted = root.join("third-party").join("crispasr").join("extracted");
+        let Ok(entries) = std::fs::read_dir(&extracted) else { continue };
+        for entry in entries.flatten() {
+            let candidate = entry.path().join(name);
+            if candidate.exists() {
+                return Some(candidate);
+            }
+        }
+    }
+
+    None
+}
+
 fn size_label(bytes: u64) -> String {
     if bytes >= 1_000_000_000 {
         format!("{:.1} GB", bytes as f64 / 1_000_000_000.0)
@@ -567,28 +600,15 @@ fn transcribe_wav(
     resource_dir: &std::path::Path,
     models_dir: &std::path::Path,
 ) -> Result<String, String> {
-    let crispasr_binary = if cfg!(target_os = "windows") {
-        "crispasr.exe"
-    } else {
-        "crispasr"
-    };
-
     // In dev mode current_dir is src-tauri/, so the project root is its parent.
     // In a bundle the files sit next to the executable instead.
     let current_dir = std::env::current_dir().unwrap_or_default();
     let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
     let model_file = format!("ggml-{}.bin", model);
 
-    // CrispASR binary: look in third-party/bin first (dev), then bundled.
-    let current_dir = std::env::current_dir().unwrap_or_default();
-    let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
     let roots = [current_dir.clone(), project_root.clone(), resource_dir.to_path_buf()];
 
-    let find_binary = |name: &str| -> Option<std::path::PathBuf> {
-        roots.iter().map(|r| r.join("third-party/bin").join(name)).find(|p| p.exists())
-    };
-
-    let whisper_path = find_binary(crispasr_binary).ok_or_else(|| {
+    let whisper_path = find_crispasr_binary(&roots).ok_or_else(|| {
         "CrispASR is not installed. Run `npm run fetch:asr` to download it.".to_string()
     })?;
 
@@ -1195,12 +1215,12 @@ async fn get_insights(app: tauri::AppHandle) -> Result<InsightsData, String> {
 #[tauri::command]
 async fn get_runtime_status(app: tauri::AppHandle, model: String) -> Result<serde_json::Value, String> {
     let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
-    let whisper_path = resource_dir.join("third-party").join("bin").join("crispasr.exe");
-    // Also check current_dir and project_root for dev mode.
     let current_dir = std::env::current_dir().unwrap_or_default();
     let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
-    let binary_exists = [current_dir.join("third-party/bin/crispasr.exe"), project_root.join("third-party/bin/crispasr.exe"), whisper_path.clone()]
-        .iter().any(|p| p.exists());
+    let roots = [current_dir.clone(), project_root.clone(), resource_dir.to_path_buf()];
+    // Same resolution as transcribe_wav, so the UI cannot report the engine
+    // missing while dictation would in fact work.
+    let binary_exists = find_crispasr_binary(&roots).is_some();
 
     let md = models_dir(&app);
     let model_path = md.join(format!("ggml-{}.bin", model));
@@ -1582,5 +1602,85 @@ mod tests {
     fn vocabulary_with_no_entries_is_a_noop() {
         let empty = std::collections::HashMap::new();
         assert_eq!(apply_vocabulary("hello world", &empty).0, "hello world");
+    }
+
+    /// Build a throwaway project tree. `layout` decides where the exe lands:
+    /// `"bin"` is what `npm run fetch:asr` produces, `"extracted"` is what a
+    /// fresh clone gets from the committed archive.
+    fn fixture(layout: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "soravo-asr-test-{}-{}",
+            layout,
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        let exe_dir = if layout == "bin" {
+            dir.join("third-party").join("bin")
+        } else {
+            dir.join("third-party")
+                .join("crispasr")
+                .join("extracted")
+                .join("crispasr-windows-x86_64-cpu")
+        };
+        std::fs::create_dir_all(&exe_dir).unwrap();
+        let name = if cfg!(target_os = "windows") { "crispasr.exe" } else { "crispasr" };
+        std::fs::write(exe_dir.join(name), b"stub").unwrap();
+        dir
+    }
+
+    #[test]
+    fn asr_lookup_finds_the_relocated_binary() {
+        let dir = fixture("bin");
+        let found = find_crispasr_binary(&[dir.clone()]);
+        assert!(found.is_some(), "should find third-party/bin/<exe>");
+        assert!(found.unwrap().to_string_lossy().contains("third-party"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn asr_lookup_falls_back_to_the_committed_archive() {
+        // This is the fresh-clone case that previously reported the engine
+        // missing even though the binary was present in the repo.
+        let dir = fixture("extracted");
+        let found = find_crispasr_binary(&[dir.clone()]);
+        assert!(found.is_some(), "should find third-party/crispasr/extracted/<build>/<exe>");
+        assert!(found.unwrap().to_string_lossy().contains("extracted"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn asr_lookup_returns_none_when_absent() {
+        let dir = std::env::temp_dir().join(format!("soravo-asr-empty-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(find_crispasr_binary(&[dir.clone()]).is_none());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn asr_lookup_prefers_bin_over_extracted() {
+        // Both copies present: bin/ wins, because that is the completed-fetch
+        // layout and the one a bundle ships.
+        let root = std::env::temp_dir().join(format!("soravo-asr-both-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let name = if cfg!(target_os = "windows") { "crispasr.exe" } else { "crispasr" };
+        let bin = root.join("third-party").join("bin");
+        let extracted = root
+            .join("third-party")
+            .join("crispasr")
+            .join("extracted")
+            .join("crispasr-windows-x86_64-cpu");
+        std::fs::create_dir_all(&bin).unwrap();
+        std::fs::create_dir_all(&extracted).unwrap();
+        std::fs::write(bin.join(name), b"bin").unwrap();
+        std::fs::write(extracted.join(name), b"extracted").unwrap();
+
+        let found = find_crispasr_binary(&[root.clone()]).unwrap();
+        assert_eq!(
+            std::fs::read(&found).unwrap(),
+            b"bin",
+            "bin/ must take precedence over the archive copy"
+        );
+        let _ = std::fs::remove_dir_all(&root);
     }
 }
