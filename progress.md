@@ -198,6 +198,29 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - Verified: transcription works end-to-end with CrispASR
 - Pushed to GitHub as `crispasr-migration` branch
 
+### Phase 8: Global Input Hooks
+- Created worktree `global-hotkeys` from CrispASR checkpoint
+- Replaced tauri-plugin-global-shortcut with native rdev input hook
+- Push-to-talk (hold-to-talk) via key-down/key-up edges
+- CapsLock as hotkey (rdev VK_CAPITAL canonicalization)
+- Mouse button hotkeys (Mouse1-5) alone or with modifiers
+- Toggle mode (press to start, press to stop) + hold mode
+- 10 unit tests for binding parser
+- Fixed: tokio::spawn crash on hook thread, modifier tracking, mouse release, CapsLock matching
+- Pushed to GitHub as `global-hotkeys` branch, merged via PR #2
+
+### Phase 9: Models Tab
+- Created worktree `models-tab` from global-hotkeys checkpoint
+- Added Models tab to sidebar with 28 MIT-licensed ASR models
+- Backend: list_models, download_model, delete_model, set_active_model commands
+- Models stored in %APPDATA%/soravo/models/ (no model shipped with binary)
+- Download streams from HuggingFace with progress events
+- Frontend: Models page with download progress bar, set active, delete
+- Model catalog: Whisper family, Moonshine, GigaAM, Kyutai, GLM-ASR, Hikari, MOSS, minI-Omni2, VibeVoice, MiMo, Hojo-ASR
+- fetch-asr.mjs script for downloading CrispASR + models
+- Verified: download, set active, transcription all work
+- Pushed to GitHub as `models-tab` branch, merged via PR #3
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.

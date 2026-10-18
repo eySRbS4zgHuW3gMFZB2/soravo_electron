@@ -8,6 +8,7 @@ Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcriptio
 - **Pill overlay** — compact floating pill with recording/transcribing/error states, animated bars, cancel/finish buttons
 - **Hub window** — Dictation, History, Settings, and Insights tabs
 - **Settings** — hotkey capture (press-to-capture), mic selection, model/language, smart cleanup, custom vocabulary, sounds, theme, retention, launch at login
+- **Models** — download, manage, and switch between 28 MIT-licensed ASR models (Whisper, Moonshine, and more)
 - **Insights** — total words, WPM gauge, activity heatmap (26-week), rhythm chart, top words, repeated phrases, correction counts
 - **Local-only** — SQLite history, tauri-plugin-store settings, no cloud dependencies
 
@@ -80,6 +81,7 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 - **Framework**: Tauri v2 (Rust backend + WebView frontend)
 - **Frontend**: React 18, TypeScript, Vite
 - **Storage**: SQLite (rusqlite) + tauri-plugin-store
+- **Models**: 28 MIT-licensed ASR models, downloaded on-demand to %APPDATA%/soravo/models/
 - **Transcription**: CrispASR (ggml-base.en.bin, ~142 MB, multi-backend ASR)
 - **Packaging**: Tauri bundle (NSIS + MSI)
 
