@@ -313,6 +313,9 @@ const MODEL_CATALOG: &[(&str, &str, u64, &str, &str)] = &[
     ("vibevoice", "VibeVoice ASR (Q4_K)", 4_590_000_000, "https://huggingface.co/cstr/vibevoice-asr-GGUF/resolve/main/vibevoice-asr-q4_k.gguf", "MIT"),
     ("mimo-asr", "MiMo ASR (Q4_K)", 4_310_000_000, "https://huggingface.co/cstr/mimo-asr-GGUF/resolve/main/mimo-asr-q4_k.gguf", "MIT"),
     ("hojo-asr", "Hojo-ASR V1 (Q4_K)", 4_220_000_000, "https://huggingface.co/cstr/Hojo-ASR-Multi-V1-GGUF/resolve/main/hojo-asr-multi-v1-q4_k.gguf", "MIT"),
+    // NVIDIA Parakeet & Canary (CC-BY-4.0)
+    ("parakeet-tdt-v2", "Parakeet TDT v2 (English)", 1_100_000_000, "https://huggingface.co/nvidia/parakeet-tdt-v2.0", "CC-BY-4.0"),
+    ("canary-1b-v2", "Canary 1B v2 (Multilingual)", 1_000_000_000, "https://huggingface.co/nvidia/canary-1b-v2", "CC-BY-4.0"),
 ];
 
 fn models_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
