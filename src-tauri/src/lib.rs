@@ -249,6 +249,16 @@ fn open_db(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
         .map_err(|e| e.to_string())?;
     }
 
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS scratchpad_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            text TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+            pinned BOOLEAN NOT NULL DEFAULT 0
+        );",
+    )
+    .map_err(|e| e.to_string())?;
+
     Ok(conn)
 }
 
@@ -1368,6 +1378,107 @@ async fn show_hub(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct ScratchpadNote {
+    pub id: i64,
+    pub text: String,
+    pub created_at: String,
+    pub pinned: bool,
+}
+
+#[tauri::command]
+async fn get_scratchpad_notes(app: tauri::AppHandle) -> Result<Vec<ScratchpadNote>, String> {
+    let conn = open_db(&app)?;
+    let mut stmt = conn
+        .prepare("SELECT id, text, created_at, pinned FROM scratchpad_notes ORDER BY pinned DESC, created_at DESC")
+        .map_err(|e| e.to_string())?;
+    let notes = stmt
+        .query_map([], |row| {
+            Ok(ScratchpadNote {
+                id: row.get(0)?,
+                text: row.get(1)?,
+                created_at: row.get(2)?,
+                pinned: row.get::<_, i64>(3)? != 0,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+    Ok(notes)
+}
+
+#[tauri::command]
+async fn add_scratchpad_note(app: tauri::AppHandle, text: String) -> Result<ScratchpadNote, String> {
+    let conn = open_db(&app)?;
+    conn.execute("INSERT INTO scratchpad_notes (text) VALUES (?1)", [&text])
+        .map_err(|e| e.to_string())?;
+    let id = conn.last_insert_rowid();
+    let note = conn
+        .query_row(
+            "SELECT id, text, created_at, pinned FROM scratchpad_notes WHERE id = ?1",
+            [id],
+            |row| {
+                Ok(ScratchpadNote {
+                    id: row.get(0)?,
+                    text: row.get(1)?,
+                    created_at: row.get(2)?,
+                    pinned: row.get::<_, i64>(3)? != 0,
+                })
+            },
+        )
+        .map_err(|e| e.to_string())?;
+    app.emit("soravo:scratchpad-changed", ()).ok();
+    Ok(note)
+}
+
+#[tauri::command]
+async fn delete_scratchpad_note(app: tauri::AppHandle, id: i64) -> Result<(), String> {
+    let conn = open_db(&app)?;
+    conn.execute("DELETE FROM scratchpad_notes WHERE id = ?1", [id])
+        .map_err(|e| e.to_string())?;
+    app.emit("soravo:scratchpad-changed", ()).ok();
+    Ok(())
+}
+
+#[tauri::command]
+async fn update_scratchpad_note(
+    app: tauri::AppHandle,
+    id: i64,
+    patch: serde_json::Value,
+) -> Result<(), String> {
+    let conn = open_db(&app)?;
+    if let Some(text) = patch.get("text").and_then(|v| v.as_str()) {
+        conn.execute(
+            "UPDATE scratchpad_notes SET text = ?1 WHERE id = ?2",
+            (text, id),
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    if let Some(pinned) = patch.get("pinned").and_then(|v| v.as_bool()) {
+        conn.execute(
+            "UPDATE scratchpad_notes SET pinned = ?1 WHERE id = ?2",
+            (if pinned { 1 } else { 0 }, id),
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    app.emit("soravo:scratchpad-changed", ()).ok();
+    Ok(())
+}
+
+#[tauri::command]
+async fn open_scratchpad_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("scratchpad") {
+        if win.is_minimized().unwrap_or(false) {
+            win.unminimize().ok();
+        }
+        win.show().ok();
+        win.set_focus().ok();
+        // Navigate to scratchpad route
+        win.eval("window.location.hash = '#/scratchpad'").ok();
+    }
+    Ok(())
+}
+
 #[tauri::command]
 async fn quit(app: tauri::AppHandle) -> Result<(), String> {
     app.exit(0);
@@ -1487,6 +1598,11 @@ pub fn run() {
             win_max,
             win_close,
             show_hub,
+            open_scratchpad_window,
+            get_scratchpad_notes,
+            add_scratchpad_note,
+            delete_scratchpad_note,
+            update_scratchpad_note,
             quit,
             hotkeys::validate_binding,
             hotkeys::binding_help

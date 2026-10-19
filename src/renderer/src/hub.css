@@ -9,6 +9,145 @@
   color: var(--soravo-ink);
 }
 
+/* Scratchpad window */
+.scratchpad-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--soravo-canvas-soft);
+  border-radius: var(--soravo-radius);
+  overflow: hidden;
+  font-family: var(--soravo-font);
+  color: var(--soravo-ink);
+}
+
+.scratchpad-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.scratchpad-sidebar {
+  width: 200px;
+  border-right: 1px solid var(--soravo-rule);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scratchpad-sidebar-header {
+  padding: 12px;
+  border-bottom: 1px solid var(--soravo-rule);
+}
+
+.scratchpad-note-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.scratchpad-note-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  transition: background 0.15s;
+}
+
+.scratchpad-note-item:hover {
+  background: var(--soravo-canvas);
+}
+
+.scratchpad-note-item.active {
+  background: var(--soravo-accent-soft);
+}
+
+.scratchpad-note-item.pinned {
+  border-left: 2px solid var(--soravo-accent);
+}
+
+.scratchpad-note-preview {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scratchpad-note-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--soravo-ink-soft);
+}
+
+.scratchpad-pin {
+  font-size: 10px;
+}
+
+.scratchpad-note-date {
+  font-size: 11px;
+}
+
+.scratchpad-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--soravo-ink-soft);
+  font-size: 13px;
+}
+
+.scratchpad-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scratchpad-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--soravo-rule);
+}
+
+.scratchpad-save-status {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--soravo-ink-soft);
+}
+
+.scratchpad-textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 16px;
+  font-family: var(--soravo-font);
+  font-size: 15px;
+  line-height: 1.6;
+  background: transparent;
+  color: var(--soravo-ink);
+}
+
+.scratchpad-welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--soravo-ink-soft);
+}
+
 .hub-titlebar {
   flex: none;
   display: flex;

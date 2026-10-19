@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { InsightsData, RecState, SoravoSettings, TranscriptEntry } from './soravo'
+import { soravo } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -13,6 +14,7 @@ import {
   MaximizeIcon,
   MicIcon,
   MinimizeIcon,
+  ScratchpadIcon,
   SettingsIcon,
   TrashIcon
 } from '@/components/icons'
@@ -146,6 +148,10 @@ function Sidebar({
       {navItem('history', 'History', <HistoryIcon />)}
       {navItem('insights', 'Insights', <ChartIcon />)}
       {navItem('models', 'Models', <BrainIcon />)}
+      <Button variant="ghost" className="hub-nav w-full justify-start" onClick={() => soravo.openScratchpadWindow()}>
+        <ScratchpadIcon />
+        <span>Scratchpad</span>
+      </Button>
       <Button variant="ghost" className="hub-nav w-full justify-start" onClick={onOpenSettings}>
         <SettingsIcon />
         <span>Settings</span>
