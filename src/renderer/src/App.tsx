@@ -112,6 +112,19 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Stop recording on keyup when pill is focused (for scratchpad textarea case)
+  useEffect(() => {
+    const keyUpHandler = () => {
+      window.soravo.getState().then((state) => {
+        if (state === 'recording') {
+          window.soravo.toggle().catch(() => {})
+        }
+      }).catch(() => {})
+    }
+    window.addEventListener('keyup', keyUpHandler)
+    return () => window.removeEventListener('keyup', keyUpHandler)
+  }, [])
+
   return (
     <div className="soravo-mini">
       <Button variant="ghost" size="icon" className="mini-x" title="Cancel" onClick={() => void window.soravo.cancel()}>

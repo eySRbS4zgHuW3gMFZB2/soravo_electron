@@ -143,6 +143,15 @@ export default function ScratchpadPage() {
     soravo.setTextareaFocus(textareaFocused).catch(() => {})
   }, [textareaFocused])
 
+  // Reset textarea focus when window loses focus (prevents stuck state)
+  useEffect(() => {
+    const handleWindowBlur = () => {
+      setTextareaFocused(false)
+    }
+    window.addEventListener('blur', handleWindowBlur)
+    return () => window.removeEventListener('blur', handleWindowBlur)
+  }, [])
+
   // keydown: start recording (only when textarea focused, global hook disabled)
   useEffect(() => {
     const keyDownHandler = (e: KeyboardEvent) => {
@@ -157,20 +166,8 @@ export default function ScratchpadPage() {
     return () => window.removeEventListener('keydown', keyDownHandler)
   }, [textareaFocused, hotkey])
 
-  // keyup: stop recording
-  useEffect(() => {
-    const keyUpHandler = (e: KeyboardEvent) => {
-      if (!textareaFocused) return
-      // Stop on any key release while recording
-      soravo.getState().then((state) => {
-        if (state === 'recording') {
-          soravo.toggle().catch(console.error)
-        }
-      }).catch(() => {})
-    }
-    window.addEventListener('keyup', keyUpHandler)
-    return () => window.removeEventListener('keyup', keyUpHandler)
-  }, [textareaFocused])
+  // keyup is handled by the pill window (App.tsx) since the textarea
+  // loses focus when the pill shows up during recording.
 
   return (
     <div className="scratchpad-page">
