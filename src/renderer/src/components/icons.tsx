@@ -1,4 +1,4 @@
-import { Check, Minus } from 'lucide-react'
+import { Check, Minus, Moon, Sun } from 'lucide-react'
 
 /**
  * Shared icon set for both windows.
@@ -99,6 +99,15 @@ export function ChartIcon() {
       <path d="M7 14l4-4 3 3 5-6" />
     </svg>
   )
+}
+
+/** Theme pickers, matching the icons Wispr Flow puts in its theme menu. */
+export function MoonIcon() {
+  return <Moon aria-hidden="true" />
+}
+
+export function SunIcon() {
+  return <Sun aria-hidden="true" />
 }
 
 export function SnippetsIcon() {

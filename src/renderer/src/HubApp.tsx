@@ -13,16 +13,19 @@ import {
   HistoryIcon,
   MaximizeIcon,
   MicIcon,
+  MoonIcon,
   MinimizeIcon,
   ScratchpadIcon,
   SettingsIcon,
   SnippetsIcon,
+  SunIcon,
   TrashIcon
 } from '@/components/icons'
 import ScratchpadPage from './ScratchpadPage'
 import SnippetsPage from './SnippetsPage'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { Progress } from '@/components/ui/progress'
 import {
   Dialog,
@@ -540,58 +543,111 @@ function SettingsModal({
           </Button>
 
           {tab === 'general' && (
-            <div>
-              <h2 className="modal-title">General</h2>
-              <div className="row">
-                <label>Shortcuts</label>
-                <span className="row-summary">{fmtHotkey(hotkey)}</span>
-                <Button variant="secondary" onClick={() => setSub('shortcuts')}>
-                  Change
-                </Button>
-              </div>
-              <div className="row">
-                <label>Microphone</label>
-                <span className="row-summary">
-                  {microphoneId
-                    ? (devices.find((d) => d.deviceId === microphoneId)?.label ?? 'Custom device')
-                    : 'Auto-detect'}
-                </span>
-                <Button variant="secondary" onClick={() => setSub('microphone')}>
-                  Change
-                </Button>
-              </div>
-              <div className="row">
-                <label>Dictation language</label>
-                <span className="row-summary">{language || 'en'}</span>
-                <Button variant="secondary" onClick={() => setSub('language')}>
-                  Change
-                </Button>
-              </div>
-              <div className="row">
-                <label>Theme</label>
-                {/* className="seg" is the app's pill treatment: canvas-soft track, 9999px
-                      radius, 13px semibold, lime fill with white text when on.
-                      The bare ToggleGroup drew a bordered box with black text
-                      instead. */}
-                <ToggleGroup
-                  type="single"
-                  value={theme}
-                  onValueChange={(v) => v && setTheme(v as 'light' | 'dark')}
-                  spacing={0}
-                  className="seg w-full"
-                >
-                  <ToggleGroupItem value="light" className="flex-1">
-                    Light
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="dark" className="flex-1">
-                    Dark
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-              <div className="row">
-                <label>Sound effects</label>
-                <Checkbox checked={sounds} onCheckedChange={(c) => setSounds(c === true)} />
-              </div>
+            <div className="general-page modal-scroll">
+              <div className="general-content">
+                <div className="general-header">
+                  <h3 className="general-title">General</h3>
+                </div>
+
+                <div className="general-section">
+                  <div className="general-card">
+                    {/* Shortcuts */}
+                    <div className="general-item">
+                      <div className="general-text">
+                        <div className="general-label">Shortcuts</div>
+                        <div className="general-desc">Hold {fmtHotkey(hotkey)} and speak.</div>
+                      </div>
+                      <div className="general-controls">
+                        <Button variant="secondary" onClick={() => setSub('shortcuts')}>
+                          Change
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="general-divider" />
+
+                    {/* Microphone */}
+                    <div className="general-item">
+                      <div className="general-text">
+                        <div className="general-label">Microphone</div>
+                        <div className="general-desc">
+                          {microphoneId
+                            ? (devices.find((d) => d.deviceId === microphoneId)?.label ?? 'Custom device')
+                            : 'Auto-detect'}
+                        </div>
+                      </div>
+                      <div className="general-controls">
+                        <Button variant="secondary" onClick={() => setSub('microphone')}>
+                          Change
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="general-divider" />
+
+                    {/* Dictation language */}
+                    <div className="general-item">
+                      <div className="general-text">
+                        <div className="general-label">Dictation language</div>
+                        <div className="general-desc">{language || 'en'}</div>
+                      </div>
+                      <div className="general-controls">
+                        <Button variant="secondary" onClick={() => setSub('language')}>
+                          Change
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="general-divider" />
+
+                    {/* Theme */}
+                    <div className="general-item">
+                      <div className="general-text">
+                        <div className="general-label">Theme</div>
+                      </div>
+                      <div className="general-controls">
+                        <Select
+                          value={theme}
+                          onValueChange={(v) => setTheme(v as 'light' | 'dark')}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select theme" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem value="light">
+                                <SunIcon />
+                                Light
+                              </SelectItem>
+                              <SelectItem value="dark">
+                                <MoonIcon />
+                                Dark
+                              </SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="general-divider" />
+
+                    {/* Sound effects */}
+                    <div className="general-item">
+                      <div className="general-text">
+                        <div className="general-label">Sound effects</div>
+                        <div className="general-desc">
+                          Play a sound when dictation starts and finishes.
+                        </div>
+                      </div>
+                      <div className="general-controls">
+                        <Switch
+                          checked={sounds}
+                          onCheckedChange={(c) => setSounds(c === true)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
               {sub === 'shortcuts' && (
                 <SubModal open 
@@ -665,68 +721,104 @@ function SettingsModal({
                   </div>
                 </SubModal>
               )}
+              </div>
             </div>
           )}
 
           {tab === 'system' && (
-            <div>
-              <h2 className="modal-title">System</h2>
-              <div className="row">
-                <label>
-                  Smart cleanup
-                  <Hint text="Strips filler words like um, uh, er, ah and hmm, then tidies spacing. Your custom vocabulary is always applied, whether this is on or off." />
-                </label>
-                <Checkbox checked={smartCleanup} onCheckedChange={(c) => setSmartCleanup(c === true)} />
+            <div className="system-page modal-scroll">
+              <div className="system-section">
+                <div className="system-section-title">App settings</div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Launch app at login
+                    <span className="system-desc">Runs Soravo as soon as you sign in to Windows.</span>
+                  </div>
+                  <Switch checked={launchAtLogin} onCheckedChange={(c) => setLaunchAtLogin(c === true)} />
+                </div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Smart cleanup
+                    <span className="system-desc">
+                      Strips filler words like um, uh, er, ah and hmm, then tidies spacing. Your custom
+                      vocabulary is always applied, whether this is on or off.
+                    </span>
+                  </div>
+                  <Switch checked={smartCleanup} onCheckedChange={(c) => setSmartCleanup(c === true)} />
+                </div>
               </div>
-              <div className="row">
-                <label>
-                  Add punctuation
-                  <Hint text="Adds a full stop when a dictation ends without a period, exclamation mark or question mark. Works on its own, even when Smart cleanup is off." />
-                </label>
-                <Checkbox checked={addPunctuation} onCheckedChange={(c) => setAddPunctuation(c === true)} />
+              <div className="system-section">
+                <div className="system-section-title">Sound</div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Dictation and notification sounds
+                  </div>
+                  <Switch checked={sounds} onCheckedChange={(c) => setSounds(c === true)} />
+                </div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Add punctuation
+                    <span className="system-desc">Adds a full stop when dictation ends without a period, exclamation mark or question mark.</span>
+                  </div>
+                  <Switch checked={addPunctuation} onCheckedChange={(c) => setAddPunctuation(c === true)} />
+                </div>
               </div>
-              <h3 className="hub-section">Custom vocabulary ({vocabEntries.length})</h3>
-              {vocabEntries.map(([from, to]) => (
-                <div className="row" key={from}>
-                  <label>{from}</label>
-                  <Input value={to} readOnly />
-                  <Button variant="destructive" onClick={() => removeWord(from)}>
-                    Remove
+              <div className="system-section">
+                <div className="system-section-title">Notifications</div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Suggestions
+                    <span className="system-desc">Tips about getting set up or improving how you use Soravo.</span>
+                  </div>
+                  <Switch checked={false} disabled />
+                </div>
+              </div>
+              <div className="system-section">
+                <div className="system-section-title">Custom vocabulary ({vocabEntries.length})</div>
+                {vocabEntries.length === 0 && (
+                  <p className="system-empty">
+                    No words yet. Add a phrase you say often and what it should be written as.
+                  </p>
+                )}
+                {vocabEntries.map(([from, to]) => (
+                  <div className="system-row" key={from}>
+                    <div className="system-label">
+                      {from}
+                      <span className="system-desc">Written as {to}</span>
+                    </div>
+                    <Button variant="destructive" size="sm" onClick={() => removeWord(from)}>
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                <div className="system-row">
+                  <div className="system-label">
+                    Heard as
+                    <Input
+                      value={newFrom}
+                      onChange={(e) => setNewFrom(e.target.value)}
+                      placeholder="e.g. sore avo"
+                      spellCheck={false}
+                    />
+                  </div>
+                </div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Write as
+                    <Input
+                      value={newTo}
+                      onChange={(e) => setNewTo(e.target.value)}
+                      placeholder="e.g. Soravo"
+                      spellCheck={false}
+                    />
+                  </div>
+                  <Button variant="secondary" onClick={addWord}>
+                    Add word
                   </Button>
                 </div>
-              ))}
-              <div className="row">
-                <label>Heard as</label>
-                <Input
-                  value={newFrom}
-                  onChange={(e) => setNewFrom(e.target.value)}
-                  placeholder="e.g. sore avo"
-                  spellCheck={false}
-                />
               </div>
-              <div className="row">
-                <label>Write as</label>
-                <Input
-                  value={newTo}
-                  onChange={(e) => setNewTo(e.target.value)}
-                  placeholder="e.g. Soravo"
-                  spellCheck={false}
-                />
-              </div>
-              <div className="row">
-                <label />
-                <Button variant="secondary" onClick={addWord}>
-                  Add word
-                </Button>
-              </div>
-              <div className="row">
-                <label title="Registers Soravo in your Windows startup folder so it runs as soon as you sign in.">
-                  Start at login
-                </label>
-                <Checkbox checked={launchAtLogin} onCheckedChange={(c) => setLaunchAtLogin(c === true)} />
-              </div>
-              <div className="row">
-                <Button variant="destructive" onClick={onQuit}>
+              <div className="system-section">
+                <Button variant="destructive" className="system-quit" onClick={onQuit}>
                   Quit Soravo
                 </Button>
               </div>
@@ -734,7 +826,7 @@ function SettingsModal({
           )}
 
           {tab === 'privacy' && (
-            <div>
+            <div className="modal-scroll">
               <h2 className="modal-title">Data &amp; Privacy</h2>
               <div className="hub-local-card">
                 <p className="hub-local-title">Everything stays on this PC</p>
