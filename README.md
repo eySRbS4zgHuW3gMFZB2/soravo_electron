@@ -6,10 +6,11 @@ Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcriptio
 
 - **Push-to-talk dictation** — global hotkey, mic capture, local Whisper transcription, text injection into any app
 - **Pill overlay** — compact floating pill with recording/transcribing/error states, animated bars, cancel/finish buttons
-- **Hub window** — Dictation, History, Settings, and Insights tabs
+- **Hub window** — Dictation, History, Scratchpad, Settings, and Insights tabs
 - **Settings** — hotkey capture (press-to-capture), mic selection, model/language, smart cleanup, custom vocabulary, sounds, theme, retention, launch at login
 - **Models** — download, manage, and switch between 28 MIT-licensed ASR models (Whisper, Moonshine, and more)
 - **Insights** — total words, WPM gauge, activity heatmap (26-week), rhythm chart, top words, repeated phrases, correction counts
+- **Scratchpad** — quick notes with pin, delete, copy, auto-save; dictation inserts text directly into notes
 - **Local-only** — SQLite history, tauri-plugin-store settings, no cloud dependencies
 
 ## Prerequisites
@@ -62,7 +63,8 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 | `src-tauri/tauri.conf.json` | Tauri v2 config (windows, bundle, resources) |
 | `src/renderer/src/main.tsx` | Frontend entry (routes pill vs hub by window label) |
 | `src/renderer/src/App.tsx` | Pill overlay component |
-| `src/renderer/src/HubApp.tsx` | Hub window (Dictation, History, Settings, Insights) |
+| `src/renderer/src/HubApp.tsx` | Hub window (Dictation, History, Scratchpad, Settings, Insights) |
+| `src/renderer/src/ScratchpadPage.tsx` | Scratchpad tab (quick notes with pin/delete/copy) |
 | `src/renderer/src/soravo.ts` | Tauri API shim (window.soravo compatible) |
 | `src/main/history.ts` | (Legacy Electron) SQLite CRUD + insights |
 | `progress.md` | Full development history |

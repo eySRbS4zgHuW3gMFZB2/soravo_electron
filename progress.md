@@ -221,6 +221,19 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - Verified: download, set active, transcription all work
 - Pushed to GitHub as `models-tab` branch, merged via PR #3
 
+### Phase 10: Scratchpad Feature (PR #6)
+- Rebuilt Scratchpad as embedded hub tab (not separate window) based on Wispr Flow reverse engineering
+- SQLite `scratchpad_notes` table with CRUD commands
+- ScratchpadPage.tsx with note creation, editing, pinning, deletion, copying, auto-save
+- Hotkey integration: global hook disabled when textarea focused, local keydown/keyup handling
+- Transcript leak fix: only appends transcripts from recordings initiated on scratchpad
+- Double-paste fix: counter-based gating ensures each transcript appended once
+- Added ScratchpadIcon to shared icons
+- Added `textarea_focused` flag to AppState for global hook control
+- Settings integration: scratchpad open behavior (resume/last-pinned/new-tab) - deferred
+- Verified: notes create/edit/pin/delete/copy work, hotkey works on textarea, no leak, no double-paste
+- Merged via PR #6
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.
