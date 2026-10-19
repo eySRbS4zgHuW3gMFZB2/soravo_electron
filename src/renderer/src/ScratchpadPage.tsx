@@ -51,7 +51,7 @@ export default function ScratchpadPage() {
     }
   }, [])
 
-  const isHotkeyMatch = (e: React.KeyboardEvent | React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const isHotkeyMatch = (e: { key: string; ctrlKey: boolean; altKey: boolean; shiftKey: boolean; metaKey: boolean }) => {
     const parts = hotkey.toLowerCase().split('+')
     const needsCtrl = parts.includes('commandorcontrol') || parts.includes('ctrl') || parts.includes('control')
     const needsAlt = parts.includes('alt')
@@ -67,21 +67,21 @@ export default function ScratchpadPage() {
     )
   }
 
-  // Don't handle keydown - the global hook handles recording start.
-  // Only handle keyup to stop recording (global hook's keyup doesn't fire when textarea is focused).
-  const handleKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!isHotkeyMatch(e)) return
-    e.preventDefault()
-    e.stopPropagation()
-    // Stop recording - state should be Recording at this point
-    soravo.getState().then((state) => {
-      if (state === 'recording') {
-        soravo.toggle().catch(console.error)
-      }
-    }).catch(() => {
-      soravo.toggle().catch(console.error)
-    })
-  }
+  // Use a document-level keyup listener to stop recording when the hotkey
+  // is released. The global rdev hook's keyup doesn't fire when a textarea
+  // is focused, so we handle it here.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!isHotkeyMatch(e)) return
+      soravo.getState().then((state) => {
+        if (state === 'recording') {
+          soravo.toggle().catch(console.error)
+        }
+      }).catch(() => {})
+    }
+    document.addEventListener('keyup', handler)
+    return () => document.removeEventListener('keyup', handler)
+  }, [hotkey])
 
   const activeNote = notes.find((n) => n.id === activeId) ?? null
 
@@ -203,7 +203,6 @@ export default function ScratchpadPage() {
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onBlur={handleBlur}
-                onKeyUp={handleKeyUp}
                 placeholder="Start typing or dictate…"
                 autoFocus
               />
