@@ -138,6 +138,7 @@ export default function ScratchpadPage() {
   // Handle hotkey locally when textarea is focused (global rdev hook doesn't
   // fire when webview textarea has focus). Start on keydown, stop on keyup.
   // Use window-level listeners since textarea loses focus when pill shows.
+  // keydown: only when textarea focused
   useEffect(() => {
     const keyDownHandler = (e: KeyboardEvent) => {
       if (!textareaFocused) return
@@ -147,21 +148,22 @@ export default function ScratchpadPage() {
       e.stopPropagation()
       soravo.toggle().catch(console.error)
     }
+    window.addEventListener('keydown', keyDownHandler)
+    return () => window.removeEventListener('keydown', keyDownHandler)
+  }, [textareaFocused, hotkey])
+
+  // keyup: always active to stop recording
+  useEffect(() => {
     const keyUpHandler = (e: KeyboardEvent) => {
-      if (!isHotkeyMatch(e)) return
       soravo.getState().then((state) => {
         if (state === 'recording') {
           soravo.toggle().catch(console.error)
         }
       }).catch(() => {})
     }
-    window.addEventListener('keydown', keyDownHandler)
     window.addEventListener('keyup', keyUpHandler)
-    return () => {
-      window.removeEventListener('keydown', keyDownHandler)
-      window.removeEventListener('keyup', keyUpHandler)
-    }
-  }, [textareaFocused, hotkey])
+    return () => window.removeEventListener('keyup', keyUpHandler)
+  }, [])
 
   return (
     <div className="scratchpad-page">
