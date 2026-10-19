@@ -234,6 +234,21 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - Verified: notes create/edit/pin/delete/copy work, hotkey works on textarea, no leak, no double-paste
 - Merged via PR #6
 
+### Phase 11: Snippets Feature (PR #7)
+- Added Snippets feature inspired by Wispr Flow (personal snippets only, no team sharing)
+- SQLite `snippets` table: phrase, expansion, created_at, updated_at, is_auto_learned
+- Rust commands: get_snippets, add_snippet, update_snippet, delete_snippet
+- `apply_snippets()` in transcription pipeline: runs after vocabulary expansion
+- Case-insensitive, word-boundary match, longest-phrase-first
+- SnippetsPage with search, sort (newest/oldest/alphabetical), bulk select/delete
+- Add/Edit dialog with phrase + expansion fields
+- Delete confirmation dialog
+- Empty state + no results state
+- Scratchpad fix: reset recordingFromScratchpad flag on window blur (prevents transcript leak)
+- Tested with LibriSpeech transcript words (rector, catechism, stephen)
+- 3/3 unit tests pass
+- Merged via PR #7
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.
