@@ -261,6 +261,18 @@ fn open_db(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
     )
     .map_err(|e| e.to_string())?;
 
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS snippets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phrase TEXT NOT NULL,
+            expansion TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+            is_auto_learned BOOLEAN NOT NULL DEFAULT 0
+        );",
+    )
+    .map_err(|e| e.to_string())?;
+
     Ok(conn)
 }
 
@@ -604,6 +616,67 @@ fn apply_vocabulary(text: &str, vocab: &std::collections::HashMap<String, String
     (result, applied)
 }
 
+/// Load snippets from the database and apply them to the text.
+/// Replaces any snippet phrase with its expansion (case-insensitive, word-boundary match).
+fn apply_snippets(text: &str, app: &tauri::AppHandle) -> Result<String, String> {
+    let conn = open_db(app)?;
+    apply_snippets_to_conn(text, &conn)
+}
+
+/// Core snippet expansion logic (testable without AppHandle).
+fn apply_snippets_to_conn(text: &str, conn: &rusqlite::Connection) -> Result<String, String> {
+    let mut stmt = conn
+        .prepare("SELECT phrase, expansion FROM snippets")
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect::<Vec<_>>();
+
+    if rows.is_empty() {
+        return Ok(text.to_string());
+    }
+
+    // Sort by phrase length (longest first) so "my email" wins over "email"
+    let mut sorted = rows;
+    sorted.sort_by(|a, b| b.0.chars().count().cmp(&a.0.chars().count()));
+
+    let is_word = |c: char| c.is_alphanumeric() || c == '_';
+    let alternatives: Vec<String> = sorted
+        .iter()
+        .map(|(phrase, _)| {
+            let lead = phrase.chars().next().map(is_word).unwrap_or(false);
+            let trail = phrase.chars().last().map(is_word).unwrap_or(false);
+            format!(
+                "{}{}{}",
+                if lead { r"\b" } else { "" },
+                regex::escape(phrase),
+                if trail { r"\b" } else { "" }
+            )
+        })
+        .collect();
+    let pattern = format!("(?i)(?:{})", alternatives.join("|"));
+    let re = match regex::Regex::new(&pattern) {
+        Ok(r) => r,
+        Err(_) => return Ok(text.to_string()),
+    };
+
+    let result = re
+        .replace_all(text, |caps: &regex::Captures| {
+            let matched = caps.get(0).map(|m| m.as_str()).unwrap_or("");
+            sorted
+                .iter()
+                .find(|(p, _)| p.eq_ignore_ascii_case(matched))
+                .map(|(_, e)| e.clone())
+                .unwrap_or_else(|| matched.to_string())
+        })
+        .to_string();
+    Ok(result)
+}
+
 // CrispASR transcription
 fn transcribe_wav(
     wav_path: &str,
@@ -916,6 +989,9 @@ async fn submit_audio(
 
             // Custom vocabulary is a separate feature and always applies.
             let (text, vocab_applied) = apply_vocabulary(&text, &vocabulary);
+
+            // Snippet expansion: replace phrase with expansion
+            let text = apply_snippets(&text, &app)?;
 
             let text = text.trim().to_string();
             if text.is_empty() {
@@ -1488,6 +1564,99 @@ async fn open_scratchpad_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct Snippet {
+    pub id: i64,
+    pub phrase: String,
+    pub expansion: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub is_auto_learned: bool,
+}
+
+#[tauri::command]
+async fn get_snippets(app: tauri::AppHandle) -> Result<Vec<Snippet>, String> {
+    let conn = open_db(&app)?;
+    let mut stmt = conn
+        .prepare("SELECT id, phrase, expansion, created_at, updated_at, is_auto_learned FROM snippets ORDER BY created_at DESC")
+        .map_err(|e| e.to_string())?;
+    let snippets = stmt
+        .query_map([], |row| {
+            Ok(Snippet {
+                id: row.get(0)?,
+                phrase: row.get(1)?,
+                expansion: row.get(2)?,
+                created_at: row.get(3)?,
+                updated_at: row.get(4)?,
+                is_auto_learned: row.get::<_, i64>(5)? != 0,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+    Ok(snippets)
+}
+
+#[tauri::command]
+async fn add_snippet(app: tauri::AppHandle, phrase: String, expansion: String) -> Result<Snippet, String> {
+    let conn = open_db(&app)?;
+    conn.execute(
+        "INSERT INTO snippets (phrase, expansion) VALUES (?1, ?2)",
+        (&phrase, &expansion),
+    )
+    .map_err(|e| e.to_string())?;
+    let id = conn.last_insert_rowid();
+    let snippet = conn
+        .query_row(
+            "SELECT id, phrase, expansion, created_at, updated_at, is_auto_learned FROM snippets WHERE id = ?1",
+            [id],
+            |row| {
+                Ok(Snippet {
+                    id: row.get(0)?,
+                    phrase: row.get(1)?,
+                    expansion: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                    is_auto_learned: row.get::<_, i64>(5)? != 0,
+                })
+            },
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(snippet)
+}
+
+#[tauri::command]
+async fn update_snippet(
+    app: tauri::AppHandle,
+    id: i64,
+    patch: serde_json::Value,
+) -> Result<(), String> {
+    let conn = open_db(&app)?;
+    if let Some(phrase) = patch.get("phrase").and_then(|v| v.as_str()) {
+        conn.execute(
+            "UPDATE snippets SET phrase = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?2",
+            (phrase, id),
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    if let Some(expansion) = patch.get("expansion").and_then(|v| v.as_str()) {
+        conn.execute(
+            "UPDATE snippets SET expansion = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?2",
+            (expansion, id),
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn delete_snippet(app: tauri::AppHandle, id: i64) -> Result<(), String> {
+    let conn = open_db(&app)?;
+    conn.execute("DELETE FROM snippets WHERE id = ?1", [id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[tauri::command]
 async fn quit(app: tauri::AppHandle) -> Result<(), String> {
     app.exit(0);
@@ -1613,6 +1782,10 @@ pub fn run() {
             add_scratchpad_note,
             delete_scratchpad_note,
             update_scratchpad_note,
+            get_snippets,
+            add_snippet,
+            update_snippet,
+            delete_snippet,
             quit,
             hotkeys::validate_binding,
             hotkeys::binding_help
@@ -1624,6 +1797,76 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn snippets_expand_basic() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE snippets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                phrase TEXT NOT NULL,
+                expansion TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                is_auto_learned BOOLEAN NOT NULL DEFAULT 0
+            );",
+        ).unwrap();
+        conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('hello', 'HELLO WORLD')", []).unwrap();
+        conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('stephen', 'Stephen Dedalus')", []).unwrap();
+
+        let text = "hello there stephen";
+        let result = apply_snippets_to_conn(&text, &conn).unwrap();
+        assert!(result.contains("HELLO WORLD"), "Expected expansion, got: {}", result);
+        assert!(result.contains("Stephen Dedalus"), "Expected name expansion, got: {}", result);
+    }
+
+    #[test]
+    fn snippets_no_match() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE snippets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                phrase TEXT NOT NULL,
+                expansion TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                is_auto_learned BOOLEAN NOT NULL DEFAULT 0
+            );",
+        ).unwrap();
+        conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('xyz', 'ABC')", []).unwrap();
+
+        let text = "hello there stephen";
+        let result = apply_snippets_to_conn(&text, &conn).unwrap();
+        assert_eq!(result, text);
+    }
+
+    #[test]
+    fn snippets_expand_librispeech_words() {
+        // Simulate real LibriSpeech transcript words as snippets
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE snippets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                phrase TEXT NOT NULL,
+                expansion TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+                is_auto_learned BOOLEAN NOT NULL DEFAULT 0
+            );",
+        ).unwrap();
+        // Add snippets based on LibriSpeech transcript
+        conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('rector', 'The Rector (Mr. Hart')", []).unwrap();
+        conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('catechism', 'the Catechism of the Church')", []).unwrap();
+        conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('stephen', 'Stephen Dedalus (protagonist)')", []).unwrap();
+
+        // Test text similar to LibriSpeech transcript line 0026
+        let text = "THE RECTOR DID NOT ASK FOR A CATECHISM TO HEAR THE LESSON FROM";
+        let result = apply_snippets_to_conn(&text, &conn).unwrap();
+        assert!(result.contains("The Rector"), "Expected rector expansion, got: {}", result);
+        assert!(result.contains("Catechism"), "Expected catechism expansion, got: {}", result);
+        assert!(!result.contains("THE RECTOR"), "Should have been replaced, got: {}", result);
+        assert!(!result.contains("CATECHISM"), "Should have been replaced, got: {}", result);
+    }
 
     #[test]
     fn cleanup_keeps_the_word_like() {

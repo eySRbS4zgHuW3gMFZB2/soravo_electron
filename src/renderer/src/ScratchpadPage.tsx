@@ -83,6 +83,16 @@ export default function ScratchpadPage() {
     soravo.setTextareaFocus(textareaFocused).catch(() => {})
   }, [textareaFocused])
 
+  // Reset recording flag when window loses focus (prevents transcript leak
+  // when user switches to another app while scratchpad is active)
+  useEffect(() => {
+    const handleWindowBlur = () => {
+      recordingFromScratchpad.current = false
+    }
+    window.addEventListener('blur', handleWindowBlur)
+    return () => window.removeEventListener('blur', handleWindowBlur)
+  }, [])
+
   // keydown: start recording (only when textarea focused, global hook disabled)
   useEffect(() => {
     const keyDownHandler = (e: KeyboardEvent) => {
