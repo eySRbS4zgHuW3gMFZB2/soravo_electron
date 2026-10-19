@@ -21,6 +21,7 @@ export default function ScratchpadPage() {
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [hotkey, setHotkey] = useState('CommandOrControl+Alt+Space')
 
   const loadNotes = async () => {
     try {
@@ -37,11 +38,40 @@ export default function ScratchpadPage() {
 
   useEffect(() => {
     loadNotes()
+    soravo.getSettings().then((s) => setHotkey(s.hotkey)).catch(() => {})
     const off = soravo.onScratchpadChanged(() => {
       loadNotes()
     })
-    return () => off()
+    const offTranscript = soravo.onTranscript((text) => {
+      setDraft((prev) => (prev ? prev + ' ' + text : text))
+    })
+    return () => {
+      off()
+      offTranscript()
+    }
   }, [])
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Check if the pressed key combination matches the hotkey
+    const parts = hotkey.toLowerCase().split('+')
+    const needsCtrl = parts.includes('commandorcontrol') || parts.includes('ctrl') || parts.includes('control')
+    const needsAlt = parts.includes('alt')
+    const needsShift = parts.includes('shift')
+    const needsMeta = parts.includes('meta') || parts.includes('super')
+    const triggerKey = parts.filter((p) => !['commandorcontrol', 'ctrl', 'control', 'alt', 'shift', 'meta', 'super'].includes(p))[0]
+
+    if (
+      (needsCtrl === (e.ctrlKey || e.metaKey)) &&
+      (needsAlt === e.altKey) &&
+      (needsShift === e.shiftKey) &&
+      triggerKey &&
+      e.key.toLowerCase() === triggerKey
+    ) {
+      e.preventDefault()
+      e.stopPropagation()
+      soravo.toggle().catch(console.error)
+    }
+  }
 
   const activeNote = notes.find((n) => n.id === activeId) ?? null
 
@@ -163,6 +193,7 @@ export default function ScratchpadPage() {
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
                 placeholder="Start typing or dictate…"
                 autoFocus
               />
