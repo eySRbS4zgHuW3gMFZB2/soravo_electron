@@ -1271,6 +1271,208 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   text-overflow: ellipsis;
 }
 
+/* --- Settings General page (Wispr Flow style) ---
+   Geometry taken from Wispr Flow's settings page CSS module:
+     container  padding 48px, column, gap 36px
+     content   column, gap 24px, overflow-y auto
+     header    column, gap 12px, margin-bottom 12px
+     pageTitle EBGaramond 28px/28px, letter-spacing -0.04em
+     card      padding 20px, gap 20px, radius 12px, bg tertiary
+     item      flex space-between, margin -8px/-12px, padding 8px/12px
+     label     15px/20px, weight 550
+     desc      15px/20px, weight 400, neutral-600
+     controls  width 164px, margin-left 12px
+     divider   1px, bg border */
+.general-page {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 36px;
+  min-width: 0;
+  /* Cancels the modal-content padding so the page owns its own 48px inset,
+     the same way Wispr Flow's settings page container does. */
+  margin: -20px -24px -16px;
+  padding: 48px;
+}
+
+.general-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  align-self: stretch;
+  width: 100%;
+  overflow-y: auto;
+}
+
+.general-content::-webkit-scrollbar {
+  display: none;
+}
+
+.general-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  align-self: stretch;
+  color: var(--soravo-ink);
+  margin-bottom: 12px;
+}
+
+.general-title {
+  font-family: var(--soravo-serif);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  -webkit-font-smoothing: antialiased;
+  font-size: 28px;
+  line-height: 28px;
+  margin: 0;
+  color: var(--soravo-ink);
+}
+
+.general-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  align-self: stretch;
+  /* No preflight means no border-box, so an explicit width would add the
+     padding on top of it. Stretch sizing does the same job correctly. */
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.general-card {
+  display: flex;
+  padding: 20px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  align-self: stretch;
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: 12px;
+  /* One step off the panel surface, the way Wispr Flow's
+     --background-tertiary sits off its page background. */
+  background: var(--soravo-surface);
+}
+
+.general-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+  box-sizing: border-box;
+  margin: -8px -12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.general-item-full {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  align-self: stretch;
+  width: 100%;
+}
+
+.general-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.general-label {
+  color: var(--foreground);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 550;
+}
+
+.general-desc {
+  color: var(--muted-foreground);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.general-controls {
+  width: 164px;
+  flex-shrink: 0;
+  margin-left: 12px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* Buttons and selects fill the 164px control column; a switch keeps its
+   natural size and sits at the right edge. */
+.general-controls > button:not([data-slot='switch']),
+.general-controls > [data-slot='select-trigger'] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* The Change button and the theme select are both 36px tall in Wispr Flow. */
+.general-controls button,
+.general-controls [data-slot='select-trigger'] {
+  height: 36px;
+  border-radius: 8px;
+}
+
+/* Wispr Flow's settings buttons are neutral grey, not the app's green-tinted
+   secondary. The Change button sits on the card surface, so it needs to read
+   as a neutral control against it. */
+.general-controls button:not([data-slot='switch']) {
+  background: #303030;
+  color: #f0f0f0;
+  border: none;
+  font-weight: 500;
+}
+
+.general-controls button:not([data-slot='switch']):hover {
+  background: #3a3a3a;
+}
+
+html[data-theme='light'] .general-controls button:not([data-slot='switch']) {
+  background: #f0f0f0;
+  color: #1a1a1a;
+}
+
+html[data-theme='light'] .general-controls button:not([data-slot='switch']):hover {
+  background: #e6e6e6;
+}
+
+/* The theme select keeps a transparent fill with a hairline border, the way
+   Wispr Flow draws it. */
+.general-controls [data-slot='select-trigger'] {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.general-controls [data-slot='select-trigger'] svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  opacity: 0.7;
+}
+
+.general-divider {
+  height: 1px;
+  align-self: stretch;
+  background: var(--border);
+}
+
 /* --- Settings System page (Wispr Flow style) --- */
 .system-page {
   display: flex;

@@ -13,10 +13,12 @@ import {
   HistoryIcon,
   MaximizeIcon,
   MicIcon,
+  MoonIcon,
   MinimizeIcon,
   ScratchpadIcon,
   SettingsIcon,
   SnippetsIcon,
+  SunIcon,
   TrashIcon
 } from '@/components/icons'
 import ScratchpadPage from './ScratchpadPage'
@@ -541,58 +543,111 @@ function SettingsModal({
           </Button>
 
           {tab === 'general' && (
-            <div>
-              <h2 className="modal-title">General</h2>
-              <div className="row">
-                <label>Shortcuts</label>
-                <span className="row-summary">{fmtHotkey(hotkey)}</span>
-                <Button variant="secondary" onClick={() => setSub('shortcuts')}>
-                  Change
-                </Button>
-              </div>
-              <div className="row">
-                <label>Microphone</label>
-                <span className="row-summary">
-                  {microphoneId
-                    ? (devices.find((d) => d.deviceId === microphoneId)?.label ?? 'Custom device')
-                    : 'Auto-detect'}
-                </span>
-                <Button variant="secondary" onClick={() => setSub('microphone')}>
-                  Change
-                </Button>
-              </div>
-              <div className="row">
-                <label>Dictation language</label>
-                <span className="row-summary">{language || 'en'}</span>
-                <Button variant="secondary" onClick={() => setSub('language')}>
-                  Change
-                </Button>
-              </div>
-              <div className="row">
-                <label>Theme</label>
-                {/* className="seg" is the app's pill treatment: canvas-soft track, 9999px
-                      radius, 13px semibold, lime fill with white text when on.
-                      The bare ToggleGroup drew a bordered box with black text
-                      instead. */}
-                <ToggleGroup
-                  type="single"
-                  value={theme}
-                  onValueChange={(v) => v && setTheme(v as 'light' | 'dark')}
-                  spacing={0}
-                  className="seg w-full"
-                >
-                  <ToggleGroupItem value="light" className="flex-1">
-                    Light
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="dark" className="flex-1">
-                    Dark
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-              <div className="row">
-                <label>Sound effects</label>
-                <Checkbox checked={sounds} onCheckedChange={(c) => setSounds(c === true)} />
-              </div>
+            <div className="general-page">
+              <div className="general-content">
+                <div className="general-header">
+                  <h3 className="general-title">General</h3>
+                </div>
+
+                <div className="general-section">
+                  <div className="general-card">
+                    {/* Shortcuts */}
+                    <div className="general-item">
+                      <div className="general-text">
+                        <div className="general-label">Shortcuts</div>
+                        <div className="general-desc">Hold {fmtHotkey(hotkey)} and speak.</div>
+                      </div>
+                      <div className="general-controls">
+                        <Button variant="secondary" onClick={() => setSub('shortcuts')}>
+                          Change
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="general-divider" />
+
+                    {/* Microphone */}
+                    <div className="general-item">
+                      <div className="general-text">
+                        <div className="general-label">Microphone</div>
+                        <div className="general-desc">
+                          {microphoneId
+                            ? (devices.find((d) => d.deviceId === microphoneId)?.label ?? 'Custom device')
+                            : 'Auto-detect'}
+                        </div>
+                      </div>
+                      <div className="general-controls">
+                        <Button variant="secondary" onClick={() => setSub('microphone')}>
+                          Change
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="general-divider" />
+
+                    {/* Dictation language */}
+                    <div className="general-item">
+                      <div className="general-text">
+                        <div className="general-label">Dictation language</div>
+                        <div className="general-desc">{language || 'en'}</div>
+                      </div>
+                      <div className="general-controls">
+                        <Button variant="secondary" onClick={() => setSub('language')}>
+                          Change
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="general-divider" />
+
+                    {/* Theme */}
+                    <div className="general-item">
+                      <div className="general-text">
+                        <div className="general-label">Theme</div>
+                      </div>
+                      <div className="general-controls">
+                        <Select
+                          value={theme}
+                          onValueChange={(v) => setTheme(v as 'light' | 'dark')}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select theme" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem value="light">
+                                <SunIcon />
+                                Light
+                              </SelectItem>
+                              <SelectItem value="dark">
+                                <MoonIcon />
+                                Dark
+                              </SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="general-divider" />
+
+                    {/* Sound effects */}
+                    <div className="general-item">
+                      <div className="general-text">
+                        <div className="general-label">Sound effects</div>
+                        <div className="general-desc">
+                          Play a sound when dictation starts and finishes.
+                        </div>
+                      </div>
+                      <div className="general-controls">
+                        <Switch
+                          checked={sounds}
+                          onCheckedChange={(c) => setSounds(c === true)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
               {sub === 'shortcuts' && (
                 <SubModal open 
@@ -666,6 +721,7 @@ function SettingsModal({
                   </div>
                 </SubModal>
               )}
+              </div>
             </div>
           )}
 
