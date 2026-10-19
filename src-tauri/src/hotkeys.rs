@@ -9,6 +9,7 @@
 
 use rdev::{Button, EventType, Key};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
 /// What a binding triggers.
@@ -306,7 +307,7 @@ fn is_modifier(key: Key) -> bool {
 /// `rdev::listen` blocks forever, so it must not run on the UI thread. The hook
 /// only observes input and never consumes it, so normal typing and clicking keep
 /// working in every other application.
-pub fn spawn_hook(config: Arc<RwLock<HookConfig>>, handles: HookHandles) -> Result<(), String> {
+pub fn spawn_hook(config: Arc<RwLock<HookConfig>>, handles: HookHandles, textarea_focused: Arc<AtomicBool>) -> Result<(), String> {
     std::thread::Builder::new()
         .name("soravo-input-hook".into())
         .spawn(move || {
@@ -319,6 +320,25 @@ pub fn spawn_hook(config: Arc<RwLock<HookConfig>>, handles: HookHandles) -> Resu
             let mut held: Option<Trigger> = None;
 
             let result = rdev::listen(move |event| {
+                // Skip dictation handling when textarea is focused (frontend
+                // handles recording locally).
+                if textarea_focused.load(Ordering::Relaxed) {
+                    // Still track modifiers
+                    match event.event_type {
+                        EventType::KeyPress(key) => {
+                            if is_modifier(key) {
+                                set_modifier(&mut mods, key, true);
+                            }
+                        }
+                        EventType::KeyRelease(key) => {
+                            if is_modifier(key) {
+                                set_modifier(&mut mods, key, false);
+                            }
+                        }
+                        _ => {}
+                    }
+                    return;
+                }
                 // Cheap and rare: snapshot the bindings for this event.
                 let cfg = match config.read() {
                     Ok(cfg) => cfg.clone(),

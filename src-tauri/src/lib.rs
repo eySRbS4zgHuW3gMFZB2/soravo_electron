@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use chrono::Datelike;
 use chrono::Timelike;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Emitter, Manager, State};
 
@@ -143,6 +143,7 @@ pub struct AppState {
     /// Live bindings for the global input hook. Replaced when settings change so
     /// the running hook picks up new shortcuts without a restart.
     pub hook_config: Arc<RwLock<hotkeys::HookConfig>>,
+    pub textarea_focused: Arc<AtomicBool>,
 }
 
 impl Default for AppState {
@@ -154,6 +155,7 @@ impl Default for AppState {
             hide_gen: Arc::new(AtomicU64::new(0)),
             audio_gen: Arc::new(AtomicU64::new(0)),
             hook_config: Arc::new(RwLock::new(hotkeys::HookConfig::default())),
+            textarea_focused: Arc::new(AtomicBool::new(false)),
         }
     }
 }
@@ -1367,6 +1369,13 @@ async fn win_close(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn set_textarea_focus(app: tauri::AppHandle, focused: bool) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    state.textarea_focused.store(focused, Ordering::Relaxed);
+    Ok(())
+}
+
+#[tauri::command]
 async fn show_hub(app: tauri::AppHandle) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("hub") {
         if win.is_minimized().unwrap_or(false) {
@@ -1561,7 +1570,7 @@ pub fn run() {
                 },
             };
 
-            if let Err(err) = hotkeys::spawn_hook(state.hook_config.clone(), handles) {
+            if let Err(err) = hotkeys::spawn_hook(state.hook_config.clone(), handles, state.textarea_focused.clone()) {
                 log::error!("[soravo] {err}");
                 app.emit("soravo:error", format!("Global hotkeys unavailable: {err}")).ok();
             }
@@ -1598,6 +1607,7 @@ pub fn run() {
             win_max,
             win_close,
             show_hub,
+            set_textarea_focus,
             open_scratchpad_window,
             get_scratchpad_notes,
             add_scratchpad_note,

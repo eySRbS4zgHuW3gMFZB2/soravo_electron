@@ -235,6 +235,7 @@ export const soravo: SoravoAPI = {
   winMin: () => invoke('win_min'),
   winMax: () => invoke('win_max'),
   winClose: () => invoke('win_close'),
+  setTextareaFocus: (focused) => invoke('set_textarea_focus', { focused }),
   getScratchpadNotes: () => invoke<ScratchpadNote[]>('get_scratchpad_notes'),
   addScratchpadNote: (text) => invoke<ScratchpadNote>('add_scratchpad_note', { text }),
   deleteScratchpadNote: (id) => invoke('delete_scratchpad_note', { id }),
