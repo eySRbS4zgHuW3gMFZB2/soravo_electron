@@ -61,11 +61,11 @@ export default function ScratchpadPage() {
     const off = soravo.onScratchpadChanged(() => {
       loadNotes()
     })
-    // Append transcript text if recording was initiated from this page
+    // Append transcript text if recording was initiated from this page.
+    // Don't reset the flag here - it's reset on next keydown.
     const offTranscript = soravo.onTranscript((text) => {
       if (recordingFromScratchpad.current) {
         setDraft((prev) => (prev ? prev + ' ' + text : text))
-        recordingFromScratchpad.current = false
       }
     })
     return () => {
