@@ -8,7 +8,7 @@ Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcriptio
 - **Pill overlay** — compact floating pill with recording/transcribing/error states, animated bars, cancel/finish buttons
 - **Hub window** — Dictation, History, Scratchpad, Settings, and Insights tabs
 - **Settings** — hotkey capture (press-to-capture), mic selection, model/language, smart cleanup, custom vocabulary, sounds, theme, retention, launch at login
-- **Models** — download, manage, and switch between 28 MIT-licensed ASR models (Whisper, Moonshine, and more)
+- **Models** — download, manage, and switch between 30 ASR models (Whisper, Moonshine, Parakeet, Canary, and more); see [MODELS.md](MODELS.md) for the full catalog and licenses
 - **Insights** — total words, WPM gauge, activity heatmap (26-week), rhythm chart, top words, repeated phrases, correction counts
 - **Scratchpad** — quick notes with pin, delete, copy, auto-save; dictation inserts text directly into notes
 - **Snippets** — phrase expansion shortcuts; dictate a short phrase and it expands to full text (case-insensitive, word-boundary match)

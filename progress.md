@@ -249,6 +249,14 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - 3/3 unit tests pass
 - Merged via PR #7
 
+### Phase 12: Add Parakeet & Canary Models (PR #8)
+- Added NVIDIA Parakeet TDT v2 (1.1 GB, CC-BY-4.0) and Canary 1B v2 (1.0 GB, CC-BY-4.0) to MODEL_CATALOG
+- Created MODELS.md with full catalog: 30 models, sizes, licenses, download sources
+- Verified CrispASR license: MIT (github.com/CrispStrobe/CrispASR/blob/main/LICENSE)
+- Verified Whisper.cpp license: MIT (github.com/ggml-org/whisper.cpp/blob/master/LICENSE)
+- License summary: 28 MIT + 2 CC-BY-4.0
+- Merged via PR #8
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.
