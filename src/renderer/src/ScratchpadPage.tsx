@@ -20,8 +20,9 @@ export default function ScratchpadPage() {
   const [activeId, setActiveId] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [hotkey, setHotkey] = useState('CommandOrControl+Alt+Space')
+  const [textareaFocused, setTextareaFocused] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const loadNotes = async () => {
     try {
@@ -35,21 +36,6 @@ export default function ScratchpadPage() {
       console.error('Failed to load scratchpad notes', e)
     }
   }
-
-  useEffect(() => {
-    loadNotes()
-    soravo.getSettings().then((s) => setHotkey(s.hotkey)).catch(() => {})
-    const off = soravo.onScratchpadChanged(() => {
-      loadNotes()
-    })
-    const offTranscript = soravo.onTranscript((text) => {
-      setDraft((prev) => (prev ? prev + ' ' + text : text))
-    })
-    return () => {
-      off()
-      offTranscript()
-    }
-  }, [])
 
   const isHotkeyMatch = (e: { key: string; ctrlKey: boolean; altKey: boolean; shiftKey: boolean; metaKey: boolean }) => {
     const parts = hotkey.toLowerCase().split('+')
@@ -67,21 +53,23 @@ export default function ScratchpadPage() {
     )
   }
 
-  // Use a document-level keyup listener to stop recording when the hotkey
-  // is released. The global rdev hook's keyup doesn't fire when a textarea
-  // is focused, so we handle it here.
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (!isHotkeyMatch(e)) return
-      soravo.getState().then((state) => {
-        if (state === 'recording') {
-          soravo.toggle().catch(console.error)
-        }
-      }).catch(() => {})
+    loadNotes()
+    soravo.getSettings().then((s) => setHotkey(s.hotkey)).catch(() => {})
+    const off = soravo.onScratchpadChanged(() => {
+      loadNotes()
+    })
+    // Only append transcript text when textarea is focused (fixes leak bug)
+    const offTranscript = soravo.onTranscript((text) => {
+      if (textareaFocused) {
+        setDraft((prev) => (prev ? prev + ' ' + text : text))
+      }
+    })
+    return () => {
+      off()
+      offTranscript()
     }
-    document.addEventListener('keyup', handler)
-    return () => document.removeEventListener('keyup', handler)
-  }, [hotkey])
+  }, [textareaFocused])
 
   const activeNote = notes.find((n) => n.id === activeId) ?? null
 
@@ -147,6 +135,27 @@ export default function ScratchpadPage() {
     }
   }
 
+  // Handle hotkey locally when textarea is focused (global rdev hook doesn't
+  // fire when webview textarea has focus). Start on keydown, stop on keyup.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.repeat) return
+    if (!isHotkeyMatch(e)) return
+    e.preventDefault()
+    e.stopPropagation()
+    soravo.toggle().catch(console.error)
+  }
+
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!isHotkeyMatch(e)) return
+    e.preventDefault()
+    e.stopPropagation()
+    soravo.getState().then((state) => {
+      if (state === 'recording') {
+        soravo.toggle().catch(console.error)
+      }
+    }).catch(() => {})
+  }
+
   return (
     <div className="scratchpad-page">
       <div className="scratchpad-body">
@@ -202,7 +211,10 @@ export default function ScratchpadPage() {
                 className="scratchpad-textarea"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                onBlur={handleBlur}
+                onFocus={() => setTextareaFocused(true)}
+                onBlur={(e) => { setTextareaFocused(false); handleBlur() }}
+                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
                 placeholder="Start typing or dictate…"
                 autoFocus
               />
