@@ -51,6 +51,7 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - [x] Data & Privacy tab: retention (all/30 days/session), delete all transcripts
 - [x] Wispr-style hotkey capture: click field, press keys, release to commit, Esc cancels
 - [x] Persisted to tauri-plugin-store (JSON)
+- [x] General and System pages rebuilt to Wispr Flow's layout (serif title, card rows, 164px control column)
 
 ### Wispr Flow Feature Parity (from config.json analysis)
 - [x] Hotkey capture (press-to-capture, like Wispr)
@@ -256,6 +257,28 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - Verified Whisper.cpp license: MIT (github.com/ggml-org/whisper.cpp/blob/master/LICENSE)
 - License summary: 28 MIT + 2 CC-BY-4.0
 - Merged via PR #8
+
+### Phase 13: Settings General/System Rebuild (PR #9)
+- Reverse-engineered Wispr Flow's settings page from `app.asar` -> `.webpack/renderer/hub/index.js`
+  (CSS module `31211`) and recovered the exact geometry: 48px container padding, 36px gap,
+  28px EB Garamond title, 20px/12px card, 164px control column, 1px dividers
+- Rebuilt Settings > General to that spec: serif title, card layout, neutral Change buttons,
+  transparent theme select with sun/moon icons
+- Bundled EB Garamond (OFL-1.1) as woff2 in `src/renderer/public/fonts/` - the app's CSP is
+  `font-src 'self' data:`, so a CDN is not an option
+- Moved Sound effects from a checkbox to a Switch to match the System page
+- Rebuilt Settings > System in the same style (App settings / Sound / Notifications sections)
+- Bug: switch thumb sat 7px right of centre in both states - the project skips Tailwind preflight,
+  so `<button>` kept Chrome's default `padding-inline: 6px`. Fixed with `p-0` on the Switch root
+- Bug: `.general-controls button` also matched the Switch (it is a button), overriding its height
+  and `rounded-full` radius. Fixed by excluding `[data-slot='switch']`
+- Self-review caught that the System rebuild had silently dropped three features:
+  Smart cleanup (still saved, no UI left), Custom vocabulary (computed but never rendered) and
+  Quit Soravo (`onQuit` passed but unused). All three restored
+- The System page now scrolls on its own (`.modal-scroll`) so the Close/Save footer stays pinned
+- Verified: sub-dialogs open, theme select switches and persists, vocabulary add/remove persists
+  across close/reopen, 30/30 cargo tests pass
+- Merged via PR #9
 
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
