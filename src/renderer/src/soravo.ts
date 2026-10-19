@@ -10,6 +10,15 @@ export interface ScratchpadNote {
   pinned: boolean
 }
 
+export interface Snippet {
+  id: number
+  phrase: string
+  expansion: string
+  createdAt: string
+  updatedAt: string
+  isAutoLearned: boolean
+}
+
 export interface TranscriptEntry {
   id: number
   text: string
@@ -236,6 +245,10 @@ export const soravo: SoravoAPI = {
   winMax: () => invoke('win_max'),
   winClose: () => invoke('win_close'),
   setTextareaFocus: (focused) => invoke('set_textarea_focus', { focused }),
+  getSnippets: () => invoke<Snippet[]>('get_snippets'),
+  addSnippet: (phrase, expansion) => invoke<Snippet>('add_snippet', { phrase, expansion }),
+  updateSnippet: (id, patch) => invoke('update_snippet', { id, patch }),
+  deleteSnippet: (id) => invoke('delete_snippet', { id }),
   getScratchpadNotes: () => invoke<ScratchpadNote[]>('get_scratchpad_notes'),
   addScratchpadNote: (text) => invoke<ScratchpadNote>('add_scratchpad_note', { text }),
   deleteScratchpadNote: (id) => invoke('delete_scratchpad_note', { id }),

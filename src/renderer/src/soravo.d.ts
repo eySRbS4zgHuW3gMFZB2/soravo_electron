@@ -49,6 +49,15 @@ export interface ScratchpadNote {
   pinned: boolean
 }
 
+export interface Snippet {
+  id: number
+  phrase: string
+  expansion: string
+  createdAt: string
+  updatedAt: string
+  isAutoLearned: boolean
+}
+
 export interface ModelInfo {
   id: string
   name: string
@@ -90,6 +99,10 @@ export interface SoravoAPI {
   onScratchpadChanged(cb: () => void): () => void
   openScratchpadWindow(): Promise<void>
   setTextareaFocus(focused: boolean): Promise<void>
+  getSnippets(): Promise<Snippet[]>
+  addSnippet(phrase: string, expansion: string): Promise<Snippet>
+  updateSnippet(id: number, patch: { phrase?: string; expansion?: string }): Promise<void>
+  deleteSnippet(id: number): Promise<void>
 }
 
 declare global {

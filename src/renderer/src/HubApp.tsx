@@ -16,9 +16,11 @@ import {
   MinimizeIcon,
   ScratchpadIcon,
   SettingsIcon,
+  SnippetsIcon,
   TrashIcon
 } from '@/components/icons'
 import ScratchpadPage from './ScratchpadPage'
+import SnippetsPage from './SnippetsPage'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
@@ -38,7 +40,7 @@ import {
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
-type Page = 'dictation' | 'history' | 'insights' | 'models' | 'scratchpad'
+type Page = 'dictation' | 'history' | 'insights' | 'models' | 'scratchpad' | 'snippets'
 type SettingsTab = 'general' | 'system' | 'privacy'
 
 function fmtHotkey(accelerator: string): string {
@@ -150,6 +152,7 @@ function Sidebar({
       {navItem('insights', 'Insights', <ChartIcon />)}
       {navItem('models', 'Models', <BrainIcon />)}
       {navItem('scratchpad', 'Scratchpad', <ScratchpadIcon />)}
+      {navItem('snippets', 'Snippets', <SnippetsIcon />)}
       <Button variant="ghost" className="hub-nav w-full justify-start" onClick={onOpenSettings}>
         <SettingsIcon />
         <span>Settings</span>
@@ -1298,6 +1301,7 @@ export default function HubApp() {
           {page === 'insights' && <InsightsPage insights={insights} />}
            {page === 'models' && <ModelsPage />}
            {page === 'scratchpad' && <ScratchpadPage />}
+           {page === 'snippets' && <SnippetsPage />}
         </main>
       </div>
       {settings && (
