@@ -42,6 +42,13 @@ export interface InsightsData {
   topPhrases: Array<{ phrase: string; count: number }>
 }
 
+export interface ScratchpadNote {
+  id: number
+  text: string
+  createdAt: string
+  pinned: boolean
+}
+
 export interface ModelInfo {
   id: string
   name: string
@@ -76,6 +83,13 @@ export interface SoravoAPI {
   setActiveModel(id: string): Promise<void>
   onModelDownloadProgress(cb: (p: { id: string; received: number; total: number; percent: number }) => void): () => void
   onModelDownloadComplete(cb: (p: { id: string }) => void): () => void
+  getScratchpadNotes(): Promise<ScratchpadNote[]>
+  addScratchpadNote(text: string): Promise<ScratchpadNote>
+  deleteScratchpadNote(id: number): Promise<void>
+  updateScratchpadNote(id: number, patch: { text?: string; pinned?: boolean }): Promise<void>
+  onScratchpadChanged(cb: () => void): () => void
+  openScratchpadWindow(): Promise<void>
+  setTextareaFocus(focused: boolean): Promise<void>
 }
 
 declare global {

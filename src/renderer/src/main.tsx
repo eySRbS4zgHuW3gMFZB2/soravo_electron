@@ -11,15 +11,11 @@ const rootEl = document.getElementById('root')
 if (!rootEl) throw new Error('Missing #root element')
 
 async function main() {
-  // Nothing to bootstrap: every component keys its state styles on data-state directly.
-
-  // Determine which component to render based on window label
   let isHub = false
   try {
     const win = getCurrentWindow()
     isHub = win.label === 'hub'
   } catch {
-    // Fallback to hash routing
     isHub = window.location.hash === '#/hub'
   }
 

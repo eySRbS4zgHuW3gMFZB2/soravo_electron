@@ -3,6 +3,13 @@ import { listen } from '@tauri-apps/api/event'
 
 export type RecState = 'idle' | 'recording' | 'transcribing' | 'error'
 
+export interface ScratchpadNote {
+  id: number
+  text: string
+  createdAt: string
+  pinned: boolean
+}
+
 export interface TranscriptEntry {
   id: number
   text: string
@@ -95,6 +102,12 @@ export interface SoravoAPI {
   winMin(): Promise<void>
   winMax(): Promise<void>
   winClose(): Promise<void>
+  getScratchpadNotes(): Promise<ScratchpadNote[]>
+  addScratchpadNote(text: string): Promise<ScratchpadNote>
+  deleteScratchpadNote(id: number): Promise<void>
+  updateScratchpadNote(id: number, patch: { text?: string; pinned?: boolean }): Promise<void>
+  onScratchpadChanged(cb: () => void): () => void
+  openScratchpadWindow(): Promise<void>
   getSettings(): Promise<SoravoSettings>
   setSettings(patch: Partial<SoravoSettings>): Promise<SoravoSettings>
   validateBinding(accel: string): Promise<boolean>
@@ -171,6 +184,10 @@ async function setupEventListeners() {
     const cbs = listeners['model-download-complete']
     if (cbs) cbs.forEach((cb) => cb(event.payload))
   })
+  await listen('soravo:scratchpad-changed', () => {
+    const cbs = listeners['scratchpad-changed']
+    if (cbs) cbs.forEach((cb) => cb())
+  })
   // Listen for hotkey toggle events from the Rust backend
   await listen('soravo:toggle-hotkey', () => {
     soravo.toggle().catch(console.error)
@@ -218,6 +235,13 @@ export const soravo: SoravoAPI = {
   winMin: () => invoke('win_min'),
   winMax: () => invoke('win_max'),
   winClose: () => invoke('win_close'),
+  setTextareaFocus: (focused) => invoke('set_textarea_focus', { focused }),
+  getScratchpadNotes: () => invoke<ScratchpadNote[]>('get_scratchpad_notes'),
+  addScratchpadNote: (text) => invoke<ScratchpadNote>('add_scratchpad_note', { text }),
+  deleteScratchpadNote: (id) => invoke('delete_scratchpad_note', { id }),
+  updateScratchpadNote: (id, patch) => invoke('update_scratchpad_note', { id, patch }),
+  onScratchpadChanged: (cb) => addListener('scratchpad-changed', cb as Function),
+  openScratchpadWindow: () => invoke('open_scratchpad_window'),
   getSettings: async () => {
     const raw = await invoke<any>('get_settings')
     return settingsFromTauri(raw)

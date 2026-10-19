@@ -112,6 +112,24 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Stop recording on keyup when pill is focused (for scratchpad textarea case)
+  useEffect(() => {
+    const keyUpHandler = () => {
+      // Only stop recording if the textarea was focused (i.e., recording
+      // was initiated from the scratchpad and global hook is disabled).
+      // Check via the textarea_focused flag is not directly accessible here,
+      // so we just check state and stop if recording. The global hook
+      // (when enabled) handles its own keyup in hold_to_talk mode.
+      window.soravo.getState().then((state) => {
+        if (state === 'recording') {
+          window.soravo.toggle().catch(() => {})
+        }
+      }).catch(() => {})
+    }
+    window.addEventListener('keyup', keyUpHandler)
+    return () => window.removeEventListener('keyup', keyUpHandler)
+  }, [])
+
   return (
     <div className="soravo-mini">
       <Button variant="ghost" size="icon" className="mini-x" title="Cancel" onClick={() => void window.soravo.cancel()}>
