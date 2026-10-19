@@ -24,6 +24,8 @@ export default function ScratchpadPage() {
   const [textareaFocused, setTextareaFocused] = useState(false)
   // Track if the current recording was initiated from this page
   const recordingFromScratchpad = useRef(false)
+  const lastProcessedRecording = useRef(0)
+  const recordingCounter = useRef(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const loadNotes = async () => {
@@ -62,10 +64,12 @@ export default function ScratchpadPage() {
       loadNotes()
     })
     // Append transcript text if recording was initiated from this page.
-    // Don't reset the flag here - it's reset on next keydown.
+    // Reset the flag after a short delay to prevent transcript leak
+    // while ensuring the transcript has time to arrive.
     const offTranscript = soravo.onTranscript((text) => {
-      if (recordingFromScratchpad.current) {
+      if (recordingFromScratchpad.current && recordingCounter.current > lastProcessedRecording.current) {
         setDraft((prev) => (prev ? prev + ' ' + text : text))
+        lastProcessedRecording.current = recordingCounter.current
       }
     })
     return () => {
@@ -88,6 +92,7 @@ export default function ScratchpadPage() {
       e.preventDefault()
       e.stopPropagation()
       recordingFromScratchpad.current = true
+      recordingCounter.current += 1
       soravo.toggle().catch(console.error)
     }
     window.addEventListener('keydown', keyDownHandler)
