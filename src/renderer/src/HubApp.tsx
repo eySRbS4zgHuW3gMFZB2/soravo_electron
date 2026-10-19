@@ -13,6 +13,7 @@ import {
   MaximizeIcon,
   MicIcon,
   MinimizeIcon,
+  ScratchpadIcon,
   SettingsIcon,
   TrashIcon
 } from '@/components/icons'
@@ -35,7 +36,7 @@ import {
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
-type Page = 'dictation' | 'history' | 'insights' | 'models'
+type Page = 'dictation' | 'history' | 'insights' | 'models' | 'scratchpad'
 type SettingsTab = 'general' | 'system' | 'privacy'
 
 function fmtHotkey(accelerator: string): string {
@@ -146,6 +147,7 @@ function Sidebar({
       {navItem('history', 'History', <HistoryIcon />)}
       {navItem('insights', 'Insights', <ChartIcon />)}
       {navItem('models', 'Models', <BrainIcon />)}
+      {navItem('scratchpad', 'Scratchpad', <ScratchpadIcon />)}
       <Button variant="ghost" className="hub-nav w-full justify-start" onClick={onOpenSettings}>
         <SettingsIcon />
         <span>Settings</span>
@@ -492,7 +494,8 @@ function SettingsModal({
       vocabulary,
       launchAtLogin,
       theme,
-      retention
+      retention,
+      scratchpadOpenBehavior: settings?.scratchpadOpenBehavior ?? 'resume'
     }).then(() => {
       setSavedTick(true)
       setTimeout(() => setSavedTick(false), 2000)
@@ -738,7 +741,28 @@ function SettingsModal({
               </div>
               <div className="row">
                 <label>History keeps</label>
-                {/* Same pill treatment as Theme, for the same reason. */}
+                {/* Scratchpad settings section */}
+              <h3 className="hub-section">Scratchpad</h3>
+              <div className="row">
+                <label>
+                  Open behavior
+                  <Hint text="Choose what happens when you open the scratchpad." />
+                </label>
+                <Select
+                  value={settings?.scratchpadOpenBehavior ?? 'resume'}
+                  onValueChange={(v) => v && setSettings((s) => s ? { ...s, scratchpadOpenBehavior: v as any } : s)}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select behavior" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="resume">Resume last note</SelectItem>
+                    <SelectItem value="last-pinned">Open last active pinned note</SelectItem>
+                    <SelectItem value="new-tab">Open in new tab</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Same pill treatment as Theme, for the same reason. */}
                 <ToggleGroup
                   type="single"
                   value={retention}
@@ -1198,6 +1222,145 @@ function InsightsPage({ insights }: { insights: InsightsData | null }) {
   )
 }
 
+function ScratchpadPage() {
+  const [notes, setNotes] = useState<Array<{ id: number; text: string; createdAt: string; pinned: boolean }>>([])
+  const [newNote, setNewNote] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadNotes = async () => {
+      try {
+        const data = await window.soravo.getScratchpadNotes()
+        setNotes(data)
+        setError(null)
+      } catch (err) {
+        setError(`Failed to load notes: ${err}`)
+        console.error('getScratchpadNotes error:', err)
+      }
+    }
+    loadNotes()
+    const off = window.soravo.onScratchpadChanged(() => {
+      loadNotes()
+    })
+    return () => off()
+  }, [])
+
+  const addNote = () => {
+    const text = newNote.trim()
+    if (!text) return
+    window.soravo.addScratchpadNote(text).then((note: any) => {
+      setNotes((prev) => [note, ...prev])
+      setNewNote('')
+    }).catch(() => {})
+  }
+
+  const deleteNote = (id: number) => {
+    window.soravo.deleteScratchpadNote(id).then(() => {
+      setNotes((prev) => prev.filter((n) => n.id !== id))
+    }).catch(() => {})
+  }
+
+  const togglePin = (id: number) => {
+    const note = notes.find((n) => n.id === id)
+    if (!note) return
+    window.soravo.updateScratchpadNote(id, { pinned: !note.pinned }).then(() => {
+      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, pinned: !n.pinned } : n)))
+    }).catch(() => {})
+  }
+
+  const copyNote = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {}, () => {})
+  }
+
+  return (
+    <div className="hub-page">
+      <h1 className="hub-greeting">Scratchpad</h1>
+      <p className="hub-sub">Quick notes and AI-powered scratchpad for your thoughts.</p>
+      {error && <p className="hub-note" style={{ color: 'var(--soravo-negative)' }}>{error}</p>}
+
+      <div className="hub-columns">
+        <div className="hub-main-col">
+          <div className="hub-card" style={{ padding: 16, marginBottom: 16 }}>
+            <h2 className="hub-section" style={{ marginTop: 0 }}>New note</h2>
+            <div className="row">
+              <textarea
+                className="scratchpad-textarea"
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Jot down a quick thought, dictation snippet, or idea..."
+                rows={4}
+              />
+            </div>
+            <div className="row">
+              <label />
+              <Button onClick={addNote} disabled={!newNote.trim()}>
+                Add note
+              </Button>
+            </div>
+          </div>
+
+          <h3 className="hub-section">Notes</h3>
+          {notes.length === 0 && (
+            <p className="history-empty">No notes yet. Add your first note above.</p>
+          )}
+          <div className="hub-entries">
+            {notes.map((note) => (
+              <div key={note.id} className="hub-entry" style={{ position: 'relative' }}>
+                <div className="hub-entry-time">{timeHM(note.createdAt)}</div>
+                <p className="hub-entry-text">{note.text}</p>
+                <div className="hub-entry-actions">
+                  {note.pinned && (
+                    <span className="scratchpad-pin" title="Pinned">📌</span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hub-mini-btn"
+                    title="Copy"
+                    onClick={() => copyNote(note.text)}
+                  >
+                    <CopyIcon />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hub-mini-btn"
+                    title={note.pinned ? 'Unpin' : 'Pin'}
+                    onClick={() => togglePin(note.id)}
+                  >
+                    {note.pinned ? '📌' : '📍'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hub-mini-btn danger"
+                    title="Delete"
+                    onClick={() => deleteNote(note.id)}
+                  >
+                    <TrashIcon />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="hub-side-col">
+          <div className="hub-local-card">
+            <p className="hub-local-title">Scratchpad tips</p>
+            <p className="hub-local-text" style={{ fontSize: 12, lineHeight: 1.6 }}>
+              • Press the dictate hotkey to add voice notes directly<br />
+              • Pin important notes to keep them at the top<br />
+              • Notes persist across sessions and sync with your settings<br />
+              • Use AI chat (coming soon) to expand or refine notes
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function HubApp() {
   const [page, setPage] = useState<Page>('dictation')
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -1293,6 +1456,7 @@ export default function HubApp() {
           )}
           {page === 'insights' && <InsightsPage insights={insights} />}
            {page === 'models' && <ModelsPage />}
+          {page === 'scratchpad' && <ScratchpadPage />}
         </main>
       </div>
       {settings && (
