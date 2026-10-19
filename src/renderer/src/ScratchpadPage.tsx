@@ -51,26 +51,36 @@ export default function ScratchpadPage() {
     }
   }, [])
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Check if the pressed key combination matches the hotkey
+  const isHotkeyMatch = (e: React.KeyboardEvent | React.KeyboardEvent<HTMLTextAreaElement>) => {
     const parts = hotkey.toLowerCase().split('+')
     const needsCtrl = parts.includes('commandorcontrol') || parts.includes('ctrl') || parts.includes('control')
     const needsAlt = parts.includes('alt')
     const needsShift = parts.includes('shift')
-    const needsMeta = parts.includes('meta') || parts.includes('super')
     const triggerKey = parts.filter((p) => !['commandorcontrol', 'ctrl', 'control', 'alt', 'shift', 'meta', 'super'].includes(p))[0]
 
-    if (
+    return (
       (needsCtrl === (e.ctrlKey || e.metaKey)) &&
       (needsAlt === e.altKey) &&
       (needsShift === e.shiftKey) &&
-      triggerKey &&
+      !!triggerKey &&
       e.key.toLowerCase() === triggerKey
-    ) {
-      e.preventDefault()
-      e.stopPropagation()
+    )
+  }
+
+  // Don't handle keydown - the global hook handles recording start.
+  // Only handle keyup to stop recording (global hook's keyup doesn't fire when textarea is focused).
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!isHotkeyMatch(e)) return
+    e.preventDefault()
+    e.stopPropagation()
+    // Stop recording - state should be Recording at this point
+    soravo.getState().then((state) => {
+      if (state === 'recording') {
+        soravo.toggle().catch(console.error)
+      }
+    }).catch(() => {
       soravo.toggle().catch(console.error)
-    }
+    })
   }
 
   const activeNote = notes.find((n) => n.id === activeId) ?? null
@@ -193,7 +203,7 @@ export default function ScratchpadPage() {
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
                 placeholder="Start typing or dictate…"
                 autoFocus
               />
