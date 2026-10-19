@@ -1,13 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { CloseIcon, CopyIcon, TrashIcon, MinimizeIcon, MaximizeIcon } from '@/components/icons'
+import { CloseIcon, CopyIcon, TrashIcon } from '@/components/icons'
 import { soravo } from './soravo'
 import type { ScratchpadNote } from './soravo'
-import './styles.css'
-import './hub.css'
 
 function fmtDate(iso: string): string {
   const d = new Date(iso)
@@ -19,13 +15,12 @@ function fmtDate(iso: string): string {
   return d.toLocaleDateString()
 }
 
-export default function ScratchpadApp() {
+export default function ScratchpadPage() {
   const [notes, setNotes] = useState<ScratchpadNote[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const win = getCurrentWindow()
 
   const loadNotes = async () => {
     try {
@@ -52,7 +47,6 @@ export default function ScratchpadApp() {
 
   const handleNew = async () => {
     if (draft.trim() && activeId !== null) {
-      // Save current before creating new
       await soravo.updateScratchpadNote(activeId, { text: draft })
     }
     const note = await soravo.addScratchpadNote('')
@@ -107,7 +101,6 @@ export default function ScratchpadApp() {
     setDraft(note.text)
   }
 
-  // Auto-save on blur
   const handleBlur = () => {
     if (activeId !== null) {
       soravo.updateScratchpadNote(activeId, { text: draft }).catch(console.error)
@@ -115,25 +108,7 @@ export default function ScratchpadApp() {
   }
 
   return (
-    <div className="scratchpad-root" data-theme="light">
-      {/* Title bar */}
-      <div className="hub-titlebar" data-tauri-drag-region>
-        <div className="hub-titlebar-left">
-          <span className="hub-titlebar-title">Scratchpad</span>
-        </div>
-        <div className="hub-titlebar-right">
-          <Button variant="ghost" size="icon" className="hub-winbtn" onClick={() => win.minimize()}>
-            <MinimizeIcon />
-          </Button>
-          <Button variant="ghost" size="icon" className="hub-winbtn" onClick={() => win.toggleMaximize()}>
-            <MaximizeIcon />
-          </Button>
-          <Button variant="ghost" size="icon" className="hub-winbtn" onClick={() => win.hide()}>
-            <CloseIcon />
-          </Button>
-        </div>
-      </div>
-
+    <div className="scratchpad-page">
       <div className="scratchpad-body">
         {/* Sidebar: recent notes */}
         <div className="scratchpad-sidebar">

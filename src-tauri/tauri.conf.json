@@ -39,22 +39,6 @@
         "shadow": false,
         "visible": false,
         "center": true
-      },
-      {
-        "label": "scratchpad",
-        "title": "Soravo Scratchpad",
-        "width": 480,
-        "height": 640,
-        "minWidth": 360,
-        "minHeight": 400,
-        "decorations": false,
-        "transparent": true,
-        "shadow": true,
-        "visible": false,
-        "center": true,
-        "resizable": true,
-        "alwaysOnTop": false,
-        "skipTaskbar": false
       }
     ],
     "security": {

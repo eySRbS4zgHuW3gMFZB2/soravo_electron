@@ -18,6 +18,7 @@ import {
   SettingsIcon,
   TrashIcon
 } from '@/components/icons'
+import ScratchpadPage from './ScratchpadPage'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
@@ -37,7 +38,7 @@ import {
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
-type Page = 'dictation' | 'history' | 'insights' | 'models'
+type Page = 'dictation' | 'history' | 'insights' | 'models' | 'scratchpad'
 type SettingsTab = 'general' | 'system' | 'privacy'
 
 function fmtHotkey(accelerator: string): string {
@@ -148,10 +149,7 @@ function Sidebar({
       {navItem('history', 'History', <HistoryIcon />)}
       {navItem('insights', 'Insights', <ChartIcon />)}
       {navItem('models', 'Models', <BrainIcon />)}
-      <Button variant="ghost" className="hub-nav w-full justify-start" onClick={() => soravo.openScratchpadWindow()}>
-        <ScratchpadIcon />
-        <span>Scratchpad</span>
-      </Button>
+      {navItem('scratchpad', 'Scratchpad', <ScratchpadIcon />)}
       <Button variant="ghost" className="hub-nav w-full justify-start" onClick={onOpenSettings}>
         <SettingsIcon />
         <span>Settings</span>
@@ -1299,6 +1297,7 @@ export default function HubApp() {
           )}
           {page === 'insights' && <InsightsPage insights={insights} />}
            {page === 'models' && <ModelsPage />}
+           {page === 'scratchpad' && <ScratchpadPage />}
         </main>
       </div>
       {settings && (
