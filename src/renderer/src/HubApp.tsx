@@ -543,7 +543,7 @@ function SettingsModal({
           </Button>
 
           {tab === 'general' && (
-            <div className="general-page">
+            <div className="general-page modal-scroll">
               <div className="general-content">
                 <div className="general-header">
                   <h3 className="general-title">General</h3>
@@ -726,14 +726,25 @@ function SettingsModal({
           )}
 
           {tab === 'system' && (
-            <div className="system-page">
+            <div className="system-page modal-scroll">
               <div className="system-section">
                 <div className="system-section-title">App settings</div>
                 <div className="system-row">
                   <div className="system-label">
                     Launch app at login
+                    <span className="system-desc">Runs Soravo as soon as you sign in to Windows.</span>
                   </div>
                   <Switch checked={launchAtLogin} onCheckedChange={(c) => setLaunchAtLogin(c === true)} />
+                </div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Smart cleanup
+                    <span className="system-desc">
+                      Strips filler words like um, uh, er, ah and hmm, then tidies spacing. Your custom
+                      vocabulary is always applied, whether this is on or off.
+                    </span>
+                  </div>
+                  <Switch checked={smartCleanup} onCheckedChange={(c) => setSmartCleanup(c === true)} />
                 </div>
               </div>
               <div className="system-section">
@@ -762,11 +773,60 @@ function SettingsModal({
                   <Switch checked={false} disabled />
                 </div>
               </div>
+              <div className="system-section">
+                <div className="system-section-title">Custom vocabulary ({vocabEntries.length})</div>
+                {vocabEntries.length === 0 && (
+                  <p className="system-empty">
+                    No words yet. Add a phrase you say often and what it should be written as.
+                  </p>
+                )}
+                {vocabEntries.map(([from, to]) => (
+                  <div className="system-row" key={from}>
+                    <div className="system-label">
+                      {from}
+                      <span className="system-desc">Written as {to}</span>
+                    </div>
+                    <Button variant="destructive" size="sm" onClick={() => removeWord(from)}>
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                <div className="system-row">
+                  <div className="system-label">
+                    Heard as
+                    <Input
+                      value={newFrom}
+                      onChange={(e) => setNewFrom(e.target.value)}
+                      placeholder="e.g. sore avo"
+                      spellCheck={false}
+                    />
+                  </div>
+                </div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Write as
+                    <Input
+                      value={newTo}
+                      onChange={(e) => setNewTo(e.target.value)}
+                      placeholder="e.g. Soravo"
+                      spellCheck={false}
+                    />
+                  </div>
+                  <Button variant="secondary" onClick={addWord}>
+                    Add word
+                  </Button>
+                </div>
+              </div>
+              <div className="system-section">
+                <Button variant="destructive" className="system-quit" onClick={onQuit}>
+                  Quit Soravo
+                </Button>
+              </div>
             </div>
           )}
 
           {tab === 'privacy' && (
-            <div>
+            <div className="modal-scroll">
               <h2 className="modal-title">Data &amp; Privacy</h2>
               <div className="hub-local-card">
                 <p className="hub-local-title">Everything stays on this PC</p>

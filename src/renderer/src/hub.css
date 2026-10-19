@@ -1222,10 +1222,21 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
 .modal-content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--soravo-canvas-soft);
   padding: 20px 24px 16px;
-  overflow-y: auto;
+  overflow: hidden;
   position: relative;
+}
+
+/* Each settings tab scrolls on its own, so the footer below stays pinned
+   no matter how long the tab gets. */
+.modal-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .modal-title {
@@ -1260,6 +1271,7 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   justify-content: flex-end;
   gap: 8px;
   padding: 16px 0 4px;
+  flex: none;
 }
 
 .row-summary {
@@ -1303,6 +1315,9 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   align-self: stretch;
   width: 100%;
   overflow-y: auto;
+  /* The page is the scroll container, so the content inside it must keep
+     its natural height rather than shrink and scroll on its own. */
+  flex-shrink: 0;
 }
 
 .general-content::-webkit-scrollbar {
@@ -1487,6 +1502,15 @@ html[data-theme='light'] .general-controls button:not([data-slot='switch']):hove
   flex-direction: column;
   gap: 12px;
   margin-bottom: 24px;
+  /* Without this the flex column squashes its rows to fit the panel
+     instead of letting the page scroll. */
+  flex-shrink: 0;
+}
+
+/* A lone action button keeps its natural width instead of stretching
+   across the column. */
+.system-quit {
+  align-self: flex-start;
 }
 
 .system-section-title {
@@ -1519,6 +1543,20 @@ html[data-theme='light'] .general-controls button:not([data-slot='switch']):hove
   font-weight: 400;
   color: var(--soravo-ink-soft);
   margin-top: 2px;
+}
+
+/* The vocabulary inputs sit inside the label column, so they need to be
+   allowed to shrink rather than overflow the row. */
+.system-label input {
+  margin-top: 6px;
+  max-width: 320px;
+}
+
+.system-empty {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--soravo-ink-soft);
+  margin: 0 0 4px;
 }
 
 .switch-row .system-label {
