@@ -136,7 +136,6 @@ function settingsFromTauri(s: any): SoravoSettings {
     launchAtLogin: s.launchAtLogin ?? s.launch_at_login ?? true,
     theme: s.theme ?? 'light',
     retention: s.retention ?? 'all',
-    scratchpadOpenBehavior: s.scratchpadOpenBehavior ?? s.scratchpad_open_behavior ?? 'resume',
   }
 }
 
@@ -171,10 +170,6 @@ async function setupEventListeners() {
   await listen('soravo:model-download-complete', (event) => {
     const cbs = listeners['model-download-complete']
     if (cbs) cbs.forEach((cb) => cb(event.payload))
-  })
-  await listen('soravo:scratchpad-changed', () => {
-    const cbs = listeners['scratchpad-changed']
-    if (cbs) cbs.forEach((cb) => cb())
   })
   // Listen for hotkey toggle events from the Rust backend
   await listen('soravo:toggle-hotkey', () => {
@@ -220,11 +215,6 @@ export const soravo: SoravoAPI = {
   setActiveModel: (id) => invoke('set_active_model', { id }),
   onModelDownloadProgress: (cb) => addListener('model-download-progress', cb as Function),
   onModelDownloadComplete: (cb) => addListener('model-download-complete', cb as Function),
-  getScratchpadNotes: () => invoke<Array<{ id: number; text: string; createdAt: string; pinned: boolean }>>('get_scratchpad_notes'),
-  addScratchpadNote: (text) => invoke<{ id: number; text: string; createdAt: string; pinned: boolean }>('add_scratchpad_note', { text }),
-  deleteScratchpadNote: (id) => invoke('delete_scratchpad_note', { id }),
-  updateScratchpadNote: (id, patch) => invoke('update_scratchpad_note', { id, patch }),
-  onScratchpadChanged: (cb) => addListener('scratchpad-changed', cb as Function),
   winMin: () => invoke('win_min'),
   winMax: () => invoke('win_max'),
   winClose: () => invoke('win_close'),
@@ -248,7 +238,6 @@ export const soravo: SoravoAPI = {
     if (patch.launchAtLogin !== undefined) tauriPatch.launchAtLogin = patch.launchAtLogin
     if (patch.theme !== undefined) tauriPatch.theme = patch.theme
     if (patch.retention !== undefined) tauriPatch.retention = patch.retention
-    if (patch.scratchpadOpenBehavior !== undefined) tauriPatch.scratchpadOpenBehavior = patch.scratchpadOpenBehavior
     const raw = await invoke<any>('set_settings', { patch: tauriPatch })
     return settingsFromTauri(raw)
   },

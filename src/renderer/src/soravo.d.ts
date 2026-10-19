@@ -21,7 +21,6 @@ export interface SoravoSettings {
   launchAtLogin: boolean
   theme: 'light' | 'dark'
   retention: 'all' | '30days' | 'session'
-  scratchpadOpenBehavior: 'resume' | 'last-pinned' | 'new-tab'
 }
 
 export interface InsightsData {
@@ -77,11 +76,6 @@ export interface SoravoAPI {
   setActiveModel(id: string): Promise<void>
   onModelDownloadProgress(cb: (p: { id: string; received: number; total: number; percent: number }) => void): () => void
   onModelDownloadComplete(cb: (p: { id: string }) => void): () => void
-  getScratchpadNotes(): Promise<Array<{ id: number; text: string; createdAt: string; pinned: boolean }>>
-  addScratchpadNote(text: string): Promise<{ id: number; text: string; createdAt: string; pinned: boolean }>
-  deleteScratchpadNote(id: number): Promise<void>
-  updateScratchpadNote(id: number, patch: { pinned?: boolean; text?: string }): Promise<void>
-  onScratchpadChanged(cb: () => void): () => void
 }
 
 declare global {

@@ -94,7 +94,6 @@ pub struct SoravoSettings {
     pub launch_at_login: bool,
     pub theme: String,
     pub retention: String,
-    pub scratchpad_open_behavior: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,7 +126,6 @@ impl Default for SoravoSettings {
             launch_at_login: true,
             theme: "light".to_string(),
             retention: "all".to_string(),
-            scratchpad_open_behavior: "resume".to_string(),
         }
     }
 }
@@ -206,16 +204,6 @@ fn hook_config_from_settings(settings: &SoravoSettings) -> hotkeys::HookConfig {
     }
 }
 
-/// Scratchpad note structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ScratchpadNote {
-    pub id: i64,
-    pub text: String,
-    pub created_at: String,
-    pub pinned: bool,
-}
-
 // Database helpers
 fn open_db(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
     let data_dir = app
@@ -237,19 +225,7 @@ fn open_db(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
     )
     .map_err(|e| e.to_string())?;
 
-    // Scratchpad notes table
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS scratchpad_notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            text TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-            pinned BOOLEAN NOT NULL DEFAULT 0
-        );",
-        [],
-    )
-    .map_err(|e| e.to_string())?;
-
-    // Migrations for transcriptions table
+    // Migrations
     let columns: Vec<String> = conn
         .prepare("PRAGMA table_info(transcriptions)")
         .map_err(|e| e.to_string())?
@@ -474,7 +450,6 @@ fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
         if let Some(v) = s.get("launchAtLogin") { if let Some(b) = v.as_bool() { settings.launch_at_login = b; } }
         if let Some(v) = s.get("theme") { if let Some(s) = v.as_str() { settings.theme = s.to_string(); } }
         if let Some(v) = s.get("retention") { if let Some(s) = v.as_str() { settings.retention = s.to_string(); } }
-        if let Some(v) = s.get("scratchpadOpenBehavior") { if let Some(s) = v.as_str() { settings.scratchpad_open_behavior = s.to_string(); } }
         settings
     } else {
         SoravoSettings::default()
@@ -498,7 +473,6 @@ fn save_settings(app: &tauri::AppHandle, settings: &SoravoSettings) -> Result<()
     store.set("launchAtLogin", serde_json::json!(settings.launch_at_login));
     store.set("theme", serde_json::json!(settings.theme));
     store.set("retention", serde_json::json!(settings.retention));
-    store.set("scratchpadOpenBehavior", serde_json::json!(settings.scratchpad_open_behavior));
     store.save().map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -1035,97 +1009,18 @@ async fn get_history(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<Tr
 }
 
 #[tauri::command]
-async fn delete_history(app: tauri::AppHandle, id: i64) -> Result<(), String> {
+async fn clear_history(app: tauri::AppHandle) -> Result<(), String> {
     let conn = open_db(&app)?;
-    conn.execute("DELETE FROM transcriptions WHERE id = ?1", [id])
-        .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM transcriptions", []).map_err(|e| e.to_string())?;
     app.emit("soravo:data-changed", ()).ok();
     Ok(())
 }
 
-// Scratchpad commands
 #[tauri::command]
-async fn get_scratchpad_notes(app: tauri::AppHandle) -> Result<Vec<ScratchpadNote>, String> {
+async fn delete_history(app: tauri::AppHandle, id: i64) -> Result<(), String> {
     let conn = open_db(&app)?;
-    let mut stmt = conn
-        .prepare("SELECT id, text, created_at, pinned FROM scratchpad_notes ORDER BY pinned DESC, created_at DESC")
+    conn.execute("DELETE FROM transcriptions WHERE id = ?1", [id])
         .map_err(|e| e.to_string())?;
-    let rows = stmt
-        .query_map([], |row| {
-            Ok(ScratchpadNote {
-                id: row.get(0)?,
-                text: row.get(1)?,
-                created_at: row.get(2)?,
-                pinned: row.get(3)?,
-            })
-        })
-        .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
-    Ok(rows)
-}
-
-#[tauri::command]
-async fn add_scratchpad_note(app: tauri::AppHandle, text: String) -> Result<ScratchpadNote, String> {
-    let conn = open_db(&app)?;
-    let created_at = chrono::Utc::now().to_rfc3339();
-    conn.execute(
-        "INSERT INTO scratchpad_notes (text, created_at, pinned) VALUES (?1, ?2, 0)",
-        rusqlite::params![text, created_at],
-    )
-    .map_err(|e| e.to_string())?;
-    let id = conn.last_insert_rowid();
-    Ok(ScratchpadNote {
-        id,
-        text,
-        created_at,
-        pinned: false,
-    })
-}
-
-#[tauri::command]
-async fn delete_scratchpad_note(app: tauri::AppHandle, id: i64) -> Result<(), String> {
-    let conn = open_db(&app)?;
-    conn.execute("DELETE FROM scratchpad_notes WHERE id = ?1", [id])
-        .map_err(|e| e.to_string())?;
-    app.emit("soravo:scratchpad-changed", ()).ok();
-    Ok(())
-}
-
-#[tauri::command]
-async fn update_scratchpad_note(app: tauri::AppHandle, id: i64, patch: serde_json::Value) -> Result<(), String> {
-    let conn = open_db(&app)?;
-    let mut sets = Vec::new();
-    let mut params = Vec::new();
-    if let Some(v) = patch.get("pinned").and_then(|v| v.as_bool()) {
-        sets.push("pinned = ?");
-        params.push((v as i64).to_string());
-    }
-    if let Some(v) = patch.get("text").and_then(|v| v.as_str()) {
-        sets.push("text = ?");
-        params.push(v.to_string());
-    }
-    if sets.is_empty() {
-        return Ok(());
-    }
-    let sql = format!("UPDATE scratchpad_notes SET {} WHERE id = ?", sets.join(", "));
-    params.push(id.to_string());
-    conn.execute(&sql, rusqlite::params_from_iter(params.iter().map(|s| s.as_str())))
-        .map_err(|e| e.to_string())?;
-    app.emit("soravo:scratchpad-changed", ()).ok();
-    Ok(())
-}
-
-#[tauri::command]
-async fn on_scratchpad_changed(app: tauri::AppHandle) -> Result<(), String> {
-    app.emit("soravo:scratchpad-changed", ()).ok();
-    Ok(())
-}
-
-#[tauri::command]
-async fn clear_history(app: tauri::AppHandle) -> Result<(), String> {
-    let conn = open_db(&app)?;
-    conn.execute("DELETE FROM transcriptions", []).map_err(|e| e.to_string())?;
     app.emit("soravo:data-changed", ()).ok();
     Ok(())
 }
@@ -1399,11 +1294,6 @@ async fn set_settings(
             settings.theme = v.to_string();
         }
     }
-    if let Some(v) = patch.get("scratchpadOpenBehavior").and_then(|v| v.as_str()) {
-        if v == "resume" || v == "last-pinned" || v == "new-tab" {
-            settings.scratchpad_open_behavior = v.to_string();
-        }
-    }
     if let Some(v) = patch.get("retention").and_then(|v| v.as_str()) {
         if v == "all" || v == "30days" || v == "session" {
             settings.retention = v.to_string();
@@ -1585,11 +1475,6 @@ pub fn run() {
             get_history,
             clear_history,
             delete_history,
-            get_scratchpad_notes,
-            add_scratchpad_note,
-            delete_scratchpad_note,
-            update_scratchpad_note,
-            on_scratchpad_changed,
             get_insights,
             get_runtime_status,
             get_settings,

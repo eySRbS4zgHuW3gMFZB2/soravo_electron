@@ -10,13 +10,7 @@ rust-version = "1.77"
 
 [lib]
 name = "soravo_lib"
-crate-type = ["staticlib", "rlib"]
-
-[profile.release]
-debug = false
-
-[profile.dev]
-debug = true
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
