@@ -137,24 +137,31 @@ export default function ScratchpadPage() {
 
   // Handle hotkey locally when textarea is focused (global rdev hook doesn't
   // fire when webview textarea has focus). Start on keydown, stop on keyup.
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.repeat) return
-    if (!isHotkeyMatch(e)) return
-    e.preventDefault()
-    e.stopPropagation()
-    soravo.toggle().catch(console.error)
-  }
-
-  const handleKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!isHotkeyMatch(e)) return
-    e.preventDefault()
-    e.stopPropagation()
-    soravo.getState().then((state) => {
-      if (state === 'recording') {
-        soravo.toggle().catch(console.error)
-      }
-    }).catch(() => {})
-  }
+  // Use window-level listeners since textarea loses focus when pill shows.
+  useEffect(() => {
+    const keyDownHandler = (e: KeyboardEvent) => {
+      if (!textareaFocused) return
+      if (e.repeat) return
+      if (!isHotkeyMatch(e)) return
+      e.preventDefault()
+      e.stopPropagation()
+      soravo.toggle().catch(console.error)
+    }
+    const keyUpHandler = (e: KeyboardEvent) => {
+      if (!isHotkeyMatch(e)) return
+      soravo.getState().then((state) => {
+        if (state === 'recording') {
+          soravo.toggle().catch(console.error)
+        }
+      }).catch(() => {})
+    }
+    window.addEventListener('keydown', keyDownHandler)
+    window.addEventListener('keyup', keyUpHandler)
+    return () => {
+      window.removeEventListener('keydown', keyDownHandler)
+      window.removeEventListener('keyup', keyUpHandler)
+    }
+  }, [textareaFocused, hotkey])
 
   return (
     <div className="scratchpad-page">
@@ -213,8 +220,6 @@ export default function ScratchpadPage() {
                 onChange={(e) => setDraft(e.target.value)}
                 onFocus={() => setTextareaFocused(true)}
                 onBlur={(e) => { setTextareaFocused(false); handleBlur() }}
-                onKeyDown={handleKeyDown}
-                onKeyUp={handleKeyUp}
                 placeholder="Start typing or dictate…"
                 autoFocus
               />
