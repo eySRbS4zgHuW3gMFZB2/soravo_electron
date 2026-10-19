@@ -1270,3 +1270,53 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* --- Settings System page (Wispr Flow style) --- */
+.system-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.system-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.system-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--soravo-mute);
+  margin-bottom: 4px;
+}
+
+.system-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.system-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--soravo-ink);
+  min-width: 0;
+}
+
+.system-label .system-desc {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--soravo-ink-soft);
+  margin-top: 2px;
+}
+
+.switch-row .system-label {
+  cursor: pointer;
+}

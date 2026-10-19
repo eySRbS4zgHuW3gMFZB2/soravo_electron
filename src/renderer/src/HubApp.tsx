@@ -23,6 +23,7 @@ import ScratchpadPage from './ScratchpadPage'
 import SnippetsPage from './SnippetsPage'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { Progress } from '@/components/ui/progress'
 import {
   Dialog,
@@ -669,66 +670,41 @@ function SettingsModal({
           )}
 
           {tab === 'system' && (
-            <div>
-              <h2 className="modal-title">System</h2>
-              <div className="row">
-                <label>
-                  Smart cleanup
-                  <Hint text="Strips filler words like um, uh, er, ah and hmm, then tidies spacing. Your custom vocabulary is always applied, whether this is on or off." />
-                </label>
-                <Checkbox checked={smartCleanup} onCheckedChange={(c) => setSmartCleanup(c === true)} />
-              </div>
-              <div className="row">
-                <label>
-                  Add punctuation
-                  <Hint text="Adds a full stop when a dictation ends without a period, exclamation mark or question mark. Works on its own, even when Smart cleanup is off." />
-                </label>
-                <Checkbox checked={addPunctuation} onCheckedChange={(c) => setAddPunctuation(c === true)} />
-              </div>
-              <h3 className="hub-section">Custom vocabulary ({vocabEntries.length})</h3>
-              {vocabEntries.map(([from, to]) => (
-                <div className="row" key={from}>
-                  <label>{from}</label>
-                  <Input value={to} readOnly />
-                  <Button variant="destructive" onClick={() => removeWord(from)}>
-                    Remove
-                  </Button>
+            <div className="system-page">
+              <div className="system-section">
+                <div className="system-section-title">App settings</div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Launch app at login
+                  </div>
+                  <Switch checked={launchAtLogin} onCheckedChange={(c) => setLaunchAtLogin(c === true)} />
                 </div>
-              ))}
-              <div className="row">
-                <label>Heard as</label>
-                <Input
-                  value={newFrom}
-                  onChange={(e) => setNewFrom(e.target.value)}
-                  placeholder="e.g. sore avo"
-                  spellCheck={false}
-                />
               </div>
-              <div className="row">
-                <label>Write as</label>
-                <Input
-                  value={newTo}
-                  onChange={(e) => setNewTo(e.target.value)}
-                  placeholder="e.g. Soravo"
-                  spellCheck={false}
-                />
+              <div className="system-section">
+                <div className="system-section-title">Sound</div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Dictation and notification sounds
+                  </div>
+                  <Switch checked={sounds} onCheckedChange={(c) => setSounds(c === true)} />
+                </div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Add punctuation
+                    <span className="system-desc">Adds a full stop when dictation ends without a period, exclamation mark or question mark.</span>
+                  </div>
+                  <Switch checked={addPunctuation} onCheckedChange={(c) => setAddPunctuation(c === true)} />
+                </div>
               </div>
-              <div className="row">
-                <label />
-                <Button variant="secondary" onClick={addWord}>
-                  Add word
-                </Button>
-              </div>
-              <div className="row">
-                <label title="Registers Soravo in your Windows startup folder so it runs as soon as you sign in.">
-                  Start at login
-                </label>
-                <Checkbox checked={launchAtLogin} onCheckedChange={(c) => setLaunchAtLogin(c === true)} />
-              </div>
-              <div className="row">
-                <Button variant="destructive" onClick={onQuit}>
-                  Quit Soravo
-                </Button>
+              <div className="system-section">
+                <div className="system-section-title">Notifications</div>
+                <div className="system-row">
+                  <div className="system-label">
+                    Suggestions
+                    <span className="system-desc">Tips about getting set up or improving how you use Soravo.</span>
+                  </div>
+                  <Switch checked={false} disabled />
+                </div>
               </div>
             </div>
           )}
