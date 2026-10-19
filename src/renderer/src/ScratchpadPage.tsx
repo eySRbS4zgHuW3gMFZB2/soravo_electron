@@ -22,6 +22,8 @@ export default function ScratchpadPage() {
   const [saving, setSaving] = useState(false)
   const [hotkey, setHotkey] = useState('CommandOrControl+Alt+Space')
   const [textareaFocused, setTextareaFocused] = useState(false)
+  // Track if the current recording was initiated from this page
+  const recordingFromScratchpad = useRef(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const loadNotes = async () => {
@@ -59,17 +61,38 @@ export default function ScratchpadPage() {
     const off = soravo.onScratchpadChanged(() => {
       loadNotes()
     })
-    // Only append transcript text when textarea is focused (fixes leak bug)
+    // Append transcript text if recording was initiated from this page
     const offTranscript = soravo.onTranscript((text) => {
-      if (textareaFocused) {
+      if (recordingFromScratchpad.current) {
         setDraft((prev) => (prev ? prev + ' ' + text : text))
+        recordingFromScratchpad.current = false
       }
     })
     return () => {
       off()
       offTranscript()
     }
+  }, [])
+
+  // When textarea is focused, disable global hook
+  useEffect(() => {
+    soravo.setTextareaFocus(textareaFocused).catch(() => {})
   }, [textareaFocused])
+
+  // keydown: start recording (only when textarea focused, global hook disabled)
+  useEffect(() => {
+    const keyDownHandler = (e: KeyboardEvent) => {
+      if (!textareaFocused) return
+      if (e.repeat) return
+      if (!isHotkeyMatch(e)) return
+      e.preventDefault()
+      e.stopPropagation()
+      recordingFromScratchpad.current = true
+      soravo.toggle().catch(console.error)
+    }
+    window.addEventListener('keydown', keyDownHandler)
+    return () => window.removeEventListener('keydown', keyDownHandler)
+  }, [textareaFocused, hotkey])
 
   const activeNote = notes.find((n) => n.id === activeId) ?? null
 
@@ -134,40 +157,6 @@ export default function ScratchpadPage() {
       soravo.updateScratchpadNote(activeId, { text: draft }).catch(console.error)
     }
   }
-
-  // Handle hotkey locally when textarea is focused (global rdev hook doesn't
-  // fire when webview textarea has focus). Start on keydown, stop on keyup.
-  // Use window-level listeners since textarea loses focus when pill shows.
-  // When textarea is focused, disable global hook and handle recording locally
-  useEffect(() => {
-    soravo.setTextareaFocus(textareaFocused).catch(() => {})
-  }, [textareaFocused])
-
-  // Reset textarea focus when window loses focus (prevents stuck state)
-  useEffect(() => {
-    const handleWindowBlur = () => {
-      setTextareaFocused(false)
-    }
-    window.addEventListener('blur', handleWindowBlur)
-    return () => window.removeEventListener('blur', handleWindowBlur)
-  }, [])
-
-  // keydown: start recording (only when textarea focused, global hook disabled)
-  useEffect(() => {
-    const keyDownHandler = (e: KeyboardEvent) => {
-      if (!textareaFocused) return
-      if (e.repeat) return
-      if (!isHotkeyMatch(e)) return
-      e.preventDefault()
-      e.stopPropagation()
-      soravo.toggle().catch(console.error)
-    }
-    window.addEventListener('keydown', keyDownHandler)
-    return () => window.removeEventListener('keydown', keyDownHandler)
-  }, [textareaFocused, hotkey])
-
-  // keyup is handled by the pill window (App.tsx) since the textarea
-  // loses focus when the pill shows up during recording.
 
   return (
     <div className="scratchpad-page">
