@@ -1420,8 +1420,10 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   box-sizing: border-box;
 }
 
-/* The Change button and the theme select are both 36px tall in Wispr Flow. */
-.general-controls button,
+/* The Change button and the theme select are both 36px tall in Wispr Flow.
+   The Switch is a button too, so it has to be excluded or it loses its
+   pill shape and picks up the button's 36px height. */
+.general-controls button:not([data-slot='switch']),
 .general-controls [data-slot='select-trigger'] {
   height: 36px;
   border-radius: 8px;
