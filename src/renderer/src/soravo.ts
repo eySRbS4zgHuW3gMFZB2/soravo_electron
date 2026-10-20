@@ -94,6 +94,10 @@ export interface InsightsData {
 
 export interface SoravoAPI {
   toggle(): Promise<void>
+  /** Start a dictation. No-op unless the recorder is idle. */
+  startRecording(): Promise<void>
+  /** End a dictation and transcribe it. */
+  stopRecording(): Promise<void>
   quit(): Promise<void>
   getState(): Promise<RecState>
   onState(cb: (s: RecState) => void): () => void
@@ -241,6 +245,8 @@ function addListener(key: string, cb: Function): () => void {
 
 export const soravo: SoravoAPI = {
   toggle: () => invoke('toggle'),
+  startRecording: () => invoke('start_record'),
+  stopRecording: () => invoke('stop_record'),
   quit: () => invoke('quit'),
   getState: () => invoke<RecState>('get_state'),
   onState: (cb) => addListener('state', cb as Function),

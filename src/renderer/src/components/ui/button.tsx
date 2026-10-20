@@ -20,7 +20,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         // Lime: the app's old .btn.primary
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        // The primary action: the brand's deep green, with white text.
+        default: "bg-primary-fill text-primary-fill-foreground hover:brightness-90",
         // Canvas surface: the app's old .btn
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_8%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",

@@ -33,6 +33,8 @@ import InsightsPage from './pages/InsightsPage'
 import ModelsPage from './pages/ModelsPage'
 import DictionaryPage from './pages/DictionaryPage'
 import StylePage from './pages/StylePage'
+import { matchesHotkey } from './pages/shared'
+import { setAppChords } from './appShortcuts'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
@@ -1076,6 +1078,77 @@ export default function HubApp() {
   useEffect(() => {
     if (settings?.sidebarOpen !== undefined) setSidebarOpen(settings.sidebarOpen)
   }, [settings?.sidebarOpen])
+
+  // The shortcut guard blocks the browser's own chords, and several of them
+  // collide with the app's hotkeys - Ctrl+1 is a tab shortcut and the default
+  // dictation hotkey. It has to know which chords belong to the app.
+  useEffect(() => {
+    if (!settings) {
+      setAppChords([])
+      return
+    }
+    setAppChords(
+      [settings.hotkey, settings.pasteHotkey, settings.copyHotkey, settings.scratchpadHotkey].filter(
+        Boolean
+      )
+    )
+  }, [
+    settings?.hotkey,
+    settings?.pasteHotkey,
+    settings?.copyHotkey,
+    settings?.scratchpadHotkey
+  ])
+
+  // The dictation hotkey, while the hub has the focus.
+  //
+  // The global hook watches the whole system, but the app's own webview takes
+  // a key press first, so while the hub is focused the hook never sees it.
+  // The window therefore drives the recorder itself. The native side is
+  // idempotent - starting when a recording is already running does nothing -
+  // so a press that both paths see still starts one recording.
+  useEffect(() => {
+    const hotkey = settings?.hotkey
+    if (!hotkey) return
+    const holdToTalk = settings?.holdToTalk ?? false
+    // The trigger that started the recording, so the release ends it even if
+    // the modifier was let go first.
+    let held = false
+
+    const inAField = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null
+      if (!el || !el.tagName) return false
+      return (
+        el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.tagName === 'SELECT' ||
+        el.isContentEditable
+      )
+    }
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat || inAField(e.target)) return
+      if (!matchesHotkey(e, hotkey)) return
+      e.preventDefault()
+      if (holdToTalk) {
+        held = true
+        window.soravo.startRecording().catch(() => {})
+      } else {
+        window.soravo.toggle().catch(() => {})
+      }
+    }
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (!holdToTalk || !held) return
+      if (!matchesHotkey(e, hotkey)) return
+      held = false
+      window.soravo.stopRecording().catch(() => {})
+    }
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [settings?.hotkey, settings?.holdToTalk])
 
   const refreshHistory = () => {
     window.soravo.getHistory(200).then(setHistory).catch(() => {})

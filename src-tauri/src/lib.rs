@@ -6,6 +6,8 @@ use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Emitter, Manager, State};
 
 mod hotkeys;
+#[cfg(target_os = "windows")]
+mod win_hook;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -947,6 +949,29 @@ async fn toggle(
     toggle_recording(&app, &state)
 }
 
+/// Start a dictation from the window that has the focus.
+///
+/// The global hook cannot see a key press that the app's own webview takes
+/// first, so the hub window drives the recorder itself while it is focused.
+/// Both paths call the same function, and it is a no-op unless the recorder is
+/// idle, so a key press that both paths see does not start twice.
+#[tauri::command]
+async fn start_record(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    start_recording(&app, &state)
+}
+
+/// End a dictation and transcribe it. A no-op unless a recording is running.
+#[tauri::command]
+async fn stop_record(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    stop_recording(&app, &state)
+}
+
 /// Toggle mode: start when idle, stop when recording.
 ///
 /// Push-to-talk deliberately does not use this — it drives `start_recording`
@@ -1869,6 +1894,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_state,
             toggle,
+            start_record,
+            stop_record,
             cancel,
             submit_audio,
             set_height,

@@ -304,45 +304,45 @@ fn is_modifier(key: Key) -> bool {
 
 /// Start the global input hook on a dedicated thread.
 ///
-/// `rdev::listen` blocks forever, so it must not run on the UI thread. The hook
-/// only observes input and never consumes it, so normal typing and clicking keep
-/// working in every other application.
+/// The hook only observes input and never consumes it, so normal typing and
+/// clicking keep working in every other application.
+///
+/// On Windows the hook is installed by `win_hook`, which runs a real message
+/// pump; `rdev::listen` blocks on a null MSG pointer and loses the hook after
+/// a while. Everywhere else rdev's own listener is used.
 pub fn spawn_hook(config: Arc<RwLock<HookConfig>>, handles: HookHandles, textarea_focused: Arc<AtomicBool>) -> Result<(), String> {
-    std::thread::Builder::new()
-        .name("soravo-input-hook".into())
-        .spawn(move || {
-            // Modifier state has to persist across events: by the time the
-            // trigger key or mouse button arrives, the modifier press was a
-            // separate, earlier event. `rdev::listen` takes an FnMut closure,
-            // so this is captured and updated in place.
-            let mut mods = Modifiers::default();
-            // The trigger currently held down for push-to-talk, if any.
-            let mut held: Option<Trigger> = None;
+    // Modifier state has to persist across events: by the time the
+    // trigger key or mouse button arrives, the modifier press was a
+    // separate, earlier event. The listener takes an FnMut closure,
+    // so this is captured and updated in place.
+    let mut mods = Modifiers::default();
+    // The trigger currently held down for push-to-talk, if any.
+    let mut held: Option<Trigger> = None;
 
-            let result = rdev::listen(move |event| {
-                // Skip dictation handling when textarea is focused (frontend
-                // handles recording locally).
-                if textarea_focused.load(Ordering::Relaxed) {
-                    // Still track modifiers
-                    match event.event_type {
-                        EventType::KeyPress(key) => {
-                            if is_modifier(key) {
-                                set_modifier(&mut mods, key, true);
-                            }
-                        }
-                        EventType::KeyRelease(key) => {
-                            if is_modifier(key) {
-                                set_modifier(&mut mods, key, false);
-                            }
-                        }
-                        _ => {}
+    let callback = move |event: rdev::Event| {
+        // Skip dictation handling when textarea is focused (frontend
+        // handles recording locally).
+        if textarea_focused.load(Ordering::Relaxed) {
+            // Still track modifiers
+            match event.event_type {
+                EventType::KeyPress(key) => {
+                    if is_modifier(key) {
+                        set_modifier(&mut mods, key, true);
                     }
-                    return;
                 }
-                // Cheap and rare: snapshot the bindings for this event.
-                let cfg = match config.read() {
-                    Ok(cfg) => cfg.clone(),
-                    Err(_) => return,
+                EventType::KeyRelease(key) => {
+                        if is_modifier(key) {
+                            set_modifier(&mut mods, key, false);
+                        }
+                    }
+                    _ => {}
+                }
+                return;
+            }
+            // Cheap and rare: snapshot the bindings for this event.
+            let cfg = match config.read() {
+                Ok(cfg) => cfg.clone(),
+                Err(_) => return,
                 };
 
                 // (trigger, is_press)
@@ -416,14 +416,16 @@ pub fn spawn_hook(config: Arc<RwLock<HookConfig>>, handles: HookHandles, textare
                 if matched(&cfg.copy_last) {
                     (handles.copy_last)();
                 }
-            });
+    };
 
-            if let Err(err) = result {
-                log::error!("[soravo] global input hook failed: {err:?}");
-            }
-        })
-        .map(|_| ())
-        .map_err(|e| format!("failed to spawn input hook thread: {e}"))
+    #[cfg(target_os = "windows")]
+    {
+        crate::win_hook::spawn(Box::new(callback))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        rdev::listen(callback).map_err(|err| format!("global input hook failed: {err:?}"))
+    }
 }
 
 fn set_modifier(mods: &mut Modifiers, key: Key, pressed: bool) {

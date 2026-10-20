@@ -13,6 +13,23 @@
  * shortcuts.
  */
 
+import { matchesHotkey } from './pages/shared'
+
+/**
+ * Chords the app itself uses.
+ *
+ * The guard below blocks the browser's own shortcuts, and several of them
+ * collide with the app's hotkeys - Ctrl+1 is a browser tab shortcut, and it
+ * is also the default dictation hotkey. Blocking it here would stop the
+ * hotkey from ever reaching the app, so the app's own chords are excluded.
+ */
+let appChords: string[] = []
+
+/** Tell the guard which chords belong to the app. */
+export function setAppChords(chords: string[]): void {
+  appChords = chords.filter(Boolean)
+}
+
 /** Browser-level chords that have no meaning in this app. */
 const BLOCKED_CHORDS = new Set([
   // find in page, find next, find previous
@@ -80,6 +97,9 @@ function shouldBlock(event: KeyboardEvent): boolean {
   if (BLOCKED_FUNCTION_KEYS.has(event.key)) return true
 
   if (!event.ctrlKey && !event.metaKey) return false
+
+  // The app's own chords are never browser shortcuts.
+  if (appChords.some((chord) => matchesHotkey(event, chord))) return false
 
   // Ctrl+Shift+<key> is a different chord from Ctrl+<key>.
   const chord = event.key.toLowerCase()

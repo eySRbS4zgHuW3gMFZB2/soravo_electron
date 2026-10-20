@@ -18,6 +18,36 @@ export function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length
 }
 
+/**
+ * Does a keyboard event match an accelerator-style binding?
+ *
+ * The binding is the same grammar the native side parses: modifiers, then
+ * the trigger. `CommandOrControl` matches either Ctrl or the Windows key.
+ */
+export function matchesHotkey(
+  e: { key: string; ctrlKey: boolean; altKey: boolean; shiftKey: boolean; metaKey: boolean },
+  binding: string
+): boolean {
+  const parts = binding
+    .toLowerCase()
+    .split('+')
+    .map((p) => p.trim())
+    .filter(Boolean)
+  if (!parts.length) return false
+  const modifiers = ['commandorcontrol', 'command', 'ctrl', 'control', 'alt', 'shift', 'meta', 'super']
+  const needsCtrl = parts.some((p) => ['commandorcontrol', 'command', 'ctrl', 'control'].includes(p))
+  const needsAlt = parts.includes('alt')
+  const needsShift = parts.includes('shift')
+  const triggerKey = parts.filter((p) => !modifiers.includes(p))[0]
+  if (!triggerKey) return false
+  return (
+    needsCtrl === (e.ctrlKey || e.metaKey) &&
+    needsAlt === e.altKey &&
+    needsShift === e.shiftKey &&
+    e.key.toLowerCase() === triggerKey
+  )
+}
+
 export type HubStats = {
   words: number
   wpm: number

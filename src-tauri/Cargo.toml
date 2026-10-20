@@ -36,3 +36,10 @@ uuid = { version = "1", features = ["v4"] }
 rdev = "0.5"
 reqwest = { version = "0.12", features = ["stream"] }
 futures = "0.3"
+
+# The Windows input hook is installed here rather than through rdev's
+# `listen`, which blocks on a null MSG pointer and loses the hook. winapi is
+# already in the tree through rdev, so this adds no new download.
+[target.'cfg(target_os = "windows")'.dependencies.winapi]
+version = "0.3"
+features = ["winuser", "minwindef", "libloaderapi", "errhandlingapi", "processthreadsapi"]

@@ -104,6 +104,10 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
   for the display face.
 - **The colour passes its contrast check.** Every text and surface pair in the app clears WCAG's
   4.5:1 in both themes, and the motion honours `prefers-reduced-motion`.
+- **A green that carries text is the brand's deep green with white text**; the lime stays the accent
+  for marks and meters - the progress bars, the heatmap, the switch, the focus ring.
+- **The hotkey works wherever the app is.** A global hook catches the combination when another
+  window has the focus, and the hub drives the recorder itself when it has it.
 - **Model downloads report their progress.** The bar is followed by the completed percentage and
   the live transfer rate, and the models can be searched, filtered and sorted.
 

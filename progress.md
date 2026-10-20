@@ -619,6 +619,40 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   and the hub window opens at 1350 x 850. 31/31 cargo tests pass,
   `tsc -p tsconfig.web.json` is clean and `npm run build` succeeds.
 
+#### Round 7: the hotkey, the green, and the Snippets band
+- **The dictation hotkey was dead, and it took three faults to find it.**
+  - The app's own shortcut guard blocks the browser's chords, and `Ctrl+1..9`
+    is one of them - the same chord as the default dictation hotkey. The guard
+    swallowed the key before anything could see it, so the hotkey could not
+    work while the hub had the focus. The guard now knows the app's own
+    chords and leaves them alone.
+  - The hub window's webview takes a key press before the global hook can
+    see it, so the hook never fires while the app is focused. The window
+    therefore drives the recorder itself, and the native side is idempotent,
+    so a press both paths see still starts one recording.
+  - rdev 0.5.3's Windows `listen` installs the low-level hook and then
+    blocks on `GetMessageA(null, null, 0, 0)` - a null MSG pointer and no
+    loop. A low-level hook is delivered through the installing thread's
+    message queue, so a thread without a real pump loses the hook, silently.
+    The hook is now installed in `win_hook.rs` with a proper message pump,
+    and rdev is only used for the `Key` and `Button` types. Both paths are
+    verified: the hotkey starts a recording with the hub focused and with
+    another app focused.
+- **A green that carries text is now the brand's deep green with white
+  text.** The lime stays the accent for marks and meters - the progress
+  bars, the heatmap, the switch, the focus ring - but a pill with a label on
+  it takes `--soravo-primary-fill` (#4a7a2e) and white text, so the label
+  reads. That is the primary button, the active segment, the "Local" badge,
+  the hotkey keycaps, the brand mark and the account avatar.
+- **The Snippets band lost its cross and its peach gradient.** The dismiss
+  button is gone, and the band takes the same green gradient as the other
+  heroes, which is the one the design already liked.
+- Verified by driving the app: the hotkey starts a recording both ways, the
+  primary buttons are the deep green with white text, the Snippets hero has
+  no cross and a green band, and the settings dialog still reads correctly.
+  31/31 cargo tests pass, `tsc -p tsconfig.web.json` is clean and
+  `npm run build` succeeds.
+
 #### Round 6: one scale, one button system, and the contrast that was failing
 - **The type scale is now a true modular scale: 12 / 14 / 16 / 18 / 24 / 32.**
   It had drifted to 12 / 16 / 18 / 20 / 24 / 32, where 18 and 20 sat two

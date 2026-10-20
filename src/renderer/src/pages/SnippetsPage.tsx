@@ -74,7 +74,6 @@ export default function SnippetsPage() {
   const [formExpansion, setFormExpansion] = useState('')
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [bannerDismissed, setBannerDismissed] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [importItems, setImportItems] = useState<ImportItem[]>([])
@@ -428,61 +427,57 @@ export default function SnippetsPage() {
       <div className="page-scroll">
         <div className="page-column">
           <div className="page-stack">
-            {bannerDismissed ? null : (
-              <PageHero
-                media="snippets"
-                onDismiss={() => setBannerDismissed(true)}
-                title={
-                  <>
-                    The stuff <em>you</em> shouldn&rsquo;t have to re-type.
-                  </>
-                }
-                description="Save text you type often — an email, intro, or prompt — then say a word to drop it in instantly."
-                examples={BANNER_EXAMPLES.map((example) => (
-                  <div
-                    key={example.id}
-                    className="page-hero-example"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
+            <PageHero
+              media="snippets"
+              title={
+                <>
+                  The stuff <em>you</em> shouldn&rsquo;t have to re-type.
+                </>
+              }
+              description="Save text you type often — an email, intro, or prompt — then say a word to drop it in instantly."
+              examples={BANNER_EXAMPLES.map((example) => (
+                <div
+                  key={example.id}
+                  className="page-hero-example"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setFormPhrase(example.trigger)
+                    setFormExpansion(example.expansion)
+                    setEditingSnippet(null)
+                    setFormError('')
+                    setIsAddOpen(true)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
                       setFormPhrase(example.trigger)
                       setFormExpansion(example.expansion)
                       setEditingSnippet(null)
                       setFormError('')
                       setIsAddOpen(true)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        setFormPhrase(example.trigger)
-                        setFormExpansion(example.expansion)
-                        setEditingSnippet(null)
-                        setFormError('')
-                        setIsAddOpen(true)
-                      }
-                    }}
-                  >
-                    <span className="page-hero-example-tag">
-                      <Button variant="secondary" tabIndex={-1}>
-                        &ldquo;{example.trigger}&rdquo;
-                      </Button>
-                    </span>
-                    <span className="page-hero-example-arrow">→</span>
-                    <span className="page-hero-example-tag">
-                      <Button variant="secondary" tabIndex={-1}>
-                        {example.expansion}
-                      </Button>
-                    </span>
-                  </div>
-                ))}
-                cta={
-                  <Button variant="default" onClick={openAdd}>
-                    Add new snippet
-                  </Button>
-                }
-              />
-            )}
-
+                    }
+                  }}
+                >
+                  <span className="page-hero-example-tag">
+                    <Button variant="secondary" tabIndex={-1}>
+                      &ldquo;{example.trigger}&rdquo;
+                    </Button>
+                  </span>
+                  <span className="page-hero-example-arrow">→</span>
+                  <span className="page-hero-example-tag">
+                    <Button variant="secondary" tabIndex={-1}>
+                      {example.expansion}
+                    </Button>
+                  </span>
+                </div>
+              ))}
+              cta={
+                <Button variant="default" onClick={openAdd}>
+                  Add new snippet
+                </Button>
+              }
+            />
             {filtered.length === 0 ? (
               <div className="page-empty">
                 <p className="page-empty-title">
