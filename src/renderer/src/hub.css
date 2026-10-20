@@ -745,13 +745,15 @@
   flex: 1;
   width: 100%;
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  /* DESIGN.md "text-input": 16px body, 12px/16px padding, 12px radius. */
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
   color: var(--soravo-ink);
   background: var(--soravo-canvas);
   border: 1px solid var(--soravo-ink);
   border-radius: 12px;
-  padding: 8px 12px;
+  padding: 12px 16px;
   cursor: pointer;
   text-align: left;
   min-width: 0;

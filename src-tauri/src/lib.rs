@@ -94,6 +94,9 @@ pub struct SoravoSettings {
     pub launch_at_login: bool,
     pub theme: String,
     pub retention: String,
+    /// Shortcut that jumps to the Scratchpad tab from anywhere in the hub.
+    /// Empty means the shortcut is not bound.
+    pub scratchpad_hotkey: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -126,6 +129,7 @@ impl Default for SoravoSettings {
             launch_at_login: true,
             theme: "light".to_string(),
             retention: "all".to_string(),
+            scratchpad_hotkey: String::new(),
         }
     }
 }
@@ -477,6 +481,7 @@ fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
         if let Some(v) = s.get("launchAtLogin") { if let Some(b) = v.as_bool() { settings.launch_at_login = b; } }
         if let Some(v) = s.get("theme") { if let Some(s) = v.as_str() { settings.theme = s.to_string(); } }
         if let Some(v) = s.get("retention") { if let Some(s) = v.as_str() { settings.retention = s.to_string(); } }
+        if let Some(v) = s.get("scratchpadHotkey") { if let Some(s) = v.as_str() { settings.scratchpad_hotkey = s.to_string(); } }
         settings
     } else {
         SoravoSettings::default()
@@ -500,6 +505,7 @@ fn save_settings(app: &tauri::AppHandle, settings: &SoravoSettings) -> Result<()
     store.set("launchAtLogin", serde_json::json!(settings.launch_at_login));
     store.set("theme", serde_json::json!(settings.theme));
     store.set("retention", serde_json::json!(settings.retention));
+    store.set("scratchpadHotkey", serde_json::json!(settings.scratchpad_hotkey));
     store.save().map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -1346,6 +1352,9 @@ async fn set_settings(
     if let Some(v) = patch.get("copyHotkey").and_then(|v| v.as_str()) {
         settings.copy_hotkey = v.to_string();
     }
+    if let Some(v) = patch.get("scratchpadHotkey").and_then(|v| v.as_str()) {
+        settings.scratchpad_hotkey = v.to_string();
+    }
     if let Some(v) = patch.get("holdToTalk").and_then(|v| v.as_bool()) {
         settings.hold_to_talk = v;
     }
@@ -1467,6 +1476,7 @@ async fn show_hub(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ScratchpadNote {
     pub id: i64,
     pub text: String,
@@ -1568,6 +1578,7 @@ async fn open_scratchpad_window(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Snippet {
     pub id: i64,
     pub phrase: String,
@@ -1800,6 +1811,40 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn snippet_and_note_serialise_with_camel_case_keys() {
+        // The renderer reads these as createdAt / updatedAt / isAutoLearned.
+        // Without the camelCase rename the front end got undefined and every
+        // sort or timestamp on the Snippets page threw.
+        let snippet = Snippet {
+            id: 1,
+            phrase: "p".to_string(),
+            expansion: "e".to_string(),
+            created_at: "c".to_string(),
+            updated_at: "u".to_string(),
+            is_auto_learned: true,
+        };
+        let json = serde_json::to_value(&snippet).unwrap();
+        assert_eq!(json["phrase"], "p");
+        assert_eq!(json["expansion"], "e");
+        assert_eq!(json["createdAt"], "c");
+        assert_eq!(json["updatedAt"], "u");
+        assert_eq!(json["isAutoLearned"], true);
+        assert!(json.get("created_at").is_none());
+
+        let note = ScratchpadNote {
+            id: 2,
+            text: "t".to_string(),
+            created_at: "c".to_string(),
+            pinned: false,
+        };
+        let json = serde_json::to_value(&note).unwrap();
+        assert_eq!(json["text"], "t");
+        assert_eq!(json["createdAt"], "c");
+        assert_eq!(json["pinned"], false);
+        assert!(json.get("created_at").is_none());
+    }
 
     #[test]
     fn snippets_expand_basic() {
