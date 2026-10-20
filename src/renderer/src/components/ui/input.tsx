@@ -7,10 +7,12 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
       type={type}
       data-slot="input"
       className={cn(
-        // Tuned to the app's old .row input: 12px radius, 8px/12px padding,
-        // 14px text, 1px border. Height is auto because the old box was sized
-        // by its padding rather than a fixed h-8.
-        "flex w-full min-w-0 items-center rounded-xl border border-input bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-[#101209] dark:aria-invalid:border-destructive/50",
+        // DESIGN.md, text-input primitive:
+        //   typography {typography.body-md}  16px / 400 / 24px
+        //   padding    {spacing.md} {spacing.lg}  12px 16px
+        //   rounded    {rounded.md}  12px
+        //   borderColor {colors.ink}
+        "flex w-full min-w-0 items-center rounded-xl border border-input bg-background px-4 py-3 text-base font-normal text-foreground transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-[#101209] dark:aria-invalid:border-destructive/50",
         className
       )}
       {...props}

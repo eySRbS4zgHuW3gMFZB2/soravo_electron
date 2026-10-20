@@ -17,8 +17,7 @@ type WisprTabsProps = {
 }
 
 /**
- * The underline tab strip used by the Wispr Flow Snippets and Scratchpad
- * pages.
+ * The underline tab strip used by the Snippets and Scratchpad pages.
  *
  * The 2px active indicator is a pseudo-element on the container whose width
  * and offset are published as CSS variables, so it can slide between tabs.
@@ -40,10 +39,10 @@ export function WisprTabs({
   const measure = useCallback(() => {
     const el = ref.current
     if (!el) return
-    const selected = el.querySelector<HTMLElement>('.wispr-tab-selected')
+    const selected = el.querySelector<HTMLElement>('.page-tab-selected')
     if (!selected) {
-      el.style.setProperty('--wispr-tab-width', '0px')
-      el.style.setProperty('--wispr-tab-left', '0px')
+      el.style.setProperty('--page-tab-width', '0px')
+      el.style.setProperty('--page-tab-left', '0px')
       return
     }
     const rect = selected.getBoundingClientRect()
@@ -53,11 +52,11 @@ export function WisprTabs({
     const padLeft = parseFloat(styles.paddingLeft) || 0
     const padRight = parseFloat(styles.paddingRight) || 0
     el.style.setProperty(
-      '--wispr-tab-width',
+      '--page-tab-width',
       `${rect.width / scale - padLeft - padRight}px`
     )
     el.style.setProperty(
-      '--wispr-tab-left',
+      '--page-tab-left',
       `${(rect.left - parent.left) / scale + padLeft}px`
     )
   }, [])
@@ -76,7 +75,7 @@ export function WisprTabs({
     if (!el || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => measure())
     observer.observe(el)
-    el.querySelectorAll('.wispr-tab').forEach((tab) => observer.observe(tab))
+    el.querySelectorAll('.page-tab').forEach((tab) => observer.observe(tab))
     return () => observer.disconnect()
   }, [measure])
 
@@ -103,11 +102,11 @@ export function WisprTabs({
   return (
     <div
       ref={ref}
-      className={cn('wispr-tabs', animated && 'wispr-tabs-animated', sticky && 'wispr-tabs-sticky', className)}
+      className={cn('page-tabs', animated && 'page-tabs-animated', sticky && 'page-tabs-sticky', className)}
       role="tablist"
       data-testid={testIdPrefix}
     >
-      <div className="wispr-tabs-wrapper">
+      <div className="page-tabs-list">
         {tabs.map((tab) => {
           const selected = tab.key === activeKey
           return (
@@ -116,7 +115,7 @@ export function WisprTabs({
               id={`tab-v2-${tab.key}`}
               data-tab-key={tab.key}
               data-active={selected || undefined}
-              className={cn('wispr-tab', selected && 'wispr-tab-selected')}
+              className={cn('page-tab', selected && 'page-tab-selected')}
               role="tab"
               aria-selected={selected}
               tabIndex={selected ? 0 : -1}
@@ -128,7 +127,7 @@ export function WisprTabs({
           )
         })}
       </div>
-      {utils ? <div className="wispr-utils">{utils}</div> : null}
+      {utils ? <div className="page-utils">{utils}</div> : null}
     </div>
   )
 }

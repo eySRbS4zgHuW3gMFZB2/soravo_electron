@@ -32,24 +32,10 @@ type Scope = 'all' | 'personal'
 
 type ImportItem = { phrase: string; expansion: string }
 
-const BANNER_IMAGE = '/images/wispr-banner-snippets.png'
-
 const BANNER_EXAMPLES = [
-  {
-    id: 'linkedin',
-    trigger: '"my LinkedIn"',
-    expansion: 'https://www.linkedin.com/in/john-doe/'
-  },
-  {
-    id: 'rewrite',
-    trigger: '"rewrite prompt"',
-    expansion: 'Rewrite this to be more concise...'
-  },
-  {
-    id: 'intro',
-    trigger: '"intro email"',
-    expansion: 'Hey, would love to find some time to chat later...'
-  }
+  { id: 'linkedin', trigger: 'my LinkedIn', expansion: 'https://www.linkedin.com/in/john-doe/' },
+  { id: 'rewrite', trigger: 'rewrite prompt', expansion: 'Rewrite this to be more concise...' },
+  { id: 'intro', trigger: 'intro email', expansion: 'Hey, would love to find some time to chat later...' }
 ]
 
 const SORT_LABELS: Record<SortMode, string> = {
@@ -66,7 +52,7 @@ function highlight(text: string, query: string) {
   return (
     <>
       {text.slice(0, index)}
-      <span className="wispr-search-highlight">{text.slice(index, index + q.length)}</span>
+      <span className="page-match">{text.slice(index, index + q.length)}</span>
       {text.slice(index + q.length)}
     </>
   )
@@ -310,33 +296,24 @@ export default function SnippetsPage() {
   const selectedCount = selectedIds.size
 
   return (
-    <div className="wispr-page">
+    <div className="page">
       <input
         ref={fileInputRef}
         type="file"
         accept=".json,application/json"
-        className="wispr-hidden-input"
+        className="hidden"
         onChange={handleImportFile}
         aria-hidden="true"
         tabIndex={-1}
       />
-      <div className="wispr-page-top">
-        <div className="wispr-page-title">
-          <div className="wispr-page-title-row">
-            <h1>Snippets</h1>
-            <div className="wispr-page-cta">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Import
-              </Button>
-              <Button size="sm" onClick={openAdd}>
-                Add new
-              </Button>
-            </div>
-          </div>
+
+      <div className="page-head">
+        <h1 className="page-head-title">Snippets</h1>
+        <div className="page-head-actions">
+          <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
+            Import
+          </Button>
+          <Button onClick={openAdd}>Add new</Button>
         </div>
       </div>
 
@@ -351,7 +328,7 @@ export default function SnippetsPage() {
           <>
             <button
               type="button"
-              className="wispr-icon-button"
+              className="page-icon-button"
               title="Search snippets"
               aria-label="Search snippets"
               onClick={openSearch}
@@ -362,17 +339,15 @@ export default function SnippetsPage() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="wispr-icon-button"
+                  className="page-icon-button"
                   title="Sort by"
                   aria-label="Sort by"
                 >
                   <SortIcon size={16} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="wispr-sort-menu">
-                <DropdownMenuLabel className="wispr-sort-menu-title">
-                  Sort by
-                </DropdownMenuLabel>
+              <DropdownMenuContent>
+                <DropdownMenuLabel className="shortcut-section">Sort by</DropdownMenuLabel>
                 <DropdownMenuItem onSelect={() => setSortMode('newest')}>
                   {SORT_LABELS.newest}
                 </DropdownMenuItem>
@@ -386,7 +361,7 @@ export default function SnippetsPage() {
             </DropdownMenu>
             <button
               type="button"
-              className="wispr-icon-button"
+              className="page-icon-button"
               title="Refresh"
               aria-label="Refresh"
               onClick={handleRefresh}
@@ -398,10 +373,10 @@ export default function SnippetsPage() {
       />
 
       {searchOpen ? (
-        <div className="wispr-snippets-search-row">
+        <div className="page-search">
           <input
             ref={searchRef}
-            className="wispr-dialog-input"
+            className="page-search-field"
             placeholder="Search your snippets"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -416,7 +391,7 @@ export default function SnippetsPage() {
           {search ? (
             <button
               type="button"
-              className="wispr-icon-button"
+              className="page-icon-button"
               onClick={() => {
                 setSearch('')
                 setSearchOpen(false)
@@ -430,12 +405,10 @@ export default function SnippetsPage() {
       ) : null}
 
       {selectedCount > 0 ? (
-        <div className="wispr-bulk-bar">
-          <span>
-            {selectedCount} selected
-          </span>
+        <div className="page-head-actions" style={{ marginBottom: 16 }}>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{selectedCount} selected</span>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onClick={() => {
               setDeleteIds([...selectedIds])
@@ -451,12 +424,11 @@ export default function SnippetsPage() {
         </div>
       ) : null}
 
-      <div className="wispr-page-scroll">
-        <div className="wispr-page-content">
-          <div className="wispr-scroll-column">
+      <div className="page-scroll">
+        <div className="page-column">
+          <div className="page-stack">
             {bannerDismissed ? null : (
               <WisprBanner
-                image={BANNER_IMAGE}
                 onDismiss={() => setBannerDismissed(true)}
                 title={
                   <>
@@ -467,11 +439,11 @@ export default function SnippetsPage() {
                 examples={BANNER_EXAMPLES.map((example) => (
                   <div
                     key={example.id}
-                    className="wispr-banner-example"
+                    className="page-hero-example"
                     role="button"
                     tabIndex={0}
                     onClick={() => {
-                      setFormPhrase(example.trigger.replace(/^"|"$/g, ''))
+                      setFormPhrase(example.trigger)
                       setFormExpansion(example.expansion)
                       setEditingSnippet(null)
                       setFormError('')
@@ -480,7 +452,7 @@ export default function SnippetsPage() {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
-                        setFormPhrase(example.trigger.replace(/^"|"$/g, ''))
+                        setFormPhrase(example.trigger)
                         setFormExpansion(example.expansion)
                         setEditingSnippet(null)
                         setFormError('')
@@ -488,21 +460,21 @@ export default function SnippetsPage() {
                       }
                     }}
                   >
-                    <span className="wispr-banner-example-tag">
-                      <Button variant="secondary" tabIndex={-1}>
-                        <em>{example.trigger}</em>
+                    <span className="page-hero-example-tag">
+                      <Button variant="secondary" size="sm" tabIndex={-1}>
+                        &ldquo;{example.trigger}&rdquo;
                       </Button>
                     </span>
-                    <span className="wispr-banner-example-arrow">→</span>
-                    <span className="wispr-banner-example-tag">
-                      <Button variant="secondary" tabIndex={-1}>
+                    <span className="page-hero-example-arrow">→</span>
+                    <span className="page-hero-example-tag">
+                      <Button variant="secondary" size="sm" tabIndex={-1}>
                         {example.expansion}
                       </Button>
                     </span>
                   </div>
                 ))}
                 cta={
-                  <Button variant="secondary" onClick={openAdd}>
+                  <Button variant="default" onClick={openAdd}>
                     Add new snippet
                   </Button>
                 }
@@ -510,52 +482,47 @@ export default function SnippetsPage() {
             )}
 
             {filtered.length === 0 ? (
-              <div className="wispr-empty">
-                <div className="wispr-empty-header">
-                  <p className="wispr-empty-message">
-                    {search.trim() ? 'No results found' : 'No snippets yet'}
-                  </p>
-                  <p className="wispr-empty-body">
-                    {search.trim()
-                      ? 'No snippets were found'
-                      : 'Save text you type often — an email, intro, or prompt — then say a word to drop it in instantly.'}
-                  </p>
-                </div>
+              <div className="page-empty">
+                <p className="page-empty-title">
+                  {search.trim() ? 'No results found' : 'No snippets yet'}
+                </p>
+                <p className="page-empty-body">
+                  {search.trim()
+                    ? 'No snippets were found.'
+                    : 'Save text you type often — an email, intro, or prompt — then say a word to drop it in instantly.'}
+                </p>
                 {search.trim() ? null : (
-                  <Button variant="secondary" size="sm" onClick={openAdd}>
+                  <Button variant="secondary" onClick={openAdd}>
                     Add new snippet
                   </Button>
                 )}
               </div>
             ) : (
-              <div className="wispr-snippet-table">
+              <div className="page-card">
                 {filtered.map((snippet) => (
                   <div
                     key={snippet.id}
-                    className={cn(
-                      'wispr-snippet-item',
-                      selectedIds.has(snippet.id) && 'wispr-snippet-selected'
-                    )}
+                    className={cn('page-row', selectedIds.has(snippet.id) && 'page-row-selected')}
                     onClick={(e) => handleSelect(snippet.id, e)}
                   >
-                    <div className="wispr-snippet-word">
-                      <p>
+                    <div className="page-row-text">
+                      <span className="page-row-label">
                         {highlight(snippet.phrase, search)}
                         {' → '}
-                        <span className="wispr-snippet-expansion">
+                        <span className="page-row-label-muted">
                           {highlight(snippet.expansion, search)}
                         </span>
-                      </p>
+                      </span>
                       {snippet.isAutoLearned ? (
-                        <span className="wispr-snippet-auto-learned" title="Auto-learned">
-                          ✨
+                        <span className="page-badge page-badge-muted" title="Auto-learned">
+                          Auto-learned
                         </span>
                       ) : null}
                     </div>
-                    <div className="wispr-snippet-actions">
+                    <div className="page-row-actions">
                       <button
                         type="button"
-                        className="wispr-icon-button wispr-snippet-action"
+                        className="page-row-action"
                         title="Edit"
                         aria-label={`Edit ${snippet.phrase}`}
                         onClick={(e) => {
@@ -567,7 +534,7 @@ export default function SnippetsPage() {
                       </button>
                       <button
                         type="button"
-                        className="wispr-icon-button wispr-snippet-action wispr-snippet-action-destructive"
+                        className="page-row-action page-row-action-danger"
                         title="Delete"
                         aria-label={`Delete ${snippet.phrase}`}
                         onClick={(e) => {
@@ -590,31 +557,31 @@ export default function SnippetsPage() {
 
       {/* Add / Edit */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="wispr-dialog-panel">
+        <DialogContent className="page-dialog-panel">
           <DialogTitle>{editingSnippet ? 'Edit snippet' : 'Add snippet'}</DialogTitle>
           <DialogDescription>
             Say the trigger word and Soravo drops the text in for you.
           </DialogDescription>
-          <div className="wispr-dialog">
-            <div className="wispr-dialog-inputs">
+          <div className="page-dialog">
+            <div className="page-dialog-fields">
               <input
-                className="wispr-dialog-input"
+                className="page-dialog-input"
                 placeholder="e.g. my email"
                 value={formPhrase}
                 onChange={(e) => setFormPhrase(e.target.value)}
                 aria-label="Trigger phrase"
               />
-              <span className="wispr-dialog-arrow">→</span>
+              <span className="page-dialog-arrow">→</span>
               <input
-                className="wispr-dialog-input"
+                className="page-dialog-input"
                 placeholder="e.g. ada@example.com"
                 value={formExpansion}
                 onChange={(e) => setFormExpansion(e.target.value)}
                 aria-label="Expansion text"
               />
             </div>
-            {formError ? <p className="wispr-dialog-error">{formError}</p> : null}
-            <div className="wispr-dialog-actions">
+            {formError ? <p className="page-dialog-error">{formError}</p> : null}
+            <div className="page-dialog-actions">
               <Button variant="ghost" onClick={() => setIsAddOpen(false)}>
                 Cancel
               </Button>
@@ -628,33 +595,31 @@ export default function SnippetsPage() {
 
       {/* Import preview */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent>
+        <DialogContent className="page-dialog-panel">
           <DialogTitle>Import snippets</DialogTitle>
           <DialogDescription>
             {importError
               ? 'That file could not be read.'
               : `${importItems.length} snippet${importItems.length === 1 ? '' : 's'} ready to import.`}
           </DialogDescription>
-          <div className="wispr-dialog">
+          <div className="page-dialog">
             {importError ? (
-              <p className="wispr-dialog-error">{importError}</p>
+              <p className="page-dialog-error">{importError}</p>
             ) : (
-              <div className="wispr-import-preview">
+              <div className="page-import-list">
                 {importItems.slice(0, 50).map((item, index) => (
-                  <div className="wispr-import-row" key={`${item.phrase}-${index}`}>
-                    <span className="wispr-import-phrase">{item.phrase}</span>
-                    <span className="wispr-import-arrow">→</span>
-                    <span className="wispr-import-expansion">{item.expansion}</span>
+                  <div className="page-import-row" key={`${item.phrase}-${index}`}>
+                    <span className="page-import-phrase">{item.phrase}</span>
+                    <span className="page-import-arrow">→</span>
+                    <span className="page-import-expansion">{item.expansion}</span>
                   </div>
                 ))}
                 {importItems.length > 50 ? (
-                  <p className="wispr-import-more">
-                    and {importItems.length - 50} more…
-                  </p>
+                  <p className="page-import-more">and {importItems.length - 50} more…</p>
                 ) : null}
               </div>
             )}
-            <div className="wispr-dialog-actions">
+            <div className="page-dialog-actions">
               <Button variant="ghost" onClick={() => setImportOpen(false)}>
                 Cancel
               </Button>
@@ -664,7 +629,9 @@ export default function SnippetsPage() {
                 </Button>
               ) : (
                 <Button onClick={handleImport} disabled={importing}>
-                  {importing ? 'Importing…' : `Import ${importItems.length} snippet${importItems.length === 1 ? '' : 's'}`}
+                  {importing
+                    ? 'Importing…'
+                    : `Import ${importItems.length} snippet${importItems.length === 1 ? '' : 's'}`}
                 </Button>
               )}
             </div>
@@ -674,7 +641,7 @@ export default function SnippetsPage() {
 
       {/* Delete confirmation */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent>
+        <DialogContent className="page-dialog-panel">
           <DialogTitle>
             {deleteIds.length > 1 ? `Delete ${deleteIds.length} snippets` : 'Delete snippet'}
           </DialogTitle>
@@ -683,8 +650,8 @@ export default function SnippetsPage() {
               ? 'Are you sure you want to delete these snippets? This cannot be undone.'
               : `Are you sure you want to delete “${deleteTarget?.phrase ?? ''}”? This cannot be undone.`}
           </DialogDescription>
-          <div className="wispr-dialog">
-            <div className="wispr-dialog-actions">
+          <div className="page-dialog">
+            <div className="page-dialog-actions">
               <Button
                 variant="ghost"
                 onClick={() => {

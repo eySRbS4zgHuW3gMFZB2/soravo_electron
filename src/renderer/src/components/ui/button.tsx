@@ -4,10 +4,13 @@ import { cn } from "@/lib/utils"
 import { Slot } from "radix-ui"
 
 const buttonVariants = cva(
-  // Tuned to match the app's previous .btn: 12px radius, 8px/16px padding,
-  // 14px semibold text, no border. Do not reset these to shadcn defaults
-  // without also updating the design tokens.
-  "group/button inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-transparent bg-clip-padding text-sm font-semibold whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  // DESIGN.md, "button-primary/secondary/tertiary":
+  //   typography {typography.button-md}  16px / 600 / 24px
+  //   padding    {spacing.md} {spacing.xl}  12px 24px
+  //   rounded    {rounded.xl}  24px
+  // The 24px pill is the brand signature - "Don't render CTAs as sharp
+  // rectangles. The 24 px pill geometry is non-negotiable."
+  "group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-3xl border border-transparent bg-clip-padding text-base font-semibold whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -25,15 +28,16 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        // Matches the old .btn box exactly: 8px vertical, 16px horizontal.
-        default: "h-auto gap-1.5 px-4 py-2",
-        xs: "h-6 gap-1 rounded-lg px-2 text-xs",
-        sm: "h-7 gap-1 rounded-lg px-2.5 text-[0.8rem]",
-        lg: "h-auto gap-1.5 px-4 py-2",
-        icon: "size-8 rounded-xl",
-        "icon-xs": "size-6 rounded-lg",
-        "icon-sm": "size-7 rounded-lg",
-        "icon-lg": "size-9 rounded-xl",
+        // {spacing.md} {spacing.xl}
+        default: "h-auto gap-2 px-6 py-3",
+        xs: "h-7 gap-1 px-3 text-xs",
+        sm: "h-9 gap-1.5 px-4 py-2 text-sm",
+        lg: "h-auto gap-2 px-6 py-3",
+        // Circular icon button: {rounded.full} {spacing.sm}
+        icon: "size-10 rounded-full",
+        "icon-xs": "size-8 rounded-full",
+        "icon-sm": "size-9 rounded-full",
+        "icon-lg": "size-11 rounded-full",
       },
     },
     defaultVariants: {

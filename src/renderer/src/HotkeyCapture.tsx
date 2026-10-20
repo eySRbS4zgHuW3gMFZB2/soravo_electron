@@ -253,7 +253,7 @@ export default function HotkeyCapture({
           {prettyHotkey(value)}
         </button>
         {allowEmpty && value && (
-          <Button type="button" onClick={() => onCommit('')}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onCommit('')}>
             Clear
           </Button>
         )}

@@ -414,6 +414,7 @@ function SettingsModal({
   const [hotkey, setHotkey] = useState(settings.hotkey)
   const [pasteHotkey, setPasteHotkey] = useState(settings.pasteHotkey)
   const [copyHotkey, setCopyHotkey] = useState(settings.copyHotkey)
+  const [scratchpadHotkey, setScratchpadHotkey] = useState(settings.scratchpadHotkey ?? '')
   const [holdToTalk, setHoldToTalk] = useState(settings.holdToTalk)
   const [language, setLanguage] = useState(settings.language)
   const [microphoneId, setMicrophoneId] = useState(settings.microphoneId)
@@ -453,6 +454,7 @@ function SettingsModal({
     setHotkey(settings.hotkey)
     setPasteHotkey(settings.pasteHotkey)
     setCopyHotkey(settings.copyHotkey)
+    setScratchpadHotkey(settings.scratchpadHotkey ?? '')
     setHoldToTalk(settings.holdToTalk)
     setLanguage(settings.language)
     setMicrophoneId(settings.microphoneId)
@@ -493,6 +495,7 @@ function SettingsModal({
       hotkey: hotkey.trim() || 'CommandOrControl+Alt+Space',
       pasteHotkey: pasteHotkey.trim(),
       copyHotkey: copyHotkey.trim(),
+      scratchpadHotkey: scratchpadHotkey.trim(),
       holdToTalk,
       language: language.trim() || 'en',
       microphoneId,
@@ -650,33 +653,56 @@ function SettingsModal({
                 </div>
 
               {sub === 'shortcuts' && (
-                <SubModal open 
+                <SubModal open
                   title="Shortcuts"
                   subtitle="Choose your preferred shortcuts for using Soravo."
                   onClose={() => setSub(null)}
                 >
-                  <div className="row">
-                    <label>Dictate</label>
+                  <p className="shortcut-section">Dictation</p>
+                  <div className="shortcut-grid">
+                    <span className="shortcut-label">Dictate</span>
                     <HotkeyCapture value={hotkey} onCommit={setHotkey} />
                   </div>
-                  <div className="row">
-                    <label>Push to talk</label>
-                    <Checkbox checked={holdToTalk} onCheckedChange={(c) => setHoldToTalk(c === true)} />
+                  <div className="shortcut-grid" style={{ marginTop: 12 }}>
+                    <span className="shortcut-label">Push to talk</span>
+                    <div>
+                      <Checkbox
+                        checked={holdToTalk}
+                        onCheckedChange={(c) => setHoldToTalk(c === true)}
+                        aria-label="Push to talk"
+                      />
+                    </div>
                   </div>
-                  <p className="hub-note">
+                  <p className="page-dialog-note" style={{ marginTop: 12 }}>
                     {holdToTalk
                       ? 'Hold the dictate shortcut to record. Release to transcribe.'
                       : 'Press to start, press again to stop and transcribe.'}
                   </p>
-                  <div className="row">
-                    <label>Paste last</label>
+                  <div className="shortcut-grid" style={{ marginTop: 12 }}>
+                    <span className="shortcut-label">Paste last</span>
                     <HotkeyCapture value={pasteHotkey} allowEmpty onCommit={setPasteHotkey} />
                   </div>
-                  <div className="row">
-                    <label>Copy last</label>
+                  <div className="shortcut-grid" style={{ marginTop: 12 }}>
+                    <span className="shortcut-label">Copy last</span>
                     <HotkeyCapture value={copyHotkey} allowEmpty onCommit={setCopyHotkey} />
                   </div>
-                  <p className="hub-note">
+
+                  <hr className="shortcut-divider" />
+
+                  <p className="shortcut-section">Scratchpad</p>
+                  <div className="shortcut-grid">
+                    <span className="shortcut-label">Open Scratchpad</span>
+                    <HotkeyCapture
+                      value={scratchpadHotkey}
+                      allowEmpty
+                      onCommit={setScratchpadHotkey}
+                    />
+                  </div>
+                  <p className="page-dialog-note" style={{ marginTop: 12 }}>
+                    Press to jump straight to the Scratchpad tab from anywhere in the hub.
+                  </p>
+
+                  <p className="page-dialog-note" style={{ marginTop: 16 }}>
                     Shortcuts accept any key on its own (CapsLock, F-keys, letters) or any mouse
                     button, with or without Ctrl, Alt, Shift or Win.
                   </p>
