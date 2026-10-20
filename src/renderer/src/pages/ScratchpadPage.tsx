@@ -37,6 +37,20 @@ function noteTitle(text: string): string {
   return firstLine.trim() || 'Untitled'
 }
 
+/**
+ * The body of a note, without the line that is already shown as its title.
+ * Without this the card repeated the same sentence twice.
+ */
+function noteBody(text: string): string {
+  const lines = text.split('\n')
+  const first = lines.findIndex((line) => line.trim().length > 0)
+  if (first === -1) return ''
+  return lines
+    .slice(first + 1)
+    .join(' ')
+    .trim()
+}
+
 export default function ScratchpadPage() {
   const [notes, setNotes] = useState<ScratchpadNote[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
@@ -381,7 +395,9 @@ export default function ScratchpadPage() {
                     ) : null}
                     <div className="page-note-body">
                       <div className="page-note-title">{noteTitle(note.text)}</div>
-                      <div className="page-note-preview">{note.text || 'Empty note'}</div>
+                      {noteBody(note.text) ? (
+                        <div className="page-note-preview">{noteBody(note.text)}</div>
+                      ) : null}
                       <div className="page-note-footer">
                         <span>{fmtDate(note.createdAt)}</span>
                       </div>

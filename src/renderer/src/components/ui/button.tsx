@@ -6,10 +6,15 @@ import { Slot } from "radix-ui"
 const buttonVariants = cva(
   // DESIGN.md, "button-primary/secondary/tertiary":
   //   typography {typography.button-md}  16px / 600 / 24px
-  //   padding    {spacing.md} {spacing.xl}  12px 24px
   //   rounded    {rounded.xl}  24px
   // The 24px pill is the brand signature - "Don't render CTAs as sharp
   // rectangles. The 24 px pill geometry is non-negotiable."
+  //
+  // Height: the brand spec is 12px/24px padding (48px tall) for the
+  // marketing surface. Inside the app a 48px button beside a 24px switch
+  // reads as two unrelated control families, so the in-app scale is
+  // 40 / 32 / 28 - still generous, and it lines up with the select (40) and
+  // the switch (24) that sit in the same rows.
   "group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-3xl border border-transparent bg-clip-padding text-base font-semibold whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
@@ -28,16 +33,16 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        // {spacing.md} {spacing.xl}
-        default: "h-auto gap-2 px-6 py-3",
+        // 40px - the default control height of the app
+        default: "h-10 gap-2 px-5",
         xs: "h-7 gap-1 px-3 text-xs",
-        sm: "h-9 gap-1.5 px-4 py-2 text-sm",
-        lg: "h-auto gap-2 px-6 py-3",
-        // Circular icon button: {rounded.full} {spacing.sm}
-        icon: "size-10 rounded-full",
-        "icon-xs": "size-8 rounded-full",
-        "icon-sm": "size-9 rounded-full",
-        "icon-lg": "size-11 rounded-full",
+        sm: "h-8 gap-1.5 px-4 text-sm",
+        lg: "h-11 gap-2 px-6",
+        // Circular icon button: {rounded.full}
+        icon: "size-9 rounded-full",
+        "icon-xs": "size-7 rounded-full",
+        "icon-sm": "size-8 rounded-full",
+        "icon-lg": "size-10 rounded-full",
       },
     },
     defaultVariants: {

@@ -430,6 +430,49 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   insights tabs and rhythm toggle, the style switches, and the history search
 - 31/31 cargo tests pass; `tsc -p tsconfig.web.json` is clean; `npm run build` succeeds
 
+#### Round 2: polish pass
+- **The two bottom Insights cards are now the same height.** The grid used
+  `align-items: start`, so "When you dictate" and the streak heat-map ended at
+  different heights. The grid stretches them and their bottom edges line up.
+- **The webview context menu is gone.** Right-clicking used to raise Chromium's
+  "Back / Forward / Refresh / Save as / Print / Inspect" menu. `contextmenu` is
+  now cancelled in the capture phase, so nothing appears.
+- **The browser's own shortcuts are gone**: Ctrl+F (find in page), Ctrl+H,
+  Ctrl+P, Ctrl+S, Ctrl+U, Ctrl+G, Ctrl+W/T/N, Ctrl+Tab, Ctrl+1-9, F3, F10, F12,
+  Ctrl+Shift+I/J/C/S/F/W and zoom. The app's own keys are untouched - the
+  hotkey capture fields still receive everything, and text fields keep their
+  editing shortcuts. This lives in `src/renderer/src/appShortcuts.ts`.
+- **One control family.** The registry's switch was 18 x 32px and the button was
+  48px, so the two read as unrelated. The in-app scale is now
+  **40 (button, select, input) / 32 (small button) / 28 (extra small) / 24
+  (switch)**, and the icon buttons step 28 / 32 / 36 / 40. The switch grew to
+  24 x 44px with a 20px thumb.
+  *Documented deviation*: DESIGN.md's button spec is 12px/24px padding (48px
+  tall) for the marketing surface. Inside the app the 48px button next to a
+  24px switch did not hold together, so the in-app default is 40px.
+- **The tab underline no longer touches the card below it.** The page now has a
+  single 18px gap between its sections instead of a margin on the header, so a
+  tab strip always clears the card underneath it.
+- **Every heading and label now sits on an exact DESIGN.md token.** The app had
+  15px, 18px, 20px and 26px type, none of which is a token. Now:
+  page title 32/600 (display-sm), card title 20/600, list key 16/600
+  (body-md-strong), list value 16/400 (body-md), card body 14/400 (body-sm),
+  eyebrow 12/600 (caption), display numbers 32/900 and 24/900.
+- **The list cards in Snippets, Dictionary and Scratchpad use that scale.** The
+  rows were 15px regular, which is not a token and read as unstyled next to
+  everything else. A Snippets or Dictionary row is now the phrase at 16/600 and
+  the value it expands to at 16/400, and the card carries the 24px interior
+  padding of `card-content`.
+- The Scratchpad note card no longer repeats its own title in the preview - the
+  preview shows the lines after the first one.
+- The Settings row buttons are now `button-tertiary` (canvas surface, 1px ink
+  border). A secondary button was canvas-soft on the canvas-soft card and
+  disappeared into it.
+- Verified by driving the app with real mouse clicks: the right-click menu and
+  the Ctrl+F find bar no longer appear, every page in both themes, all three
+  settings tabs, the shortcuts sub-dialog, and the add/edit/delete flows for
+  snippets, dictionary entries and notes.
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.

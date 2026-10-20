@@ -89,6 +89,12 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
   Soravo uses a themed gradient per band so the artwork can be replaced later without touching the
   layout. Each band picks a slot through the `media` prop on `PageHero`, and the matching rule in
   `hub.css` sets `--hero-gradient` - swap that one rule for a `url(...)` to drop a real image in.
+- **It behaves like an app, not a web page.** The webview's context menu is disabled, and so are the
+  browser's own shortcuts (Ctrl+F find-in-page, Ctrl+P print, Ctrl+S save, F12 devtools and friends).
+  The app's own shortcuts and the text fields keep working normally. See
+  `src/renderer/src/appShortcuts.ts`.
+- **One control family.** Buttons, selects and inputs are 40px, small buttons 32px and the switch is
+  24 x 44px, so a settings row reads as a single set of controls.
 
 ## Tech Stack
 

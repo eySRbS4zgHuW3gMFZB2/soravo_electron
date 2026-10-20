@@ -298,6 +298,9 @@ html[data-theme='dark'] {
   flex: 1;
   min-height: 0;
   padding: 26px 34px 40px;
+  /* One gap for the whole page, so a tab strip never sits flush against the
+     card below it. */
+  gap: 18px;
 }
 
 .page-head {
@@ -307,14 +310,14 @@ html[data-theme='dark'] {
   justify-content: space-between;
   gap: 16px;
   width: 100%;
-  margin-bottom: 18px;
   flex-shrink: 0;
 }
 
 .page-head-title {
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 38.4px;
+  letter-spacing: -0.96px;
   color: var(--soravo-ink);
   margin: 0;
   display: flex;
@@ -734,10 +737,11 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 /* --- Cards and rows -------------------------------------------------------- */
 
 .page-card {
+  /* card-content: 24px radius, 24px of interior padding. */
   background: var(--soravo-canvas-soft);
   color: var(--soravo-ink);
   border-radius: var(--soravo-radius);
-  padding: 6px 20px;
+  padding: 12px 24px;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -747,7 +751,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 13px 0;
+  /* ex-data-table-cell cellPadding: {spacing.md} {spacing.lg} */
+  padding: 12px 0;
   border-bottom: 1px solid var(--soravo-canvas);
   position: relative;
 }
@@ -766,9 +771,11 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .page-row-label {
-  font-size: 15px;
-  line-height: 22px;
-  font-weight: 400;
+  /* {typography.body-md-strong} - the key of the pair. The brand rule is
+     "weight 900 for hero, weight 600 for everything else". */
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
   color: var(--soravo-ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -776,6 +783,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .page-row-label-muted {
+  /* {typography.body-md} - the value it expands to. */
+  font-weight: 400;
   color: var(--soravo-body);
 }
 
@@ -861,9 +870,10 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .page-empty-title {
-  font-size: 18px;
-  line-height: 26px;
+  font-size: 24px;
+  line-height: 31.2px;
   font-weight: 600;
+  letter-spacing: -0.48px;
   color: var(--soravo-ink);
 }
 
@@ -930,11 +940,12 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 /* --- Dictation page -------------------------------------------------------- */
 
 .page-greeting {
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 38.4px;
+  letter-spacing: -0.96px;
   color: var(--soravo-ink);
-  margin: 0 0 20px;
+  margin: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -949,9 +960,10 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .hub-hotkey-key {
   display: inline-block;
-  padding: 3px 12px;
-  font-size: 18px;
+  padding: 4px 14px;
+  font-size: 20px;
   font-weight: 700;
+  line-height: 28px;
   background: var(--soravo-primary);
   color: var(--soravo-on-primary);
   border-radius: 9999px;
@@ -959,7 +971,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .hub-hotkey-plus {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--soravo-ink);
 }
@@ -995,7 +1007,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .dictation-day-label {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 1.4px;
   text-transform: uppercase;
   color: var(--soravo-mute);
@@ -1034,8 +1046,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 15px;
-  line-height: 22px;
+  font-size: 16px;
+  line-height: 24px;
   color: var(--soravo-ink);
   user-select: text;
   -webkit-user-select: text;
@@ -1070,15 +1082,17 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .rail-card-title {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: -0.2px;
   color: var(--soravo-ink);
   margin: 0 0 4px;
 }
 
 .rail-card-body {
-  font-size: 13px;
-  line-height: 19px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--soravo-body);
   margin: 0 0 14px;
 }
@@ -1096,8 +1110,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .rail-stat-value {
-  font-size: 26px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 900;
   color: var(--soravo-ink);
   line-height: 1;
 }
@@ -1137,11 +1151,13 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   gap: 16px;
 }
 
+/* Two cards side by side, always the same height, so their bottom edges
+   line up. */
 .insights-grid-duo {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .insights-card {
@@ -1167,7 +1183,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .insights-card-title {
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 600;
+  line-height: 30px;
   letter-spacing: -0.2px;
   color: var(--soravo-ink);
   margin: 0;
@@ -1175,7 +1192,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .insights-card-kicker {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: var(--soravo-mute);
@@ -1183,9 +1200,9 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .insights-card-value {
-  font-size: 34px;
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 38.4px;
   color: var(--soravo-ink);
   margin: 10px 0 2px;
 }
@@ -1459,15 +1476,17 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .model-card-name {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: -0.2px;
   color: var(--soravo-ink);
   margin: 0;
 }
 
 .model-card-meta {
-  font-size: 13px;
-  line-height: 19px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--soravo-body);
   margin: 0;
 }
@@ -1506,15 +1525,17 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .style-card-name {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: -0.2px;
   color: var(--soravo-ink);
   margin: 0;
 }
 
 .style-card-desc {
-  font-size: 13px;
-  line-height: 19px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--soravo-body);
   margin: 0;
 }
@@ -1574,10 +1595,11 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .page-note-title {
+  /* {typography.body-md-strong} */
   color: var(--soravo-ink);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 24px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1585,17 +1607,18 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .page-note-preview {
+  /* {typography.body-md} */
   color: var(--soravo-body);
   overflow-wrap: break-word;
   word-break: break-word;
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  line-clamp: 3;
-  -webkit-line-clamp: 3;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
   text-overflow: ellipsis;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 16px;
+  line-height: 24px;
   font-weight: 400;
   pointer-events: none;
   width: 100%;
@@ -1971,14 +1994,15 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .settings-row-label {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
+  line-height: 24px;
   color: var(--soravo-ink);
 }
 
 .settings-row-desc {
-  font-size: 13px;
-  line-height: 19px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--soravo-body);
 }
 
@@ -1988,6 +2012,20 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+/* The row control sits on the sage card, so a secondary (canvas-soft) button
+   would disappear into it. DESIGN.md's button-tertiary - canvas surface with a
+   1px ink border - is the treatment that reads on that surface. */
+.settings-row-control [data-slot='button'] {
+  background: var(--soravo-canvas);
+  color: var(--soravo-ink);
+  border-color: var(--soravo-ink);
+}
+
+.settings-row-control [data-slot='button']:hover {
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
 }
 
 .settings-section {
