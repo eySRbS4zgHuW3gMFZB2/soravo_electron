@@ -2,10 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-export type WisprTab = { key: string; label: string }
+export type PageTab = { key: string; label: string }
 
-type WisprTabsProps = {
-  tabs: WisprTab[]
+type PageTabsProps = {
+  tabs: PageTab[]
   activeKey: string
   onChange: (key: string) => void
   /** Controls rendered on the right of the tab strip. */
@@ -24,7 +24,7 @@ type WisprTabsProps = {
  * The measurement mirrors the shipped implementation: the indicator spans the
  * label only, so the tab's horizontal padding is subtracted.
  */
-export function WisprTabs({
+export function PageTabs({
   tabs,
   activeKey,
   onChange,
@@ -32,7 +32,7 @@ export function WisprTabs({
   className,
   sticky,
   'data-testid': testIdPrefix
-}: WisprTabsProps) {
+}: PageTabsProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [animated, setAnimated] = useState(false)
 

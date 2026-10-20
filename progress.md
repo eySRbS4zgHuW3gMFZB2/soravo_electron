@@ -286,7 +286,7 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   pages: 73570 (page shell), 85087 (hero banner), 15813 (banner examples), 24323 (tabs),
   63136 (snippet list), 43395 (note list), 75559 (banner mockup)
 - Captured the live Wispr Flow Snippets and Scratchpad pages for a layout reference
-- Added `src/renderer/src/pages.css` plus `components/wispr/` (hero band, underline tabs,
+- Added `src/renderer/src/pages.css` plus `components/pages/` (hero band, tab strip,
   icons) as reusable hub page primitives
 - **The look is Soravo's, not Wispr's.** The page STRUCTURE came from the reverse
   engineering, but every surface, radius, type size and colour comes from DESIGN.md:
@@ -323,6 +323,35 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   create/type/autosave/pin/copy/delete/search/refresh, Flow Bar toggle, shortcut capture,
   Settings > General > Shortcuts, in both light and dark themes
 - 31/31 cargo tests pass; Dictation, History, Insights, Models and Settings are unaffected
+
+#### Self-review fixes (before merge)
+- **Bug fixed**: `loadNotes` read `activeId` from the state captured when the Scratchpad page
+  mounted. The `scratchpad-changed` event fires after every add, edit and delete - including
+  the autosave when the editor loses focus - so any event moved the selection back to the first
+  note and replaced the draft. A draft typed into note B was silently discarded. The active id
+  is now mirrored in a ref, so a change event refreshes the list without touching the
+  selection or the draft.
+- **Bug fixed**: the note card had no `position: relative`, so the absolutely positioned action
+  cluster (pin/copy/delete) anchored to the scroll container instead of the card and every note
+  stacked its actions in the same corner. The card is now the containing block.
+- **Bug fixed**: the action cluster used `z-index: 600`. The card does not open a stacking
+  context, so that value resolved in the root context and would have painted over the Radix
+  dialogs (`z-50`). It is now `z-index: 1`.
+- The selected note and the selected snippet row now use a tint of the brand green over the card
+  surface. The old `canvas-soft` fill was identical to the page surface in dark mode, which made
+  the selected note look like it had no card at all.
+- The Input primitive used `rounded-xl`. The theme sets `--radius` to 0.75rem, so `rounded-xl`
+  is 16.8px, not the 12px that DESIGN.md asks for on a text input. It is now `rounded-lg`
+  (12px). Buttons keep `rounded-3xl`, which is 24px - the non-negotiable pill.
+- The tab indicator no longer animates on the first paint; the transition is gated on the
+  measured state.
+- Renamed `components/wispr/` to `components/pages/` (`WisprBanner` -> `PageHero`,
+  `WisprTabs` -> `PageTabs`). The page structure came from the reverse engineering, but these
+  are Soravo components and should not be named after another product.
+- Reverted the `img-src` addition to the Content-Security-Policy. It was only needed for the
+  hero photos, which are gone; the app has no images left.
+- Removed the dead `.page-dialog-textarea` rule and the unused `ReactNode` re-export from the
+  icon module.
 
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so

@@ -12,9 +12,9 @@ import {
   RefreshIcon,
   SearchIcon,
   TrashIcon
-} from '@/components/wispr/icons'
-import { WisprBanner } from '@/components/wispr/WisprBanner'
-import { WisprTabs } from '@/components/wispr/WisprTabs'
+} from '@/components/pages/icons'
+import { PageHero } from '@/components/pages/PageHero'
+import { PageTabs } from '@/components/pages/PageTabs'
 import {
   Dialog,
   DialogContent,
@@ -58,14 +58,32 @@ export default function ScratchpadPage() {
   const recordingCounter = useRef(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  // The active note is mirrored in a ref. `loadNotes` is registered as the
+  // scratchpad-changed listener, and that event fires after every add, edit
+  // and delete - including the autosave triggered by the editor losing
+  // focus. Reading the id from state there would capture a stale value and
+  // could move the selection or overwrite the draft mid-edit.
+  const activeIdRef = useRef<number | null>(null)
+
+  const selectNote = (id: number | null, text = '') => {
+    activeIdRef.current = id
+    setActiveId(id)
+    setDraft(text)
+  }
 
   const loadNotes = async () => {
     try {
       const list = await soravo.getScratchpadNotes()
       setNotes(list)
-      if (list.length > 0 && activeId === null) {
-        setActiveId(list[0].id)
-        setDraft(list[0].text)
+      const current = activeIdRef.current
+      if (list.length === 0) {
+        selectNote(null)
+        return
+      }
+      if (current === null || !list.some((n) => n.id === current)) {
+        // Nothing is selected yet, or the selected note was removed
+        // elsewhere. Either way, fall back to the first note.
+        selectNote(list[0].id, list[0].text)
       }
     } catch (e) {
       console.error('Failed to load scratchpad notes', e)
@@ -159,8 +177,7 @@ export default function ScratchpadPage() {
     }
     const note = await soravo.addScratchpadNote('')
     setNotes((prev) => [note, ...prev])
-    setActiveId(note.id)
-    setDraft('')
+    selectNote(note.id)
     setTimeout(() => textareaRef.current?.focus(), 50)
   }
 
@@ -188,11 +205,9 @@ export default function ScratchpadPage() {
     if (activeId === id) {
       const remaining = notes.filter((n) => n.id !== id)
       if (remaining.length > 0) {
-        setActiveId(remaining[0].id)
-        setDraft(remaining[0].text)
+        selectNote(remaining[0].id, remaining[0].text)
       } else {
-        setActiveId(null)
-        setDraft('')
+        selectNote(null)
       }
     }
   }
@@ -205,8 +220,7 @@ export default function ScratchpadPage() {
     if (activeId !== null && draft !== activeNote?.text) {
       soravo.updateScratchpadNote(activeId, { text: draft }).catch(console.error)
     }
-    setActiveId(note.id)
-    setDraft(note.text)
+    selectNote(note.id, note.text)
   }
 
   const handleBlur = () => {
@@ -254,7 +268,7 @@ export default function ScratchpadPage() {
       <div className="page-scroll">
         <div className="page-column">
           <div className="page-stack">
-            <WisprBanner
+            <PageHero
               title={<>For quick thoughts you want to come back to</>}
               description="Drop a to-do list, polish a message before you send it, brain dump an idea. Scratchpad is your safe space to save, create, and explore."
               cta={
@@ -283,7 +297,7 @@ export default function ScratchpadPage() {
               }
             />
 
-            <WisprTabs
+            <PageTabs
               tabs={[{ key: 'recents', label: 'Recents' }]}
               activeKey="recents"
               onChange={() => {}}

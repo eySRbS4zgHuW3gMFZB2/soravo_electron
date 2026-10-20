@@ -357,6 +357,13 @@ html[data-theme='dark'] {
   transition-duration: 150ms;
 }
 
+/* The indicator is measured after the first layout. Until the tabs have
+   been measured there is nothing to slide from, so the first paint must not
+   animate. */
+.page-tabs:not(.page-tabs-animated)::after {
+  transition: none;
+}
+
 /* The Recents strip sticks to the top of the page while it scrolls. */
 .page-tabs-sticky {
   position: sticky;
@@ -488,7 +495,8 @@ html[data-theme='dark'] {
 }
 
 .page-row-selected {
-  background: var(--page-canvas-soft);
+  /* Same brand-green tint as the selected Scratchpad note. */
+  background: color-mix(in oklch, var(--page-primary) 14%, var(--page-canvas));
   border-radius: 12px;
 }
 
@@ -659,28 +667,6 @@ html[data-theme='dark'] {
   border-color: var(--page-primary);
 }
 
-.page-dialog-textarea {
-  flex: 1;
-  min-width: 0;
-  min-height: 96px;
-  padding: 12px 16px;
-  border: 1px solid var(--soravo-ink);
-  border-radius: 12px;
-  background: var(--page-canvas);
-  color: var(--page-ink);
-  font-family: inherit;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-  outline: none;
-  resize: vertical;
-  box-sizing: border-box;
-}
-
-.page-dialog-textarea:focus {
-  border-color: var(--page-primary);
-}
-
 .page-dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -772,10 +758,18 @@ html[data-theme='dark'] {
   text-align: left;
   font: inherit;
   cursor: pointer;
+  /* The action cluster is absolutely positioned inside the card. Without this
+     it would anchor to .page-scroll and every card would stack its actions
+     in the same place. */
+  position: relative;
 }
 
 .page-note-active {
-  background: var(--page-canvas-soft);
+  /* A tint of the brand green over the card surface. The plain canvas-soft
+     fill would be identical to the page surface in dark mode, which made
+     the selected note look like it had no card at all. */
+  background: color-mix(in oklch, var(--page-primary) 14%, var(--page-canvas));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--page-primary) 45%, transparent);
 }
 
 .page-note-pin {
@@ -848,7 +842,10 @@ html[data-theme='dark'] {
   transition: opacity 200ms ease, visibility 200ms ease;
   background: var(--page-canvas);
   border-radius: 9999px;
-  z-index: 600;
+  /* Kept low on purpose. The card does not open a stacking context, so a
+     high value here would resolve in the root context and paint over the
+     Radix dialogs (z-50). */
+  z-index: 1;
 }
 
 .page-note:hover .page-note-actions,

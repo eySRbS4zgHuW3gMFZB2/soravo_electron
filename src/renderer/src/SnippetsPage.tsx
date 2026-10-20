@@ -8,9 +8,9 @@ import {
   SearchIcon,
   SortIcon,
   TrashIcon
-} from '@/components/wispr/icons'
-import { WisprBanner } from '@/components/wispr/WisprBanner'
-import { WisprTabs } from '@/components/wispr/WisprTabs'
+} from '@/components/pages/icons'
+import { PageHero } from '@/components/pages/PageHero'
+import { PageTabs } from '@/components/pages/PageTabs'
 import {
   Dialog,
   DialogContent,
@@ -317,7 +317,7 @@ export default function SnippetsPage() {
         </div>
       </div>
 
-      <WisprTabs
+      <PageTabs
         tabs={[
           { key: 'all', label: 'All' },
           { key: 'personal', label: 'Personal' }
@@ -428,7 +428,7 @@ export default function SnippetsPage() {
         <div className="page-column">
           <div className="page-stack">
             {bannerDismissed ? null : (
-              <WisprBanner
+              <PageHero
                 onDismiss={() => setBannerDismissed(true)}
                 title={
                   <>

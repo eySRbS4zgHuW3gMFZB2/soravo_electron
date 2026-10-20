@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { CloseIcon } from './icons'
 
-type WisprBannerProps = {
+type PageHeroProps = {
   title: ReactNode
   description: ReactNode
   /** The call-to-action button. */
@@ -21,7 +21,7 @@ type WisprBannerProps = {
  * DESIGN.md, "card-feature-dark": a near-black surface carrying the brand
  * green, with a 24px radius and 24px of padding.
  */
-export function WisprBanner({
+export function PageHero({
   title,
   description,
   cta,
@@ -29,7 +29,7 @@ export function WisprBanner({
   overlay,
   onDismiss,
   className
-}: WisprBannerProps) {
+}: PageHeroProps) {
   return (
     <div className={cn('page-hero', className)}>
       {onDismiss ? (

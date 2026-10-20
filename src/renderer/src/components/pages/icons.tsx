@@ -1,7 +1,5 @@
-import type { ReactNode } from 'react'
-
 /**
- * Icons used by the Wispr-style Snippets and Scratchpad pages.
+ * Icons used by the Snippets and Scratchpad pages.
  *
  * The shapes match the lucide icons Wispr Flow ships in the same places
  * (search, sort, refresh, plus, pencil, trash, info, x).
@@ -121,4 +119,3 @@ export function TrashIcon({ size = 16, className }: IconProps) {
 }
 
 export type { IconProps }
-export type { ReactNode }
