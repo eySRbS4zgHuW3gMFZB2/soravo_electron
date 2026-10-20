@@ -191,34 +191,6 @@ body {
   height: 100%;
 }
 
-.soravo-pill {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 84px;
-  padding: 12px 16px;
-  background: var(--soravo-canvas);
-  border-radius: var(--soravo-radius);
-  box-shadow: 0 12px 40px rgba(14, 15, 12, 0.22);
-  -webkit-app-region: drag;
-}
-
-.soravo-pill button,
-.soravo-pill input,
-.soravo-pill select {
-  -webkit-app-region: no-drag;
-}
-
-.rec-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-  background: var(--soravo-negative);
-  margin-right: 6px;
-  animation: pulse 1.2s ease-in-out infinite;
-}
-
 @keyframes pulse {
   0%,
   100% {
@@ -269,47 +241,6 @@ body {
 .icon-btn svg {
   width: 18px;
   height: 18px;
-}
-
-.soravo-drawer {
-  margin-top: 8px;
-  max-height: 328px;
-  overflow-y: auto;
-  background: var(--soravo-canvas);
-  border-radius: var(--soravo-radius);
-  box-shadow: 0 12px 40px rgba(14, 15, 12, 0.22);
-  padding: 16px;
-}
-
-.drawer-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 12px;
-}
-
-.history-item {
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--soravo-canvas-soft);
-  margin-bottom: 8px;
-}
-
-.history-text {
-  font-size: 14px;
-  line-height: 20px;
-  margin: 0 0 4px;
-  user-select: text;
-  -webkit-user-select: text;
-}
-
-.history-meta {
-  font-size: 12px;
-  color: var(--soravo-mute);
-}
-
-.history-empty {
-  font-size: 14px;
-  color: var(--soravo-mute);
 }
 
 .row {
@@ -383,15 +314,6 @@ body {
   border-radius: 12px;
   padding: 8px 12px;
   min-width: 0;
-}
-
-.model-active-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--soravo-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .soravo-mini {

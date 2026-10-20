@@ -119,6 +119,11 @@ export interface SoravoAPI {
   updateScratchpadNote(id: number, patch: { text?: string; pinned?: boolean }): Promise<void>
   onScratchpadChanged(cb: () => void): () => void
   openScratchpadWindow(): Promise<void>
+  setTextareaFocus(focused: boolean): Promise<void>
+  getSnippets(): Promise<Snippet[]>
+  addSnippet(phrase: string, expansion: string): Promise<Snippet>
+  updateSnippet(id: number, patch: { phrase?: string; expansion?: string }): Promise<void>
+  deleteSnippet(id: number): Promise<void>
   getSettings(): Promise<SoravoSettings>
   setSettings(patch: Partial<SoravoSettings>): Promise<SoravoSettings>
   validateBinding(accel: string): Promise<boolean>
@@ -289,5 +294,11 @@ export const soravo: SoravoAPI = {
 
 // Expose on window for compatibility
 ;(window as any).soravo = soravo
+
+declare global {
+  interface Window {
+    soravo: SoravoAPI
+  }
+}
 
 export default soravo

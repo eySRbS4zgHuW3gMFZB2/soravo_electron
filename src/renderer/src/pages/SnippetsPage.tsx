@@ -24,8 +24,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { soravo } from './soravo'
-import type { Snippet } from './soravo'
+import { soravo } from '../soravo'
+import type { Snippet } from '../soravo'
 
 type SortMode = 'newest' | 'oldest' | 'alphabetical'
 type Scope = 'all' | 'personal'
@@ -429,6 +429,7 @@ export default function SnippetsPage() {
           <div className="page-stack">
             {bannerDismissed ? null : (
               <PageHero
+                media="snippets"
                 onDismiss={() => setBannerDismissed(true)}
                 title={
                   <>

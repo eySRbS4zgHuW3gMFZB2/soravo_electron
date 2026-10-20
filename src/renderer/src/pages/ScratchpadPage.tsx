@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
-import HotkeyCapture, { prettyHotkey } from './HotkeyCapture'
+import HotkeyCapture, { prettyHotkey } from '../HotkeyCapture'
 import {
   CloseIcon,
   CopyIcon,
-  InfoIcon,
   PinIcon,
   PlusIcon,
   RefreshIcon,
@@ -21,8 +19,8 @@ import {
   DialogDescription,
   DialogTitle
 } from '@/components/ui/dialog'
-import { soravo } from './soravo'
-import type { ScratchpadNote } from './soravo'
+import { soravo } from '../soravo'
+import type { ScratchpadNote } from '../soravo'
 
 function fmtDate(iso: string): string {
   const d = new Date(iso)
@@ -48,7 +46,6 @@ export default function ScratchpadPage() {
   const [textareaFocused, setTextareaFocused] = useState(false)
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
-  const [showFlowBar, setShowFlowBar] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [scratchpadHotkey, setScratchpadHotkey] = useState('')
   const [shortcutOpen, setShortcutOpen] = useState(false)
@@ -250,15 +247,6 @@ export default function ScratchpadPage() {
           </span>
         </h1>
         <div className="page-head-actions">
-          <span className="shortcut-label">Add to Flow Bar</span>
-          <span title="Show a Scratchpad button on the flow bar so you can open notes from anywhere." style={{ display: 'inline-flex' }}>
-            <InfoIcon size={14} />
-          </span>
-          <Switch
-            checked={showFlowBar}
-            onCheckedChange={(c) => setShowFlowBar(c === true)}
-            aria-label="Add to Flow Bar"
-          />
           <Button variant="secondary" size="sm" onClick={() => setShortcutOpen(true)}>
             {scratchpadHotkey ? prettyHotkey(scratchpadHotkey) : 'Click to enable shortcut'}
           </Button>
@@ -269,6 +257,7 @@ export default function ScratchpadPage() {
         <div className="page-column">
           <div className="page-stack">
             <PageHero
+              media="scratchpad"
               title={<>For quick thoughts you want to come back to</>}
               description="Drop a to-do list, polish a message before you send it, brain dump an idea. Scratchpad is your safe space to save, create, and explore."
               cta={

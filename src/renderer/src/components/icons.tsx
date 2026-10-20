@@ -140,3 +140,33 @@ export function BrainIcon() {
     </svg>
   )
 }
+
+/** Dictionary - a book, matching the glyph Wispr Flow uses for the page. */
+export function DictionaryIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" />
+    </svg>
+  )
+}
+
+/** Style - the letter A, matching the glyph Wispr Flow uses for the page. */
+export function StyleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7V4h16v3" />
+      <path d="M9 20h6" />
+      <path d="M12 4v16" />
+    </svg>
+  )
+}
+
+export function HelpIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <path d="M12 17h.01" />
+    </svg>
+  )
+}

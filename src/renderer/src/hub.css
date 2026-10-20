@@ -1,3 +1,74 @@
+/* ---------------------------------------------------------------------------
+   Soravo hub - application shell and page styles.
+
+   The page STRUCTURE was recovered from the shipped Wispr Flow hub
+   (app-1.6.1174, .webpack/renderer/hub/index.js) with REA and verified against
+   the running app: a left navigation rail, a rounded content panel, a page
+   header with right-aligned actions, an underline tab strip with right-aligned
+   icon tools, a full-width hero band, a card-per-row list and a right-hand
+   rail of stat cards.
+
+   The LOOK is Soravo's own design language (DESIGN.md): the sage canvas, the
+   lime brand accent, 24px card and button radii, Inter at 400/600 for
+   everything below the hero and the serif display face for hero headlines.
+
+   HERO IMAGERY
+   Wispr Flow's hero bands use licensed photography. Soravo ships gradients
+   instead, so the artwork can be swapped later without touching the layout.
+   Each band picks a slot through the `media` prop on <PageHero>, which sets
+   `data-media` on the element; the matching rule below sets --hero-gradient.
+   To drop a real image in later, replace the gradient in that one rule with
+   `url(...)` plus `background-size: cover; background-position: center;` -
+   nothing else has to change.
+   --------------------------------------------------------------------------- */
+:root {
+  --soravo-primary: #9fe870;
+  --soravo-on-primary: #0e0f0c;
+  --soravo-ink: #0e0f0c;
+  --soravo-body: #454745;
+  --soravo-mute: #868685;
+  --soravo-canvas: #ffffff;
+  --soravo-canvas-soft: #e8ebe6;
+  --soravo-surface: #ffffff;
+  --soravo-positive: #2ead4b;
+  --soravo-negative: #d03238;
+  --soravo-radius: 24px;
+  --soravo-font: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --soravo-serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
+
+  /* Hero band: card-feature-dark, inverted in dark mode so the lime accent
+     keeps enough contrast to stay readable. */
+  --hero-surface: #0e0f0c;
+  --hero-fg: #ffffff;
+  --hero-accent: #9fe870;
+  --hero-body: rgba(255, 255, 255, 0.76);
+  --hero-chip: rgba(255, 255, 255, 0.12);
+  --hero-chip-fg: #ffffff;
+
+  --hub-rail: 224px;
+  --hub-panel-radius: 24px;
+}
+
+html[data-theme='dark'] {
+  --soravo-canvas: #191c15;
+  --soravo-canvas-soft: #22261e;
+  --soravo-ink: #f0f3e6;
+  --soravo-body: #c2c7b2;
+  --soravo-mute: #8b9080;
+  --soravo-surface: #2a2e26;
+
+  /* The hero stays the dark feature card in both themes, so the brand green
+     keeps its contrast and the band reads like the photograph it replaces. */
+  --hero-surface: #0e0f0c;
+  --hero-fg: #ffffff;
+  --hero-accent: #9fe870;
+  --hero-body: rgba(255, 255, 255, 0.76);
+  --hero-chip: rgba(255, 255, 255, 0.14);
+  --hero-chip-fg: #ffffff;
+}
+
+/* --- Shell ---------------------------------------------------------------- */
+
 .hub-root {
   display: flex;
   flex-direction: column;
@@ -9,396 +80,22 @@
   color: var(--soravo-ink);
 }
 
-/* Scratchpad window */
-.scratchpad-root {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: var(--soravo-canvas-soft);
-  border-radius: var(--soravo-radius);
-  overflow: hidden;
-  font-family: var(--soravo-font);
-  color: var(--soravo-ink);
-}
-
-.scratchpad-body {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-.scratchpad-sidebar {
-  width: 200px;
-  border-right: 1px solid var(--soravo-rule);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.scratchpad-sidebar-header {
-  padding: 12px;
-  border-bottom: 1px solid var(--soravo-rule);
-}
-
-.scratchpad-note-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-.scratchpad-note-item {
-  width: 100%;
-  text-align: left;
-  padding: 10px 12px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-bottom: 4px;
-  transition: background 0.15s;
-}
-
-.scratchpad-note-item:hover {
-  background: var(--soravo-canvas);
-}
-
-.scratchpad-note-item.active {
-  background: var(--soravo-accent-soft);
-}
-
-.scratchpad-note-item.pinned {
-  border-left: 2px solid var(--soravo-accent);
-}
-
-.scratchpad-note-preview {
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scratchpad-note-meta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-  font-size: 11px;
-  color: var(--soravo-ink-soft);
-}
-
-.scratchpad-pin {
-  font-size: 10px;
-}
-
-.scratchpad-note-date {
-  font-size: 11px;
-}
-
-.scratchpad-empty {
-  padding: 20px;
-  text-align: center;
-  color: var(--soravo-ink-soft);
-  font-size: 13px;
-}
-
-.scratchpad-editor {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.scratchpad-toolbar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--soravo-rule);
-}
-
-.scratchpad-save-status {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--soravo-ink-soft);
-}
-
-.scratchpad-textarea {
-  flex: 1;
-  border: none;
-  outline: none;
-  resize: none;
-  padding: 16px;
-  font-family: var(--soravo-font);
-  font-size: 15px;
-  line-height: 1.6;
-  background: transparent;
-  color: var(--soravo-ink);
-}
-
-.scratchpad-welcome {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  color: var(--soravo-ink-soft);
-}
-
-/* Snippets page */
-.snippets-page {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 24px;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.snippets-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  flex-shrink: 0;
-}
-
-.snippets-title {
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 28px;
-  color: var(--soravo-ink);
-  margin: 0;
-}
-
-.snippets-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-shrink: 0;
-}
-
-.snippets-search {
-  flex: 1;
-  max-width: 320px;
-}
-
-.snippets-search-input {
-  height: 36px;
-}
-
-.snippets-sort-trigger {
-  width: 160px;
-  height: 36px;
-}
-
-.snippets-bulk-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid var(--soravo-rule);
-  font-size: 12px;
-  line-height: 20px;
-  font-weight: 600;
-  color: var(--soravo-ink);
-  flex-shrink: 0;
-  animation: snippets-bulk-in 0.13s ease;
-}
-
-@keyframes snippets-bulk-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.snippets-bulk-bar span {
-  flex: 1;
-}
-
-.snippets-bulk-bar button {
-  white-space: nowrap;
-}
-
-.snippets-list {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 36px;
-  min-height: 0;
-  padding-top: 24px;
-}
-
-.snippets-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--soravo-rule);
-  border-radius: 16px;
-  background: var(--soravo-canvas);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.snippets-item:hover {
-  background: var(--soravo-canvas-soft);
-}
-
-.snippets-item.selected {
-  background: var(--soravo-accent-soft);
-  border-color: var(--soravo-accent);
-}
-
-.snippets-item-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.snippets-item-phrase {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--soravo-ink);
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.snippets-auto-learned {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: var(--soravo-canvas-soft);
-  color: var(--soravo-ink-soft);
-}
-
-.snippets-item-expansion {
-  font-size: 14px;
-  color: var(--soravo-ink-soft);
-  line-height: 1.5;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.snippets-item-date {
-  font-size: 12px;
-  color: var(--soravo-ink-soft);
-}
-
-.snippets-item-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.snippets-item:hover .snippets-item-actions,
-.snippets-item.selected .snippets-item-actions {
-  opacity: 1;
-}
-
-.snippets-action {
-  height: 32px;
-  padding: 0 8px;
-  font-size: 13px;
-}
-
-.snippets-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 24px;
-  margin: 32px 0 48px;
-  text-align: center;
-  border-radius: 16px;
-  background: var(--soravo-canvas-soft);
-  align-self: stretch;
-  flex: 1 0 0;
-}
-
-.snippets-empty-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--soravo-ink);
-  margin: 8px 0 0;
-}
-
-.snippets-empty-body {
-  font-size: 14px;
-  color: var(--soravo-ink-soft);
-  line-height: 1.5;
-  margin: 0 0 16px;
-  max-width: 360px;
-}
-
-.snippets-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px 0;
-}
-
-.snippets-form-label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--soravo-ink);
-}
-
-.snippets-form-textarea {
-  border: 1px solid var(--soravo-rule);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-family: var(--soravo-font);
-  font-size: 14px;
-  line-height: 1.5;
-  resize: vertical;
-  background: var(--soravo-canvas);
-  color: var(--soravo-ink);
-  outline: none;
-}
-
-.snippets-form-textarea:focus {
-  border-color: var(--soravo-accent);
-}
-
-.snippets-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.snippets-delete-body {
-  font-size: 14px;
-  color: var(--soravo-ink-soft);
-  line-height: 1.5;
-}
-
 .hub-titlebar {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px 4px;
+  gap: 12px;
+  height: 52px;
+  padding: 0 8px 0 16px;
   -webkit-app-region: drag;
+}
+
+.hub-titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .hub-titlebar-right,
@@ -406,15 +103,14 @@
   -webkit-app-region: no-drag;
 }
 
-.hub-wordmark {
-  font-size: 20px;
-  font-weight: 900;
-  letter-spacing: -0.4px;
+.hub-titlebar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .hub-badge {
   display: inline-block;
-  margin-left: 8px;
   padding: 2px 10px;
   font-size: 12px;
   font-weight: 600;
@@ -422,21 +118,12 @@
   color: var(--soravo-on-primary);
   border-radius: 9999px;
   vertical-align: 3px;
-  /* shadcn's Badge sets overflow-hidden, which changes an inline-block's
-     baseline from its last line box to its bottom margin edge. Combined with
-     the vertical-align above, that parked the pill 5px higher than it was and
-     grew the titlebar. Nothing here needs clipping. */
   overflow: visible;
-}
-
-.hub-titlebar-right {
-  display: flex;
-  gap: 4px;
 }
 
 .hub-winbtn {
   width: 36px;
-  height: 28px;
+  height: 32px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -467,20 +154,54 @@
   min-height: 0;
 }
 
+/* --- Navigation rail ------------------------------------------------------ */
+
 .hub-sidebar {
   flex: none;
-  width: 232px;
+  width: var(--hub-rail);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px;
+  gap: 2px;
+  padding: 4px 10px 12px 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.hub-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  padding: 6px 10px 14px;
+}
+
+.hub-brand-mark {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--soravo-primary);
+  color: var(--soravo-on-primary);
+  font-size: 16px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hub-brand-name {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+  color: var(--soravo-ink);
 }
 
 .hub-nav {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 9px 12px;
   border: none;
   border-radius: 12px;
   background: transparent;
@@ -490,33 +211,61 @@
   font-weight: 600;
   cursor: pointer;
   text-align: left;
+  position: relative;
   -webkit-app-region: no-drag;
 }
 
+.hub-nav:hover {
+  background: color-mix(in oklch, var(--soravo-ink) 6%, transparent);
+}
+
 .hub-nav svg {
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
   flex: none;
 }
 
+/* The active row carries the brand accent, as ex-app-shell-row describes. */
 .hub-nav.active {
   background: var(--soravo-canvas);
 }
 
+.hub-nav.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--soravo-primary);
+}
+
+.hub-nav-external {
+  color: var(--soravo-body);
+}
+
 .hub-sidebar-foot {
   margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .hub-local-card {
   background: var(--soravo-canvas);
   border-radius: 16px;
   padding: 14px;
+  margin-bottom: 8px;
 }
 
 .hub-local-title {
   margin: 0 0 6px;
   font-size: 14px;
   font-weight: 600;
+  color: var(--soravo-ink);
 }
 
 .hub-local-text {
@@ -526,299 +275,949 @@
   color: var(--soravo-body);
 }
 
+/* --- Content panel -------------------------------------------------------- */
+
 .hub-content {
   flex: 1;
   min-width: 0;
-  overflow-y: auto;
-  padding: 8px 24px 24px 8px;
-}
-
-.hub-columns {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-}
-
-.hub-main-col {
-  flex: 1;
-  min-width: 0;
-}
-
-.hub-side-col {
-  flex: none;
-  width: 220px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 8px;
+  background: var(--soravo-canvas);
+  border-radius: var(--hub-panel-radius) 0 0 0;
+  overflow: hidden;
 }
 
-.hub-greeting {
+/* --- Page scaffolding ----------------------------------------------------- */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  flex: 1;
+  min-height: 0;
+  padding: 26px 34px 40px;
+}
+
+.page-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 18px;
+  flex-shrink: 0;
+}
+
+.page-head-title {
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.3px;
-  margin: 12px 0 16px;
+  color: var(--soravo-ink);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-head-title .page-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-body);
+}
+
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.page-scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+.page-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.page-column {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.page-stack {
+  gap: 22px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* This project builds without Tailwind's preflight,
+so headings and
+   paragraphs keep the browser's default margins. Every block of copy in the
+   page primitives is sized from DESIGN.md,
+which has no margins. */
+.page-hero-title,
+.page-hero-body,
+.page-empty-title,
+.page-empty-body,
+.page-row-text p,
+.page-note-title,
+.page-note-preview,
+.page-greeting,
+.page-card p {
+  margin: 0;
+}
+
+/* --- Hero band ------------------------------------------------------------ */
+
+.page-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px 30px;
+  border-radius: var(--soravo-radius);
+  background: var(--hero-surface);
+  color: var(--hero-fg);
+  width: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* The gradient layer. Swappable for a real photograph - see the file header. */
+.page-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--hero-gradient, none);
+  background-size: cover;
+  background-position: center;
+}
+
+.page-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.page-hero[data-media='flow'] {
+  --hero-gradient: radial-gradient(120% 150% at 88% 10%, rgba(159, 232, 112, 0.42), transparent 58%),
+    linear-gradient(135deg, #163300 0%, #0e0f0c 52%, #24500f 100%);
+}
+
+.page-hero[data-media='snippets'] {
+  --hero-gradient: radial-gradient(90% 130% at 12% 8%, rgba(255, 192, 145, 0.32), transparent 62%),
+    linear-gradient(135deg, #0e0f0c 0%, #10241a 55%, #163300 100%);
+}
+
+.page-hero[data-media='dictionary'] {
+  --hero-gradient: radial-gradient(100% 140% at 90% 15%, rgba(56, 200, 255, 0.26), transparent 60%),
+    linear-gradient(135deg, #0e0f0c 0%, #142a13 55%, #163300 100%);
+}
+
+.page-hero[data-media='scratchpad'] {
+  --hero-gradient: radial-gradient(110% 140% at 20% 0%, rgba(159, 232, 112, 0.34), transparent 60%),
+    linear-gradient(135deg, #163300 0%, #0e0f0c 58%, #1d3a0c 100%);
+}
+
+html[data-theme='dark'] .page-hero[data-media='flow'] {
+  --hero-gradient: radial-gradient(120% 150% at 88% 10%, rgba(159, 232, 112, 0.34), transparent 58%),
+    linear-gradient(135deg, #163300 0%, #0e0f0c 52%, #1d3a0c 100%);
+}
+
+html[data-theme='dark'] .page-hero[data-media='snippets'] {
+  --hero-gradient: radial-gradient(90% 130% at 12% 8%, rgba(255, 192, 145, 0.26), transparent 62%),
+    linear-gradient(135deg, #0e0f0c 0%, #10241a 55%, #163300 100%);
+}
+
+html[data-theme='dark'] .page-hero[data-media='dictionary'] {
+  --hero-gradient: radial-gradient(100% 140% at 90% 15%, rgba(56, 200, 255, 0.22), transparent 60%),
+    linear-gradient(135deg, #0e0f0c 0%, #142a13 55%, #163300 100%);
+}
+
+html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
+  --hero-gradient: radial-gradient(110% 140% at 20% 0%, rgba(159, 232, 112, 0.3), transparent 60%),
+    linear-gradient(135deg, #163300 0%, #0e0f0c 58%, #1d3a0c 100%);
+}
+
+.page-hero-title {
+  font-family: var(--soravo-serif);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+  color: var(--hero-fg);
+  max-width: 640px;
+}
+
+.page-hero-title em {
+  font-style: italic;
+  color: var(--hero-accent);
+}
+
+.page-hero-body {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  color: var(--hero-body);
+  max-width: 620px;
+}
+
+.page-hero-cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.page-hero-cta [data-slot='button'] {
+  background: var(--hero-chip);
+  color: var(--hero-chip-fg);
+  border-color: transparent;
+}
+
+.page-hero-cta [data-slot='button']:hover {
+  background: color-mix(in oklch, var(--hero-chip) 70%, var(--hero-fg) 14%);
+  color: var(--hero-chip-fg);
+}
+
+.page-hero-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.page-hero-example {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  opacity: 0.86;
+  transition: opacity 150ms ease;
+}
+
+.page-hero-example:hover {
+  opacity: 1;
+}
+
+.page-hero-example-tag {
+  pointer-events: none;
+}
+
+.page-hero-example [data-slot='button'] {
+  background: var(--hero-chip);
+  color: var(--hero-chip-fg);
+  border-color: transparent;
+}
+
+.page-hero-example [data-slot='button']:hover {
+  background: color-mix(in oklch, var(--hero-chip) 70%, var(--hero-fg) 14%);
+  color: var(--hero-chip-fg);
+}
+
+.page-hero-example-arrow {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  color: var(--hero-chip-fg);
+  opacity: 0.7;
+}
+
+.page-hero-dismiss {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: var(--hero-chip);
+  color: var(--hero-chip-fg);
+  cursor: pointer;
+}
+
+.page-hero-dismiss:hover {
+  background: color-mix(in oklch, var(--hero-chip) 70%, var(--hero-fg) 16%);
+}
+
+/* The little window mockup that sits in the corner of the Scratchpad band. */
+.page-hero-mockup {
+  position: absolute;
+  right: 26px;
+  bottom: -78px;
+  width: 264px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: var(--soravo-canvas);
+  color: var(--soravo-ink);
+  overflow: hidden;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.page-hero-mockup-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--soravo-canvas-soft);
+}
+
+.page-hero-mockup-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--soravo-mute);
+}
+
+.page-hero-mockup-body {
+  display: flex;
+  align-items: stretch;
+  height: 130px;
+}
+
+.page-hero-mockup-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 40px;
+  padding: 12px 0;
+  align-items: center;
+  border-right: 1px solid var(--soravo-canvas-soft);
+}
+
+.page-hero-mockup-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--soravo-canvas-soft);
+}
+
+.page-hero-mockup-text {
+  flex: 1;
+  padding: 12px 10px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  color: var(--soravo-body);
+  margin: 0;
+}
+
+/* --- Tabs and tool strips ------------------------------------------------- */
+
+.page-tabs {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  position: relative;
+  gap: 8px;
+  border-bottom: 1px solid var(--soravo-canvas-soft);
+}
+
+.page-tabs-list {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 0 -12px;
+}
+
+.page-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  color: var(--soravo-mute);
+  user-select: none;
+  outline: none;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  transition-property: color;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  transition-duration: 150ms;
+  cursor: pointer;
+}
+
+.page-tab:hover:not(.page-tab-selected) {
+  color: var(--soravo-body);
+}
+
+.page-tab-selected {
+  color: var(--soravo-ink);
+}
+
+.page-tabs::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 2px;
+  width: var(--page-tab-width, 0);
+  background-color: var(--soravo-primary);
+  transform: translateX(var(--page-tab-left, 0));
+  transition-property: transform, width;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  transition-duration: 150ms;
+}
+
+.page-tabs:not(.page-tabs-animated)::after {
+  transition: none;
+}
+
+/* The strip pins under the page header, which sits outside the scroll area. */
+.page-tabs-sticky {
+  position: sticky;
+  top: 0;
+  background-color: var(--soravo-canvas);
+  z-index: 5;
+}
+
+.page-utils {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  color: var(--soravo-body);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.page-icon-button:hover {
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
+}
+
+.page-icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* --- Cards and rows -------------------------------------------------------- */
+
+.page-card {
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
+  border-radius: var(--soravo-radius);
+  padding: 6px 20px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--soravo-canvas);
+  position: relative;
+}
+
+.page-row:last-child {
+  border-bottom: none;
+}
+
+.page-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-row-label {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 400;
+  color: var(--soravo-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-row-label-muted {
+  color: var(--soravo-body);
+}
+
+.page-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.page-row:hover .page-row-actions,
+.page-row:focus-within .page-row-actions {
+  opacity: 1;
+}
+
+.page-row-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--soravo-mute);
+  cursor: pointer;
+}
+
+.page-row-action:hover {
+  background: var(--soravo-canvas);
+  color: var(--soravo-ink);
+}
+
+.page-row-action-danger:hover {
+  color: var(--soravo-negative);
+}
+
+.page-row-selected {
+  background: color-mix(in oklch, var(--soravo-primary) 16%, var(--soravo-canvas-soft));
+  border-radius: 12px;
+}
+
+/* --- Badges ---------------------------------------------------------------- */
+
+.page-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--soravo-primary) 22%, var(--soravo-canvas-soft));
+  color: var(--soravo-ink);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.page-badge-muted {
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-mute);
+}
+
+/* --- Empty states ---------------------------------------------------------- */
+
+.page-empty {
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
+  border-radius: var(--soravo-radius);
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  flex: 0 0 auto;
+  align-self: stretch;
+  margin: 8px 0 32px;
+}
+
+.page-empty-title {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+  color: var(--soravo-ink);
+}
+
+.page-empty-body {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  color: var(--soravo-body);
+  max-width: 460px;
+}
+
+.page-empty-flat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--soravo-mute);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+}
+
+/* --- Search field ---------------------------------------------------------- */
+
+.page-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.page-search-field {
+  flex: 1;
+  max-width: 360px;
+  height: auto;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 400;
+  outline: none;
+}
+
+.page-search-field::placeholder {
+  color: var(--soravo-mute);
+}
+
+.page-search-field:focus {
+  border-color: var(--soravo-primary);
+  background: var(--soravo-canvas);
+}
+
+.page-match {
+  display: inline;
+  background: color-mix(in oklch, var(--soravo-primary) 30%, transparent);
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+/* --- Dictation page -------------------------------------------------------- */
+
+.page-greeting {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--soravo-ink);
+  margin: 0 0 20px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .hub-hotkey {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hub-hotkey-key {
   display: inline-block;
-  padding: 2px 12px;
-  font-size: 20px;
+  padding: 3px 12px;
+  font-size: 18px;
+  font-weight: 700;
   background: var(--soravo-primary);
   color: var(--soravo-on-primary);
   border-radius: 9999px;
   white-space: nowrap;
 }
 
-.hub-hero {
+.hub-hotkey-plus {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--soravo-ink);
+}
+
+.dictation-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+.dictation-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.dictation-rail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dictation-day {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  background: var(--soravo-ink);
-  color: var(--soravo-canvas);
-  border-radius: var(--soravo-radius);
-  padding: 28px 32px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-top: 4px;
 }
 
-.hub-hero h2 {
-  margin: 0 0 6px;
-  font-size: 24px;
-  font-weight: 800;
-}
-
-.hub-hero p {
-  margin: 0 0 16px;
-  font-size: 15px;
-  color: var(--soravo-canvas-soft);
-}
-
-.hub-hero-mark {
-  flex: none;
-  width: 96px;
-  height: 96px;
-  border-radius: 28px;
-  background: var(--soravo-primary);
-  color: var(--soravo-on-primary);
-  font-size: 64px;
-  font-weight: 900;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hub-live {
-  font-size: 14px;
-  color: var(--soravo-body);
-  min-height: 20px;
-  margin-bottom: 12px;
-}
-
-.hub-section {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 1.2px;
+.dictation-day-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
   text-transform: uppercase;
   color: var(--soravo-mute);
-  margin: 20px 0 10px;
 }
 
-.hub-entries {
+.dictation-feed {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  background: var(--soravo-canvas-soft);
+  border-radius: var(--soravo-radius);
+  overflow: hidden;
 }
 
-.hub-entry {
+.dictation-row {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--soravo-canvas);
-  border-radius: 16px;
-  padding: 12px 16px;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--soravo-canvas);
 }
 
-.hub-entry-time {
+.dictation-row:last-child {
+  border-bottom: none;
+}
+
+.dictation-row-time {
   flex: none;
-  width: 64px;
-  font-size: 13px;
+  width: 62px;
+  font-size: 12px;
+  line-height: 20px;
   color: var(--soravo-mute);
+  padding-top: 2px;
 }
 
-.hub-entry-text {
+.dictation-row-text {
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 14px;
-  line-height: 20px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--soravo-ink);
   user-select: text;
   -webkit-user-select: text;
 }
 
-.hub-entry-actions {
+.dictation-row-actions {
   flex: none;
-  display: flex;
-  gap: 6px;
-}
-
-.hub-mini-btn {
-  border: none;
-  border-radius: 8px;
-  background: var(--soravo-canvas-soft);
-  color: var(--soravo-ink);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  min-width: 32px;
-  height: 32px;
-  padding: 0 8px;
-  cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 150ms ease;
 }
 
-.hub-mini-btn svg {
-  width: 16px;
-  height: 16px;
+.dictation-row:hover .dictation-row-actions,
+.dictation-row:focus-within .dictation-row-actions {
+  opacity: 1;
 }
 
-.hub-mini-btn.danger {
-  color: var(--soravo-negative);
+.dictation-live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--soravo-body);
 }
 
-.hub-stat {
-  background: var(--soravo-canvas);
-  border-radius: 16px;
-  padding: 14px 16px;
+.rail-card {
+  background: var(--soravo-canvas-soft);
+  border-radius: var(--soravo-radius);
+  padding: 20px;
 }
 
-.hub-stat-value {
+.rail-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--soravo-ink);
+  margin: 0 0 4px;
+}
+
+.rail-card-body {
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--soravo-body);
+  margin: 0 0 14px;
+}
+
+.rail-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rail-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.rail-stat-value {
   font-size: 26px;
   font-weight: 800;
+  color: var(--soravo-ink);
+  line-height: 1;
 }
 
-.hub-stat-value span {
+.rail-stat-label {
   font-size: 14px;
   font-weight: 400;
   color: var(--soravo-body);
 }
 
-.hub-page {
-  max-width: 760px;
-}
-
-.hub-note {
-  font-size: 14px;
-  line-height: 21px;
-  color: var(--soravo-body);
+.rail-progress {
+  height: 6px;
+  border-radius: 9999px;
   background: var(--soravo-canvas);
-  border-radius: 12px;
-  padding: 12px 16px;
+  overflow: hidden;
+  margin-bottom: 8px;
 }
 
-.row input[type='checkbox'] {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  accent-color: var(--soravo-positive);
+.rail-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--soravo-primary);
 }
 
-.hotkey-row {
-  flex: 1;
+.rail-progress-meta {
   display: flex;
-  gap: 8px;
-  min-width: 0;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--soravo-mute);
 }
 
-.hotkey-capture {
-  flex: 1;
-  min-width: 0;
-}
+/* --- Insights page --------------------------------------------------------- */
 
-.hotkey-field {
-  flex: 1;
-  width: 100%;
-  font: inherit;
-  /* DESIGN.md "text-input": 16px body, 12px/16px padding, 12px radius. */
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-  color: var(--soravo-ink);
-  background: var(--soravo-canvas);
-  border: 1px solid var(--soravo-ink);
-  border-radius: 12px;
-  padding: 12px 16px;
-  cursor: pointer;
-  text-align: left;
-  min-width: 0;
-}
-
-.hotkey-field.listening {
-  border-color: var(--soravo-positive);
-  box-shadow: 0 0 0 2px var(--soravo-primary);
-  outline: none;
-  cursor: text;
-}
-
-.hotkey-error {
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: var(--soravo-negative);
-}
-
-/* Dark theme: flip surfaces, keep the lime accent and dark hero. */
-html[data-theme='dark'] {
-  --soravo-canvas: #191c15;
-  --soravo-canvas-soft: #22261e;
-  --soravo-ink: #f0f3e6;
-  --soravo-body: #c2c7b2;
-  --soravo-mute: #8b9080;
-}
-
-html[data-theme='dark'] .hub-hero {
-  background: #0e0f0c;
-}
-
-html[data-theme='dark'] .row input,
-html[data-theme='dark'] .row select {
-  background: #101209;
-  border-color: #3a3f30;
-  color: var(--soravo-ink);
-}
-
-html[data-theme='dark'] .hub-nav.active,
-html[data-theme='dark'] .hub-local-card,
-html[data-theme='dark'] .hub-entry,
-html[data-theme='dark'] .hub-stat,
-html[data-theme='dark'] .hub-note {
-  background: #22261e;
-}
-
-html[data-theme='dark'] .hub-mini-btn {
-  background: #2c3125;
-  color: var(--soravo-ink);
-}
-
-.insights-page {
-  max-width: 860px;
-}
-
-.insights-stats {
+.insights-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.insights-grid-duo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.insights-card {
+  background: var(--soravo-canvas-soft);
+  border-radius: var(--soravo-radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.insights-card-wide {
+  grid-column: 1 / -1;
+}
+
+.insights-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
+  margin-bottom: 4px;
+}
+
+.insights-card-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: var(--soravo-ink);
+  margin: 0;
+}
+
+.insights-card-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--soravo-mute);
+  margin: 0;
+}
+
+.insights-card-value {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--soravo-ink);
+  margin: 10px 0 2px;
+}
+
+.insights-card-note {
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--soravo-body);
+  margin: 0;
+}
+
+.gauge-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.gauge-svg {
+  width: 100%;
+  max-width: 220px;
+  margin-top: 10px;
+}
+
+.gauge-top {
+  font-size: 12px;
+  color: var(--soravo-mute);
+  margin-top: 4px;
 }
 
 .hub-heatmap-card {
-  background: var(--soravo-canvas);
-  border-radius: 16px;
-  padding: 16px;
+  background: transparent;
+  padding: 0;
 }
 
 .heatmap {
@@ -843,7 +1242,7 @@ html[data-theme='dark'] .hub-mini-btn {
   width: 13px;
   height: 13px;
   border-radius: 3px;
-  background: var(--soravo-canvas-soft);
+  background: var(--soravo-canvas);
 }
 
 .heatmap-cell.empty {
@@ -851,31 +1250,19 @@ html[data-theme='dark'] .hub-mini-btn {
 }
 
 .heatmap-cell[data-level='1'] {
-  background: #d9f4c2;
+  background: color-mix(in oklch, var(--soravo-primary) 30%, var(--soravo-canvas));
 }
 
 .heatmap-cell[data-level='2'] {
-  background: #9fe870;
+  background: color-mix(in oklch, var(--soravo-primary) 55%, var(--soravo-canvas));
 }
 
 .heatmap-cell[data-level='3'] {
-  background: #5fce3f;
+  background: color-mix(in oklch, var(--soravo-primary) 78%, var(--soravo-canvas));
 }
 
 .heatmap-cell[data-level='4'] {
-  background: #2ead4b;
-}
-
-html[data-theme='dark'] .heatmap-cell[data-level='1'] {
-  background: #2c4423;
-}
-
-html[data-theme='dark'] .heatmap-cell[data-level='2'] {
-  background: #4c7a35;
-}
-
-html[data-theme='dark'] .heatmap-cell[data-level='3'] {
-  background: #6fae4e;
+  background: var(--soravo-positive);
 }
 
 .heatmap-legend {
@@ -884,25 +1271,6 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   gap: 4px;
   margin-top: 10px;
   font-size: 12px;
-  color: var(--soravo-mute);
-}
-
-.heatmap-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.heatmap-streak {
-  font-size: 22px;
-  font-weight: 800;
-}
-
-.heatmap-longest {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
   color: var(--soravo-mute);
 }
 
@@ -932,7 +1300,7 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
 }
 
 .heatmap-nav:not(:disabled):hover {
-  background: var(--soravo-canvas-soft);
+  background: var(--soravo-canvas);
 }
 
 .heatmap-months {
@@ -968,24 +1336,14 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   line-height: 13px;
 }
 
-.hub-rhythm-card {
-  background: var(--soravo-canvas);
-  border-radius: 16px;
-  padding: 16px;
-}
-
 .seg {
   display: inline-flex;
-  background: var(--soravo-canvas-soft);
+  background: var(--soravo-canvas);
   border-radius: 9999px;
   padding: 3px;
   margin-bottom: 12px;
 }
 
-/* The rhythm chart keeps its original pill shape. ToggleGroup supplies the
-   behaviour and the selected state; these rules restore the old appearance
-   (9999px radius, no border, 13px semibold, lime pill when active).
-   They live unlayered, so they win over the component's Tailwind classes. */
 .seg [data-slot='toggle-group-item'] {
   border: none;
   border-radius: 9999px;
@@ -993,92 +1351,20 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   color: var(--soravo-ink);
   font-size: 13px;
   font-weight: 600;
-  /* The component pins h-8; the original pill sized itself from its padding. */
   height: auto;
   padding: 6px 16px;
 }
 
 .seg [data-slot='toggle-group-item'][data-state='on'] {
   background: var(--soravo-primary);
-  color: #ffffff;
-}
-
-.seg [data-slot='toggle-group-item']:focus-visible {
-  box-shadow: none;
-}
-
-.insights-duo {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 12px;
-  align-items: stretch;
-}
-
-.gauge-card {
-  background: var(--soravo-canvas);
-  border-radius: 16px;
-  padding: 20px 16px 12px;
-  text-align: center;
-}
-
-.gauge-num {
-  font-size: 44px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.gauge-label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  color: var(--soravo-mute);
-  margin: 4px 0 8px;
-}
-
-.gauge-svg {
-  width: 100%;
-  max-width: 230px;
-}
-
-.gauge-top {
-  font-size: 12px;
-  color: var(--soravo-mute);
-  margin-top: 2px;
-}
-
-.hub-rhythm-card .hub-bars {
-  background: transparent;
-  padding: 4px 0 0;
-}
-
-.chart {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.chart-caption {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--soravo-mute);
-  letter-spacing: 0.4px;
-}
-
-.hub-bars.compact {
-  justify-content: flex-start;
-}
-
-.hub-bars.compact .hub-bar-col {
-  flex: 0 0 44px;
+  color: var(--soravo-on-primary);
 }
 
 .hub-bars {
   display: flex;
   align-items: flex-end;
-  gap: 3px;
-  background: var(--soravo-canvas);
-  border-radius: 16px;
-  padding: 16px 16px 8px;
+  gap: 4px;
+  height: 88px;
 }
 
 .hub-bar-col {
@@ -1086,52 +1372,56 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
   min-width: 0;
 }
 
 .hub-bar {
   width: 100%;
-  border-radius: 4px;
+  max-width: 26px;
+  border-radius: 6px 6px 2px 2px;
   background: var(--soravo-primary);
+  min-height: 3px;
 }
 
 .hub-bar-col span {
   font-size: 10px;
   color: var(--soravo-mute);
-  height: 12px;
+  white-space: nowrap;
+}
+
+.chart {
+  width: 100%;
 }
 
 .toprow {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--soravo-canvas);
-  border-radius: 12px;
-  padding: 8px 14px;
-  margin-bottom: 6px;
+  padding: 7px 0;
 }
 
 .toprow-label {
   flex: none;
   width: 140px;
   font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
+  color: var(--soravo-ink);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toprow-label.wide {
-  flex: 1;
   width: auto;
+  flex: 1;
 }
 
 .toprow-track {
   flex: 1;
   height: 8px;
   border-radius: 9999px;
-  background: var(--soravo-canvas-soft);
+  background: var(--soravo-canvas);
   overflow: hidden;
 }
 
@@ -1144,81 +1434,456 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
 .toprow-count {
   flex: none;
   font-size: 13px;
-  color: var(--soravo-mute);
-  min-width: 32px;
+  color: var(--soravo-body);
+  font-weight: 600;
+  min-width: 28px;
   text-align: right;
 }
 
-/* --- Dialog ---------------------------------------------------------------
-   The Settings and sub-dialogs now render through shadcn's Dialog, which
-   brings its own overlay/box classes. These rules re-apply the old .modal-*
-   box so the result is unchanged. Kept unlayered so they win over the
-   component's Tailwind utilities. */
-[data-slot='dialog-overlay'] {
-  background: rgba(14, 15, 12, 0.45);
-  -webkit-app-region: no-drag;
+/* --- Models page ----------------------------------------------------------- */
+
+.model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
 }
 
-[data-slot='dialog-content'].settings-dialog {
+.model-card {
+  background: var(--soravo-canvas-soft);
+  border-radius: var(--soravo-radius);
+  padding: 20px;
   display: flex;
-  width: min(960px, calc(100vw - 60px));
-  height: min(680px, calc(100vh - 60px));
-  max-width: none;
-  background: var(--soravo-canvas-soft);
-  color: var(--soravo-ink);
-  border-radius: var(--soravo-radius);
-  box-shadow: 0 24px 80px rgba(14, 15, 12, 0.35);
-  overflow: hidden;
-  gap: 0;
-  padding: 0;
-  border: none;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
 }
 
-[data-slot='dialog-content'].sub-dialog {
-  display: block;
-  width: min(560px, calc(100vw - 120px));
-  height: auto;
-  max-width: none;
-  max-height: min(560px, calc(100vh - 120px));
-  overflow-y: auto;
+.model-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--soravo-ink);
+  margin: 0;
+}
+
+.model-card-meta {
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--soravo-body);
+  margin: 0;
+}
+
+.model-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+
+/* --- Style page ------------------------------------------------------------ */
+
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.style-card {
+  background: var(--soravo-canvas-soft);
+  border-radius: var(--soravo-radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.style-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.style-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--soravo-ink);
+  margin: 0;
+}
+
+.style-card-desc {
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--soravo-body);
+  margin: 0;
+}
+
+/* --- Notes ----------------------------------------------------------------- */
+
+.page-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.page-note {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  min-height: 90px;
+  max-height: 210px;
+  overflow: hidden;
+  padding: 16px;
+  border-radius: var(--soravo-radius);
+  border: none;
   background: var(--soravo-canvas-soft);
   color: var(--soravo-ink);
-  border-radius: var(--soravo-radius);
-  box-shadow: 0 24px 80px rgba(14, 15, 12, 0.35);
-  padding: 24px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  position: relative;
+}
+
+.page-note-active {
+  background: color-mix(in oklch, var(--soravo-primary) 16%, var(--soravo-canvas-soft));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--soravo-primary) 45%, transparent);
+}
+
+.page-note-pin {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 24px;
+  padding-right: 8px;
+  padding-top: 4px;
+  color: var(--soravo-mute);
+}
+
+.page-note-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.page-note-title {
+  color: var(--soravo-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.page-note-preview {
+  color: var(--soravo-body);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  pointer-events: none;
+  width: 100%;
+}
+
+.page-note-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  color: var(--soravo-mute);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+}
+
+.page-note-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 200ms ease, visibility 200ms ease;
+  background: var(--soravo-canvas-soft);
+  border-radius: 9999px;
+  z-index: 1;
+}
+
+.page-note:hover .page-note-actions,
+.page-note:focus-within .page-note-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
+.page-note-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--soravo-mute);
+  background: transparent;
   border: none;
+  cursor: pointer;
+}
+
+.page-note-action:hover {
+  background: var(--soravo-canvas);
+  color: var(--soravo-ink);
+}
+
+.page-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+  margin-top: 8px;
+}
+
+.page-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.page-editor-field {
+  width: 100%;
+  min-height: 200px;
+  flex: 1;
+  padding: 16px;
+  border-radius: var(--soravo-radius);
+  border: 1px solid var(--soravo-ink);
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.page-editor-field:focus {
+  border-color: var(--soravo-primary);
+}
+
+.page-editor-status {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--soravo-mute);
+}
+
+/* --- Dialogs --------------------------------------------------------------- */
+
+.page-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.page-dialog-panel {
+  width: 100%;
+  max-width: 520px;
+  border-radius: var(--soravo-radius);
+  padding: 24px;
+}
+
+.page-dialog-fields {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-dialog-arrow {
+  color: var(--soravo-ink);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.page-dialog-input {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  padding: 10px 14px;
+  border: 1px solid var(--soravo-ink);
+  border-radius: 12px;
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 400;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.page-dialog-input::placeholder {
+  color: var(--soravo-mute);
+}
+
+.page-dialog-input:focus {
+  border-color: var(--soravo-primary);
+  background: var(--soravo-canvas);
+}
+
+.page-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.page-dialog-error {
+  color: var(--soravo-negative);
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0;
+}
+
+.page-dialog-note {
+  color: var(--soravo-body);
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0;
+}
+
+.page-import-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--soravo-canvas-soft);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.page-import-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 20px;
+  min-width: 0;
+}
+
+.page-import-phrase {
+  color: var(--soravo-ink);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.page-import-arrow {
+  color: var(--soravo-mute);
+  flex-shrink: 0;
+}
+
+.page-import-expansion {
+  color: var(--soravo-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-import-more {
+  color: var(--soravo-mute);
+  font-size: 14px;
+  margin: 4px 0 0;
+}
+
+/* --- Settings modal -------------------------------------------------------- */
+
+.settings-dialog {
+  width: min(880px, calc(100vw - 80px));
+  max-width: none;
+  height: min(640px, calc(100vh - 80px));
+  padding: 0;
+  gap: 0;
+  display: flex;
+  overflow: hidden;
+  border-radius: var(--soravo-radius);
 }
 
 .modal-sidebar {
   flex: none;
-  width: 220px;
-  padding: 20px 12px;
+  width: 208px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  padding: 20px 12px;
+  background: var(--soravo-canvas-soft);
+  overflow-y: auto;
 }
 
 .modal-heading {
-  margin: 0 0 12px 12px;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--soravo-mute);
+  margin: 0 0 8px 12px;
+}
+
+.modal-heading + .modal-tab {
+  margin-top: 0;
 }
 
 .modal-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   background: transparent;
   color: var(--soravo-ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  text-align: left;
-  padding: 10px 14px;
   cursor: pointer;
+  text-align: left;
+}
+
+.modal-tab:hover {
+  background: color-mix(in oklch, var(--soravo-ink) 6%, transparent);
 }
 
 .modal-tab.active {
   background: var(--soravo-canvas);
+  color: var(--soravo-ink);
+}
+
+.modal-group {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--soravo-mute);
+  margin: 18px 0 6px 12px;
+}
+
+.modal-group:first-child {
+  margin-top: 0;
 }
 
 .modal-content {
@@ -1226,341 +1891,322 @@ html[data-theme='dark'] .heatmap-cell[data-level='3'] {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: var(--soravo-canvas-soft);
-  padding: 20px 24px 16px;
-  overflow: hidden;
+  padding: 26px 28px 20px;
+  background: var(--soravo-canvas);
   position: relative;
-}
-
-/* Each settings tab scrolls on its own, so the footer below stays pinned
-   no matter how long the tab gets. */
-.modal-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.modal-title {
-  margin: 0 0 16px;
-  font-size: 22px;
-  font-weight: 800;
 }
 
 .modal-close {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 9999px;
-  background: var(--soravo-canvas);
-  color: var(--soravo-ink);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 22px;
+  right: 22px;
 }
 
-.modal-close svg {
-  width: 16px;
-  height: 16px;
+.modal-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.modal-title {
+  font-family: var(--soravo-serif);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--soravo-ink);
+  margin: 0 0 20px;
+}
+
+.modal-sub {
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--soravo-body);
+  margin: 0 0 18px;
+  max-width: 480px;
 }
 
 .modal-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 16px 0 4px;
   flex: none;
-}
-
-.row-summary {
-  flex: 1;
-  font-size: 14px;
-  color: var(--soravo-body);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* --- Settings General page (Wispr Flow style) ---
-   Geometry taken from Wispr Flow's settings page CSS module:
-     container  padding 48px, column, gap 36px
-     content   column, gap 24px, overflow-y auto
-     header    column, gap 12px, margin-bottom 12px
-     pageTitle EBGaramond 28px/28px, letter-spacing -0.04em
-     card      padding 20px, gap 20px, radius 12px, bg tertiary
-     item      flex space-between, margin -8px/-12px, padding 8px/12px
-     label     15px/20px, weight 550
-     desc      15px/20px, weight 400, neutral-600
-     controls  width 164px, margin-left 12px
-     divider   1px, bg border */
-.general-page {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 36px;
-  min-width: 0;
-  /* Cancels the modal-content padding so the page owns its own 48px inset,
-     the same way Wispr Flow's settings page container does. */
-  margin: -20px -24px -16px;
-  padding: 48px;
-}
-
-.general-content {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 24px;
-  align-self: stretch;
-  width: 100%;
-  overflow-y: auto;
-  /* The page is the scroll container, so the content inside it must keep
-     its natural height rather than shrink and scroll on its own. */
-  flex-shrink: 0;
-}
-
-.general-content::-webkit-scrollbar {
-  display: none;
-}
-
-.general-header {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: flex-end;
   gap: 12px;
-  align-self: stretch;
-  color: var(--soravo-ink);
-  margin-bottom: 12px;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--soravo-canvas-soft);
 }
 
-.general-title {
-  font-family: var(--soravo-serif);
-  font-weight: 400;
-  letter-spacing: -0.04em;
-  -webkit-font-smoothing: antialiased;
-  font-size: 28px;
-  line-height: 28px;
-  margin: 0;
-  color: var(--soravo-ink);
+.modal-version {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--soravo-mute);
 }
 
-.general-section {
+/* The settings body: one card of rows, each row a label plus a control. */
+.settings-card {
+  background: var(--soravo-canvas-soft);
+  border-radius: var(--soravo-radius);
+  padding: 4px 20px;
+}
+
+.settings-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-  align-self: stretch;
-  /* No preflight means no border-box, so an explicit width would add the
-     padding on top of it. Stretch sizing does the same job correctly. */
-  box-sizing: border-box;
-  width: 100%;
-}
-
-.general-card {
-  display: flex;
-  padding: 20px;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 20px;
-  align-self: stretch;
-  box-sizing: border-box;
-  width: 100%;
-  border-radius: 12px;
-  /* One step off the panel surface, the way Wispr Flow's
-     --background-tertiary sits off its page background. */
-  background: var(--soravo-surface);
-}
-
-.general-item {
-  display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--soravo-canvas);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settings-row-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--soravo-ink);
+}
+
+.settings-row-desc {
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--soravo-body);
+}
+
+.settings-row-control {
+  flex: none;
+  display: flex;
   align-items: center;
-  align-self: stretch;
-  box-sizing: border-box;
-  margin: -8px -12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-}
-
-.general-item-full {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
-  align-self: stretch;
-  width: 100%;
-}
-
-.general-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  flex: 1 1 0;
+  gap: 8px;
   min-width: 0;
 }
 
-.general-label {
-  color: var(--foreground);
-  font-size: 15px;
-  line-height: 20px;
-  font-weight: 550;
+.settings-section {
+  margin-top: 26px;
 }
 
-.general-desc {
-  color: var(--muted-foreground);
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  max-width: 100%;
-  font-size: 15px;
-  line-height: 20px;
-  font-weight: 400;
+.settings-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--soravo-mute);
+  margin: 0 0 10px;
 }
 
-.general-controls {
-  width: 164px;
-  flex-shrink: 0;
-  margin-left: 12px;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-}
-
-/* Buttons and selects fill the 164px control column; a switch keeps its
-   natural size and sits at the right edge. */
-.general-controls > button:not([data-slot='switch']),
-.general-controls > [data-slot='select-trigger'] {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* The Change button and the theme select are both 36px tall in Wispr Flow.
-   The Switch is a button too, so it has to be excluded or it loses its
-   pill shape and picks up the button's 36px height. */
-.general-controls button:not([data-slot='switch']),
-.general-controls [data-slot='select-trigger'] {
-  height: 36px;
-  border-radius: 8px;
-}
-
-/* Wispr Flow's settings buttons are neutral grey, not the app's green-tinted
-   secondary. The Change button sits on the card surface, so it needs to read
-   as a neutral control against it. */
-.general-controls button:not([data-slot='switch']) {
-  background: #303030;
-  color: #f0f0f0;
-  border: none;
-  font-weight: 500;
-}
-
-.general-controls button:not([data-slot='switch']):hover {
-  background: #3a3a3a;
-}
-
-html[data-theme='light'] .general-controls button:not([data-slot='switch']) {
-  background: #f0f0f0;
-  color: #1a1a1a;
-}
-
-html[data-theme='light'] .general-controls button:not([data-slot='switch']):hover {
-  background: #e6e6e6;
-}
-
-/* The theme select keeps a transparent fill with a hairline border, the way
-   Wispr Flow draws it. */
-.general-controls [data-slot='select-trigger'] {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--foreground);
-  justify-content: flex-start;
-  gap: 8px;
-}
-
-.general-controls [data-slot='select-trigger'] svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-  opacity: 0.7;
-}
-
-.general-divider {
-  height: 1px;
-  align-self: stretch;
-  background: var(--border);
-}
-
-/* --- Settings System page (Wispr Flow style) --- */
-.system-page {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.system-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
-  /* Without this the flex column squashes its rows to fit the panel
-     instead of letting the page scroll. */
-  flex-shrink: 0;
-}
-
-/* A lone action button keeps its natural width instead of stretching
-   across the column. */
 .system-quit {
   align-self: flex-start;
 }
 
-.system-section-title {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--soravo-mute);
-  margin-bottom: 4px;
+.hub-note {
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--soravo-body);
+  background: var(--soravo-canvas-soft);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 0;
 }
 
-.system-row {
+/* --- Sub dialogs ----------------------------------------------------------- */
+
+.sub-dialog {
+  width: min(560px, calc(100vw - 80px));
+  max-width: none;
+  border-radius: var(--soravo-radius);
+  padding: 24px;
+  max-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sub-dialog-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.sub-dialog-foot {
+  flex: none;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
-  padding: 10px 0;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--soravo-canvas-soft);
 }
 
-.system-label {
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.shortcut-label {
   font-size: 14px;
-  font-weight: 500;
+  line-height: 20px;
+  font-weight: 600;
   color: var(--soravo-ink);
+}
+
+.shortcut-section {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--soravo-mute);
+}
+
+.shortcut-divider {
+  height: 1px;
+  background: var(--soravo-canvas-soft);
+  border: none;
+  margin: 20px 0 16px;
+}
+
+/* --- Hotkey capture -------------------------------------------------------- */
+
+.hotkey-row {
+  flex: 1;
+  display: flex;
+  gap: 8px;
   min-width: 0;
 }
 
-.system-label .system-desc {
-  display: block;
-  font-size: 12px;
+.hotkey-capture {
+  flex: 1;
+  min-width: 0;
+}
+
+.hotkey-field {
+  flex: 1;
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  line-height: 24px;
   font-weight: 400;
-  color: var(--soravo-ink-soft);
-  margin-top: 2px;
-}
-
-/* The vocabulary inputs sit inside the label column, so they need to be
-   allowed to shrink rather than overflow the row. */
-.system-label input {
-  margin-top: 6px;
-  max-width: 320px;
-}
-
-.system-empty {
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--soravo-ink-soft);
-  margin: 0 0 4px;
-}
-
-.switch-row .system-label {
+  color: var(--soravo-ink);
+  background: var(--soravo-canvas-soft);
+  border: 1px solid var(--soravo-ink);
+  border-radius: 12px;
+  padding: 10px 14px;
   cursor: pointer;
+  text-align: left;
+  min-width: 0;
 }
+
+.hotkey-field.listening {
+  border-color: var(--soravo-primary);
+  box-shadow: 0 0 0 2px var(--soravo-primary);
+  outline: none;
+  cursor: text;
+}
+
+.hotkey-error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--soravo-negative);
+}
+
+/* --- Shared form rows ------------------------------------------------------ */
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.row label {
+  flex: none;
+  width: 132px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.row input,
+.row select {
+  flex: 1;
+  font: inherit;
+  font-size: 14px;
+  color: var(--soravo-ink);
+  background: var(--soravo-canvas-soft);
+  border: 1px solid var(--soravo-ink);
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-width: 0;
+}
+
+.row input[type='checkbox'] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--soravo-primary);
+}
+
+/* --- Dark-mode corrections ------------------------------------------------- */
+
+html[data-theme='dark'] .hub-nav.active,
+html[data-theme='dark'] .hub-local-card,
+html[data-theme='dark'] .hub-note {
+  background: var(--soravo-canvas-soft);
+}
+
+html[data-theme='dark'] .rail-card,
+html[data-theme='dark'] .page-card,
+html[data-theme='dark'] .page-empty,
+html[data-theme='dark'] .insights-card,
+html[data-theme='dark'] .model-card,
+html[data-theme='dark'] .style-card,
+html[data-theme='dark'] .page-note,
+html[data-theme='dark'] .settings-card,
+html[data-theme='dark'] .modal-sidebar {
+  background: var(--soravo-canvas-soft);
+}
+
+html[data-theme='dark'] .page-row,
+html[data-theme='dark'] .dictation-row,
+html[data-theme='dark'] .settings-row {
+  border-bottom-color: var(--soravo-canvas);
+}
+
+html[data-theme='dark'] .dictation-feed {
+  background: var(--soravo-canvas-soft);
+}
+
+html[data-theme='dark'] .page-editor-field,
+html[data-theme='dark'] .page-dialog-input,
+html[data-theme='dark'] .hotkey-field,
+html[data-theme='dark'] .row input,
+html[data-theme='dark'] .row select {
+  background: var(--soravo-canvas-soft);
+  border-color: var(--soravo-ink);
+  color: var(--soravo-ink);
+}
+
+html[data-theme='dark'] .rail-progress,
+html[data-theme='dark'] .toprow-track {
+  background: var(--soravo-canvas);
+}
+
+html[data-theme='dark'] .seg {
+  background: var(--soravo-canvas);
+}
+

@@ -35,11 +35,20 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - [x] Transparent window with rounded corners, no shadow/border
 
 ### UI — Hub Window
-- [x] Sidebar: Dictation, History, Settings
-- [x] Dictation page: greeting with hotkey pill, hero card, today's entries, stats (words/wpm/streak)
-- [x] History page: search, copy, delete, clear all
-- [x] Insights page: stats, corrections, activity heatmap (26-week, Wispr-style), WPM radial gauge, hour/weekday rhythm chart (segmented toggle), top words, repeated phrases
-- [x] Title bar with minimize/maximize/close
+- [x] Navigation rail: brand block, Dictation, History, Insights, Dictionary, Snippets, Style, Models,
+      Scratchpad, a "Local & private" card, Settings and Help
+- [x] Content panel with a 24px corner, its own scroll area, and a pinned page header
+- [x] Title bar with a theme menu plus minimize/maximize/close
+- [x] Dictation page: greeting with the shortcut spelled out as key chips, hero band, dated
+      transcript feed with copy/delete, and a right-hand rail (word counts, voice profile, daily goal)
+- [x] History page: date-grouped transcript feed with search, copy, delete, clear all
+- [x] Insights page: Your usage / Your voice tabs, WPM gauge, fixes made, total words, rhythm
+      chart, 26-week heat-map, top words, repeated phrases
+- [x] Dictionary page: personal word list with add, edit, remove, import and export
+- [x] Style page: clean-up, punctuation and language rules as cards
+- [x] Models page: card grid of downloadable transcription models
+- [x] Snippets page: phrase expansion with search, sort, bulk delete and import
+- [x] Scratchpad page: notes list with pin/copy/delete and an inline editor
 - [x] Transparent window with rounded corners, no shadow/border
 
 ### Settings (Wispr-style sub-modals)
@@ -52,6 +61,8 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - [x] Wispr-style hotkey capture: click field, press keys, release to commit, Esc cancels
 - [x] Persisted to tauri-plugin-store (JSON)
 - [x] General and System pages rebuilt to Wispr Flow's layout (serif title, card rows, 164px control column)
+- [x] Settings shell rebuilt to Wispr Flow's: grouped left nav, serif title, card of rows, pinned
+      footer with the version, and a Shortcuts sub-dialog that scrolls with a Reset/Done footer
 
 ### Wispr Flow Feature Parity (from config.json analysis)
 - [x] Hotkey capture (press-to-capture, like Wispr)
@@ -352,6 +363,72 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   hero photos, which are gone; the app has no images left.
 - Removed the dead `.page-dialog-textarea` rule and the unused `ReactNode` re-export from the
   icon module.
+
+### Phase 15: Hub redesigned to the Wispr Flow information architecture (branch `feature/wispr-redesign`)
+- Worked in a fresh worktree (`.worktrees/wispr-redesign`) off `main` at `84c3e33`
+- **Every page of the shipped Wispr Flow hub was walked** and captured as a reference:
+  Dictation, Notetaker, Insights, Dictionary, Snippets, Style, Transforms, Scratchpad, plus the
+  Settings shell, the "Add snippet" dialog and the Shortcuts dialog. The running app was captured
+  with `PrintWindow` on the Electron render widget, and the hub bundle was analysed with REA
+  (`analyze_javascript_application` over `.webpack/renderer/hub/index.js` in the extracted ASAR).
+- **Ghidra on the native layer** (`Wispr Flow.exe`, x86-64 PE) confirms the hub is entirely
+  renderer-side. The browser process imports 58 system libraries and 1274 symbols - the stock
+  Chromium/Electron surface (D3D, DirectWrite, DXGI, UIAutomation, printing, audio) - and of the
+  UI-creating Win32 APIs only `TrackPopupMenu`, `SetForegroundWindow` and `DwmSetWindowAttribute`
+  are present: `CreateWindowEx`, `CreatePopupMenu`, `CreateMenu`, `Shell_NotifyIcon`,
+  `RegisterClass`, `MessageBox`, `SetWindowLong` and the whole Win32 menu API are absent. The only
+  application strings in the binary are "Wispr AI", "Wispr Flow" and "Wispr Flow.exe" - no native
+  labels, menu items or window titles. The tray icon and tray menu are therefore built from the
+  JavaScript main bundle (`new Tray(...)`, `Menu.buildFromTemplate(...)`), and every hub page is
+  HTML/CSS in the renderer, so a renderer-side redesign covers the whole hub.
+  (The full Ghidra auto-analysis of the 235 MB binary does not finish inside the REA bridge's
+  330 s budget, so the native check was run headless against the import table instead.)
+- **The information architecture now mirrors Wispr Flow's**, with Soravo's own capabilities behind it:
+
+  | Wispr Flow        | Soravo                                                        |
+  |-------------------|---------------------------------------------------------------|
+  | Dictation         | Dictation (hero band, dated transcript feed, right-hand rail) |
+  | Notetaker         | - (no meeting recorder; not implemented)                       |
+  | Insights          | Insights (Your usage / Your voice tabs)                        |
+  | Dictionary        | Dictionary (new page over the existing vocabulary)             |
+  | Snippets          | Snippets                                                      |
+  | Style             | Style (new page over clean-up, punctuation and language)       |
+  | Transforms        | - (no LLM post-processing; not implemented)                    |
+  | Scratchpad        | Scratchpad                                                    |
+  | Settings          | Settings                                                      |
+  | -                 | History and Models (Soravo-only pages)                         |
+
+- New shell: a navigation rail (brand block, page list with a brand-green active indicator, a
+  "Local & private" card, Settings and Help) beside a rounded content panel, and a title bar
+  carrying a theme menu plus the window buttons - the same shape as Wispr Flow's hub
+- Every page was rebuilt on shared primitives in `src/renderer/src/pages/`; `pages.css` was folded
+  into `hub.css` and the old `hub.css` layout was replaced
+- **Hero bands are gradients, not photographs.** Each band picks a slot through the `media` prop on
+  `PageHero` and the matching rule in `hub.css` sets `--hero-gradient`, so a real image can be
+  dropped in later by replacing that one rule
+- The Settings modal was rebuilt as Wispr Flow's settings shell: a grouped left nav (Settings /
+  Data), a serif page title, a card of rows with right-aligned controls, and a footer with the
+  version. The Shortcuts sub-dialog now scrolls its body and pins a "Reset to default" / "Done"
+  footer instead of clipping its last line
+- Added a Help dialog, reachable from the rail
+- **Bug fixed**: the shadcn `Button` did not forward its ref, so a Radix `DropdownMenu` trigger
+  built on it had no anchor element and the menu never appeared. The theme menu in the title bar
+  was dead because of it. `Button` now forwards its ref.
+- **Bug fixed**: `soravo.d.ts` was shadowed by `soravo.ts`, so `window.soravo` was untyped and
+  every call to it was an implicit `any`. The dead declaration file was removed and the global
+  augmentation moved into `soravo.ts`, which also completed the `SoravoAPI` interface with the
+  snippet and scratchpad members that were implemented but not declared. `tsc -p tsconfig.web.json`
+  now reports zero errors.
+- Removed the "Add to Flow Bar" toggle from the Scratchpad header - it never did anything
+- **UX fix**: "Clear all" on the History page wiped every transcript on a single click with no
+  confirmation. It now asks first, like the snippet and note deletions do
+- Removed 42 dead CSS rules (the pre-Tauri scratchpad window styles, the old settings page
+  classes and the ones the rebuild replaced)
+- Verified by driving the running app with real mouse clicks: every page in both themes, the
+  theme menu, all three Settings tabs and the Shortcuts sub-dialog, snippet add/edit/delete/search/
+  sort, dictionary add/edit/remove/export, scratchpad note create/type/pin/copy/delete, the
+  insights tabs and rhythm toggle, the style switches, and the history search
+- 31/31 cargo tests pass; `tsc -p tsconfig.web.json` is clean; `npm run build` succeeds
 
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so

@@ -2,6 +2,15 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { CloseIcon } from './icons'
 
+/**
+ * The gradient slot the band paints.
+ *
+ * Wispr Flow's bands use licensed photography. Soravo ships gradients so the
+ * artwork can be replaced later without touching the layout - see the HERO
+ * IMAGERY note at the top of hub.css for how to swap one in.
+ */
+export type HeroMedia = 'flow' | 'snippets' | 'dictionary' | 'scratchpad'
+
 type PageHeroProps = {
   title: ReactNode
   description: ReactNode
@@ -12,6 +21,8 @@ type PageHeroProps = {
   /** Extra content pinned to the corner of the banner. */
   overlay?: ReactNode
   onDismiss?: () => void
+  /** Picks the gradient slot. */
+  media?: HeroMedia
   className?: string
 }
 
@@ -19,7 +30,8 @@ type PageHeroProps = {
  * The hero band at the top of a hub page.
  *
  * DESIGN.md, "card-feature-dark": a near-black surface carrying the brand
- * green, with a 24px radius and 24px of padding.
+ * green, with a 24px radius and 24px of padding. In dark mode the band
+ * inverts to the light sage surface so the lime accent keeps its contrast.
  */
 export function PageHero({
   title,
@@ -28,10 +40,11 @@ export function PageHero({
   examples,
   overlay,
   onDismiss,
+  media = 'flow',
   className
 }: PageHeroProps) {
   return (
-    <div className={cn('page-hero', className)}>
+    <div className={cn('page-hero', className)} data-media={media}>
       {onDismiss ? (
         <button
           type="button"

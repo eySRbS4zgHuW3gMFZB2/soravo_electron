@@ -118,4 +118,88 @@ export function TrashIcon({ size = 16, className }: IconProps) {
   )
 }
 
+export function BookIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size)} className={className}>
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" />
+    </svg>
+  )
+}
+
+export function TypeIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size)} className={className}>
+      <path d="M4 7V4h16v3" />
+      <path d="M9 20h6" />
+      <path d="M12 4v16" />
+    </svg>
+  )
+}
+
+export function DownloadIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size)} className={className}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" x2="12" y1="15" y2="3" />
+    </svg>
+  )
+}
+
+export function ChevronLeftIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size)} className={className}>
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  )
+}
+
+export function ChevronRightIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size)} className={className}>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  )
+}
+
+export function ListIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size)} className={className}>
+      <line x1="8" x2="21" y1="6" y2="6" />
+      <line x1="8" x2="21" y1="12" y2="12" />
+      <line x1="8" x2="21" y1="18" y2="18" />
+      <line x1="3" x2="3" y1="6" y2="6" />
+      <line x1="3" x2="3" y1="12" y2="12" />
+      <line x1="3" x2="3" y1="18" y2="18" />
+    </svg>
+  )
+}
+
+export function KeyboardIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size)} className={className}>
+      <rect width="20" height="14" x="2" y="5" rx="2" />
+      <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M8 13h8" />
+    </svg>
+  )
+}
+
+export function SparkleIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size)} className={className}>
+      <path d="M9.94 4.34a2 2 0 0 1 3.75 0l1.28 3.07a2 2 0 0 0 1.2 1.2l3.07 1.28a2 2 0 0 1 0 3.75l-3.07 1.28a2 2 0 0 0-1.2 1.2l-1.28 3.07a2 2 0 0 1-3.75 0l-1.28-3.07a2 2 0 0 0-1.2-1.2L4.26 13.64a2 2 0 0 1 0-3.75l3.07-1.28a2 2 0 0 0 1.2-1.2z" />
+    </svg>
+  )
+}
+
+export function GlobeIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...svgProps(size)} className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  )
+}
+
 export type { IconProps }

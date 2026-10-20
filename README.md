@@ -6,11 +6,13 @@ Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcriptio
 
 - **Push-to-talk dictation** — global hotkey, mic capture, local Whisper transcription, text injection into any app
 - **Pill overlay** — compact floating pill with recording/transcribing/error states, animated bars, cancel/finish buttons
-- **Hub window** — Dictation, History, Insights, Models, Scratchpad, Snippets and Settings tabs
-- **Settings** — hotkey capture (press-to-capture) for dictate, paste last, copy last and the Scratchpad; mic selection, model/language, smart cleanup, custom vocabulary, sounds, theme, retention, launch at login; General and System pages rebuilt to match Wispr Flow's layout
+- **Hub window** — a navigation rail (brand block, page list, local-and-private card, Settings and Help) beside a rounded content panel, with Dictation, History, Insights, Dictionary, Snippets, Style, Models, Scratchpad and Settings
+- **Settings** — hotkey capture (press-to-capture) for dictate, paste last, copy last and the Scratchpad; mic selection, model/language, smart cleanup, custom vocabulary, sounds, theme, retention, launch at login; General, System and Data & Privacy pages laid out like Wispr Flow's settings shell
 - **Models** — download, manage, and switch between 30 ASR models (Whisper, Moonshine, Parakeet, Canary, and more); see [MODELS.md](MODELS.md) for the full catalog and licenses
-- **Insights** — total words, WPM gauge, activity heatmap (26-week), rhythm chart, top words, repeated phrases, correction counts
-- **Scratchpad** — quick notes with pin, delete, copy, auto-save; dictation inserts text directly into notes. The tab is a launcher for the notes list, a Flow Bar toggle and its own shortcut
+- **Insights** — a tabbed dashboard: words-per-minute gauge, fixes made, total words, when-you-dictate rhythm chart, a 26-week activity heat-map, top words and repeated phrases
+- **Dictionary** — the personal word list as a first-class page: say "sore avo" and it is written as "Soravo". Add, edit, remove, import and export the list
+- **Style** — the rules Soravo applies to every dictation (clean-up, punctuation, language), as a page rather than a settings row
+- **Scratchpad** — quick notes with pin, delete, copy, auto-save; dictation inserts text directly into notes. The tab is a launcher for the notes list and its own shortcut
 - **Snippets** — phrase expansion shortcuts; dictate a short phrase and it expands to full text (case-insensitive, word-boundary match). Import from a JSON file
 - **Local-only** — SQLite history, tauri-plugin-store settings, no cloud dependencies
 
@@ -64,12 +66,11 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 | `src-tauri/tauri.conf.json` | Tauri v2 config (windows, bundle, resources) |
 | `src/renderer/src/main.tsx` | Frontend entry (routes pill vs hub by window label) |
 | `src/renderer/src/App.tsx` | Pill overlay component |
-| `src/renderer/src/HubApp.tsx` | Hub window (Dictation, History, Scratchpad, Snippets, Settings, Insights) |
-| `src/renderer/src/ScratchpadPage.tsx` | Scratchpad tab (notes list, Flow Bar toggle, shortcut) |
-| `src/renderer/src/SnippetsPage.tsx` | Snippets tab (phrase expansion with search/sort/bulk delete/import) |
+| `src/renderer/src/HubApp.tsx` | Hub shell (navigation rail, content panel, Settings and Help dialogs) |
+| `src/renderer/src/pages/` | One file per hub page (Dictation, History, Insights, Dictionary, Snippets, Style, Models, Scratchpad) |
+| `src/renderer/src/pages/shared.ts` | Shared page helpers (day grouping, word counts, hotkey chips) |
 | `src/renderer/src/components/pages/` | Shared page primitives (hero band, tab strip, icons) |
-| `src/renderer/src/pages.css` | Hub page primitives (hero band, tabs, cards) built on DESIGN.md |
-| `src/renderer/src/hub.css` | Hub + settings page styling (Wispr Flow General/System layout) |
+| `src/renderer/src/hub.css` | The whole hub design layer: shell, page primitives and the hero gradients |
 | `src/renderer/src/soravo.ts` | Tauri API shim (window.soravo compatible) |
 | `src/main/history.ts` | (Legacy Electron) SQLite CRUD + insights |
 | `progress.md` | Full development history |
@@ -82,8 +83,12 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 - **SQLite DB** auto-created at `%APPDATA%/soravo/soravo.sqlite`
 - **Settings** stored at `%APPDATA%/soravo/soravo-settings.json`
 - **Default hotkey**: `Ctrl+Alt+Space` (configurable in Settings)
-- **EB Garamond** (OFL-1.1) is bundled in `src/renderer/public/fonts/` for the settings page titles.
+- **EB Garamond** (OFL-1.1) is bundled in `src/renderer/public/fonts/` for the hero headlines and the settings page titles.
   It is served locally rather than from a CDN because the app's CSP sets `font-src 'self' data:`
+- **Hero bands are gradients, not photographs.** Wispr Flow ships licensed photography in its banners;
+  Soravo uses a themed gradient per band so the artwork can be replaced later without touching the
+  layout. Each band picks a slot through the `media` prop on `PageHero`, and the matching rule in
+  `hub.css` sets `--hero-gradient` - swap that one rule for a `url(...)` to drop a real image in.
 
 ## Tech Stack
 

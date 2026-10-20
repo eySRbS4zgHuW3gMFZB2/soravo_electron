@@ -70,4 +70,29 @@ function Button({
   )
 }
 
-export { Button, buttonVariants }
+/**
+ * The ref is forwarded so the button can be used as a Radix trigger
+ * (`asChild`). Radix anchors a dropdown to the trigger element, and it reads
+ * that element through the ref - without one the menu has nothing to
+ * position itself against and never appears.
+ */
+const ButtonWithRef = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & { asChild?: boolean }>(function Button(
+  { className, variant = "default", size = "default", asChild = false, ...props },
+  ref
+) {
+  const Comp = asChild ? Slot.Root : "button"
+
+  return (
+    <Comp
+      ref={ref}
+      data-slot="button"
+      data-variant={variant}
+      data-size={size}
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+})
+
+export { ButtonWithRef as Button, buttonVariants }
