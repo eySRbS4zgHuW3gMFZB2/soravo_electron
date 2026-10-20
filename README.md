@@ -95,13 +95,15 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
   browser's own shortcuts (Ctrl+F find-in-page, Ctrl+P print, Ctrl+S save, F12 devtools and friends).
   The app's own shortcuts and the text fields keep working normally. See
   `src/renderer/src/appShortcuts.ts`.
-- **One control family.** The page-level actions are 36px and the small in-row
-  actions (Change, Delete all, Refresh) are 28px, so a row of controls never
-  outweighs the actions around it.
+- **One control family.** A button's height follows its role: 36px for a call to action and for a
+  dialog's own actions, 28px for a utility - a header's tools, a toolbar, a row, a card. The small
+  buttons take a 14px label to match, and the 28px tier is above the 24px WCAG pointer target.
 - **One type scale, one pair of faces.** The scale is a set of tokens, so it cannot drift:
-  12 / 16 / 18 / 20 / 24 / 32, with the headings on the brand's display steps and the body tier
-  two pixels above the brand's 14 / 16, which read as fine print at app density. The only
-  typeface is Inter, which DESIGN.md names as the substitute for the display face.
+  12 / 14 / 16 / 18 / 24 / 32 - fine print, small control labels, body copy, the key of a row, card
+  and section titles, page titles. The only typeface is Inter, which DESIGN.md names as the substitute
+  for the display face.
+- **The colour passes its contrast check.** Every text and surface pair in the app clears WCAG's
+  4.5:1 in both themes, and the motion honours `prefers-reduced-motion`.
 - **Model downloads report their progress.** The bar is followed by the completed percentage and
   the live transfer rate, and the models can be searched, filtered and sorted.
 

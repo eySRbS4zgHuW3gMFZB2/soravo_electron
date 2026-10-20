@@ -25,11 +25,16 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_8%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
+          "border-border bg-background text-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
+          "text-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         // Solid red: the app's old .btn.danger
         destructive: "bg-destructive text-white hover:bg-destructive/85",
+        // A destructive action that is not the point of the screen. The solid
+        // red is for the button in a confirmation dialog; on a page or in a
+        // toolbar an outlined red says the same thing without shouting.
+        "destructive-outline":
+          "border border-destructive/45 bg-transparent text-destructive-text hover:bg-destructive/10 hover:text-destructive-text",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

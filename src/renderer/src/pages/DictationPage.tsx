@@ -216,7 +216,7 @@ export default function DictationPage({
                   <span>{settings?.model ?? 'no model'}</span>
                 </div>
                 <div style={{ marginTop: 12 }}>
-                  <Button variant="secondary" onClick={onOpenDictionary}>
+                  <Button variant="secondary" size="sm" onClick={onOpenDictionary}>
                     Open dictionary
                   </Button>
                 </div>

@@ -16,7 +16,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         //
         // Height is 36px, the same as the buttons, so a settings row with a
         // field, a select and a switch reads as one control family.
-        "flex h-9 w-full min-w-0 items-center rounded-lg border border-input bg-background px-4 text-lg font-normal text-foreground transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-[#101209] dark:aria-invalid:border-destructive/50",
+        "flex h-9 w-full min-w-0 items-center rounded-lg border border-input bg-background px-4 text-base font-normal text-foreground transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-[#101209] dark:aria-invalid:border-destructive/50",
         className
       )}
       {...props}

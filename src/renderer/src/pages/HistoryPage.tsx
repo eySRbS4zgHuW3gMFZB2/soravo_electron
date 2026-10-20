@@ -56,7 +56,7 @@ export default function HistoryPage({
             Refresh
           </Button>
           {history.length > 0 ? (
-            <Button variant="destructive" size="sm" onClick={() => setClearOpen(true)}>
+            <Button variant="destructive-outline" size="sm" onClick={() => setClearOpen(true)}>
               Clear all
             </Button>
           ) : null}

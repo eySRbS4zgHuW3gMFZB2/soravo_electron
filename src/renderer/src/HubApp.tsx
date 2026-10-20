@@ -981,7 +981,7 @@ function SettingsModal({
                     <span className="settings-row-desc">{historyCount} on this machine.</span>
                   </div>
                   <div className="settings-row-control">
-                    <Button variant="destructive" size="sm" onClick={onClearHistory}>
+                    <Button variant="destructive-outline" size="sm" onClick={onClearHistory}>
                       Delete all
                     </Button>
                   </div>

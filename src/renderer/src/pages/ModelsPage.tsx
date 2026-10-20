@@ -200,7 +200,10 @@ export default function ModelsPage() {
               <p
                 className="hub-note"
                 style={{
-                  color: runtime.binary && runtime.modelPresent ? 'var(--soravo-positive)' : 'var(--soravo-negative)'
+                  color:
+                  runtime.binary && runtime.modelPresent
+                    ? 'var(--soravo-positive-text)'
+                    : 'var(--soravo-negative-text)'
                 }}
               >
                 {runtime.binary && runtime.modelPresent
@@ -211,7 +214,7 @@ export default function ModelsPage() {
               </p>
             ) : null}
             {error ? (
-              <p className="hub-note" style={{ color: 'var(--soravo-negative)' }}>
+              <p className="hub-note" style={{ color: 'var(--soravo-negative-text)' }}>
                 {error}
               </p>
             ) : null}

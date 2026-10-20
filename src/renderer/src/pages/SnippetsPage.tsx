@@ -408,6 +408,7 @@ export default function SnippetsPage() {
         <div className="page-head-actions" style={{ marginBottom: 16 }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>{selectedCount} selected</span>
           <Button
+            size="sm"
             variant="secondary"
            
             onClick={() => {
@@ -418,7 +419,7 @@ export default function SnippetsPage() {
           >
             <TrashIcon size={14} /> Delete
           </Button>
-          <Button variant="ghost" onClick={clearSelection}>
+          <Button variant="ghost" size="sm" onClick={clearSelection}>
             Clear
           </Button>
         </div>

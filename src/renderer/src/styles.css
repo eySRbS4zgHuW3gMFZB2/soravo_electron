@@ -16,7 +16,14 @@
   --soravo-on-primary: #0e0f0c;
   --soravo-ink: #0e0f0c;
   --soravo-body: #454745;
-  --soravo-mute: #868685;
+  /* The brand's mute (#868685) is 3.0:1 on the sage card, which is too
+     faint for the fine print it carries. The app's mute is a step darker -
+     the same warm grey, far enough from the surface to read. */
+  --soravo-mute: #666a63;
+  /* The semantic colours have a text-weight step, so a status sentence is
+     readable and the fill keeps the brand's brightness. */
+  --soravo-negative-text: #a7000d;
+  --soravo-positive-text: #054d28;
   --soravo-canvas: #ffffff;
   --soravo-canvas-soft: #e8ebe6;
   /* Card surface that sits one step off the panel background, matching
@@ -109,6 +116,7 @@ html[data-theme='dark'] {
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-text: var(--soravo-negative-text);
   --color-positive: var(--positive);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -123,6 +131,35 @@ html[data-theme='dark'] {
 
 * {
   box-sizing: border-box;
+}
+
+/* One piece of Tailwind's preflight that this app needs: a button takes the
+   colour of the text around it. Without it the browser's own button colour
+   wins, and a button with no explicit text colour - the outline and ghost
+   variants - comes out black on a dark surface. */
+button {
+  color: inherit;
+}
+
+/* The app's motion is small - a colour transition, a spinner - but it is
+   still motion, and a reader who has asked the system to reduce it should
+   get none of it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* A spinner that has stopped turning looks like a broken control, so the
+     one spinner in the app keeps going. */
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 
 /* Hide scrollbar chrome everywhere without disabling scrolling. The Settings

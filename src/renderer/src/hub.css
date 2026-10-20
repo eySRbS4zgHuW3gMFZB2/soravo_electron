@@ -29,7 +29,9 @@
   --soravo-on-primary: #0e0f0c;
   --soravo-ink: #0e0f0c;
   --soravo-body: #454745;
-  --soravo-mute: #868685;
+  --soravo-mute: #666a63;
+  --soravo-negative-text: #a7000d;
+  --soravo-positive-text: #054d28;
   --soravo-canvas: #ffffff;
   --soravo-canvas-soft: #e8ebe6;
   --soravo-surface: #ffffff;
@@ -51,21 +53,31 @@
   --hub-panel-radius: 24px;
 }
 :root {
-  /* The type scale. The brand's steps are 12 / 14 / 16 / 20 / 24 / 32; the
-     body tier sits two pixels higher (16 / 18) because 14px read as fine
-     print at app density. The caption, the card titles and the display sizes
-     keep the brand's steps. */
+  /* The type scale - one modular scale, so no two steps crowd each other:
+       12  fine print: eyebrows, axis labels, badges, timestamps
+       14  small control labels: the 28px buttons, meta lines
+       16  body copy: descriptions, nav labels, the main button, fields
+       18  the key of a row: row labels, lead paragraphs, transcripts
+       24  card and section titles
+       32  page titles and display numbers
+     The brand's steps (DESIGN.md) are 12 / 14 / 16 / 20 / 24 / 32. The body
+     tier sits two pixels above the brand's 14 / 16, because 14px read as fine
+     print at app density, and the brand's 20 - a body size, not a heading -
+     is not used as a step: a card title is a heading, so it takes 24. */
   --t-caption: 12px;
+  --t-meta: 14px;
   --t-body-sm: 16px;
   --t-body-md: 18px;
-  --t-body-lg: 20px;
   --t-display-xs: 24px;
   --t-display-sm: 32px;
 
+  /* The wordmark is the brand lockup, not a step of the scale. */
+  --t-wordmark: 20px;
+
   --lh-caption: 16px;
+  --lh-meta: 20px;
   --lh-body-sm: 24px;
   --lh-body-md: 26px;
-  --lh-body-lg: 30px;
   --lh-display-xs: 31.2px;
   --lh-display-sm: 38.4px;
 }
@@ -76,7 +88,9 @@ html[data-theme='dark'] {
   --soravo-canvas-soft: #22261e;
   --soravo-ink: #f0f3e6;
   --soravo-body: #c2c7b2;
-  --soravo-mute: #8b9080;
+  --soravo-mute: #9aa08e;
+  --soravo-negative-text: #ff6b6b;
+  --soravo-positive-text: #5fd47c;
   --soravo-surface: #2a2e26;
 
   /* The hero stays the dark feature card in both themes, so the brand green
@@ -241,7 +255,7 @@ html[data-theme='dark'] {
   border-radius: 12px;
   background: var(--soravo-ink);
   color: var(--soravo-canvas);
-  font-size: var(--t-body-sm);
+  font-size: var(--t-meta);
   line-height: var(--lh-body-sm);
   font-weight: 600;
   white-space: nowrap;
@@ -282,7 +296,7 @@ html[data-theme='dark'] {
 }
 
 .hub-brand-name {
-  font-size: var(--t-body-lg);
+  font-size: var(--t-wordmark);
   font-weight: 900;
   letter-spacing: -0.4px;
   color: var(--soravo-ink);
@@ -355,7 +369,7 @@ html[data-theme='dark'] {
 
 .hub-local-title {
   margin: 0 0 6px;
-  font-size: var(--t-body-sm);
+  font-size: var(--t-body-md);
   font-weight: 600;
   color: var(--soravo-ink);
 }
@@ -762,6 +776,14 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   cursor: pointer;
 }
 
+/* The tab takes its focus ring from the brand's ring colour, the way the
+   shadcn controls do. Without it the tab has no focus indicator at all. */
+.page-tab:focus-visible,
+.hotkey-field:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 .page-tab:hover:not(.page-tab-selected) {
   color: var(--soravo-body);
 }
@@ -916,7 +938,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .page-row-action-danger:hover {
-  color: var(--soravo-negative);
+  color: var(--soravo-negative-text);
 }
 
 .page-row-selected {
@@ -1008,7 +1030,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   border-radius: 12px;
   background: var(--soravo-canvas-soft);
   color: var(--soravo-ink);
-  font-size: var(--t-body-md);
+  font-size: var(--t-body-sm);
   line-height: var(--lh-body-md);
   font-weight: 400;
   outline: none;
@@ -1055,7 +1077,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 .hub-hotkey-key {
   display: inline-block;
   padding: 4px 14px;
-  font-size: 20px;
+  font-size: var(--t-body-md);
   font-weight: 600;
   line-height: 28px;
   background: var(--soravo-primary);
@@ -1065,7 +1087,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .hub-hotkey-plus {
-  font-size: 20px;
+  font-size: var(--t-body-md);
   font-weight: 600;
   color: var(--soravo-ink);
 }
@@ -1176,7 +1198,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .rail-card-title {
-  font-size: var(--t-body-lg);
+  font-size: var(--t-display-xs);
   font-weight: 600;
   line-height: var(--lh-body-lg);
   letter-spacing: -0.2px;
@@ -1211,7 +1233,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .rail-stat-label {
-  font-size: var(--t-body-sm);
+  font-size: var(--t-meta);
   font-weight: 400;
   color: var(--soravo-body);
 }
@@ -1276,7 +1298,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .insights-card-title {
-  font-size: var(--t-body-lg);
+  font-size: var(--t-display-xs);
   font-weight: 600;
   line-height: var(--lh-body-lg);
   letter-spacing: -0.2px;
@@ -1302,7 +1324,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .insights-card-note {
-  font-size: var(--t-body-sm);
+  font-size: var(--t-meta);
   line-height: var(--lh-body-sm);
   color: var(--soravo-body);
   margin: 0;
@@ -1401,7 +1423,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   border-radius: 8px;
   background: transparent;
   color: var(--soravo-ink);
-  font-size: var(--t-body-md);
+  font-size: var(--t-body-sm);
   line-height: 1;
   cursor: pointer;
 }
@@ -1463,9 +1485,9 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   border-radius: 9999px;
   background: transparent;
   color: var(--soravo-ink);
-  font-size: 14px;
+  font-size: var(--t-meta);
   font-weight: 600;
-  line-height: 20px;
+  line-height: var(--lh-meta);
   height: auto;
   padding: 6px 16px;
 }
@@ -1584,7 +1606,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .model-card-meta {
-  font-size: var(--t-body-sm);
+  font-size: var(--t-meta);
   line-height: var(--lh-body-sm);
   color: var(--soravo-body);
   margin: 0;
@@ -1685,7 +1707,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .style-card-name {
-  font-size: var(--t-body-lg);
+  font-size: var(--t-display-xs);
   font-weight: 600;
   line-height: var(--lh-body-lg);
   letter-spacing: -0.2px;
@@ -1899,7 +1921,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .page-dialog-arrow {
   color: var(--soravo-ink);
-  font-size: var(--t-body-md);
+  font-size: var(--t-body-sm);
   line-height: var(--lh-body-md);
   font-weight: 600;
   flex-shrink: 0;
@@ -1914,7 +1936,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   border-radius: 12px;
   background: var(--soravo-canvas-soft);
   color: var(--soravo-ink);
-  font-size: var(--t-body-md);
+  font-size: var(--t-body-sm);
   line-height: var(--lh-body-md);
   font-weight: 400;
   outline: none;
@@ -1937,7 +1959,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .page-dialog-error {
-  color: var(--soravo-negative);
+  color: var(--soravo-negative-text);
   font-size: var(--t-body-sm);
   line-height: var(--lh-body-sm);
   margin: 0;
@@ -2129,7 +2151,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .account-profile-name {
   margin: 0 0 4px;
-  font-size: var(--t-body-lg);
+  font-size: var(--t-display-xs);
   line-height: var(--lh-body-lg);
   font-weight: 600;
   color: var(--soravo-ink);
@@ -2188,7 +2210,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 /* The settings shell's own page title - a step above a sub-dialog title. */
 .settings-page-title {
   font-family: var(--soravo-font);
-  font-size: var(--t-display-sm);
+  font-size: var(--t-display-xs);
   font-weight: 600;
   line-height: var(--lh-display-sm);
   letter-spacing: -0.96px;
@@ -2412,7 +2434,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   flex: 1;
   width: 100%;
   font: inherit;
-  font-size: var(--t-body-md);
+  font-size: var(--t-body-sm);
   line-height: var(--lh-body-md);
   font-weight: 400;
   color: var(--soravo-ink);
@@ -2436,7 +2458,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   margin: 6px 0 0;
   font-size: var(--t-body-sm);
   line-height: var(--lh-body-sm);
-  color: var(--soravo-negative);
+  color: var(--soravo-negative-text);
 }
 
 /* --- Shared form rows ------------------------------------------------------ */

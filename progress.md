@@ -619,6 +619,62 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   and the hub window opens at 1350 x 850. 31/31 cargo tests pass,
   `tsc -p tsconfig.web.json` is clean and `npm run build` succeeds.
 
+#### Round 6: one scale, one button system, and the contrast that was failing
+- **The type scale is now a true modular scale: 12 / 14 / 16 / 18 / 24 / 32.**
+  It had drifted to 12 / 16 / 18 / 20 / 24 / 32, where 18 and 20 sat two
+  pixels apart at the same weight and read as the same level, and where the
+  28px utility buttons carried a 14px label that appeared nowhere else in the
+  app. The scale is now the one the ui-ux-pro-max guidelines call for
+  ("Type scale (12 14 16 18 24 32)"), and every step but 18 is a step
+  DESIGN.md already names:
+  - 12 fine print - eyebrows, axis labels, badges, timestamps
+  - 14 small control labels - the 28px buttons, meta lines
+  - 16 body copy - descriptions, nav labels, the main button, fields
+  - 18 the key of a row - row labels, lead paragraphs, transcripts
+  - 24 card and section titles
+  - 32 page titles and display numbers
+  A card title is a heading, so it takes 24; the brand's 20 - a body size -
+  is not a step of the scale, and the wordmark keeps 20 as a lockup of its
+  own. The settings page title moved from 32 to 24: it titles a section, not
+  a page. The shadcn primitives moved with the scale: the field and the
+  select carry body copy again (16), and a select's items match the dropdown
+  menu's items (16) instead of being 14.
+- **Buttons have one system.** A button's height follows its role: 36px for a
+  call to action and for a dialog's own actions, 28px for a utility - a
+  header's tools, a toolbar, a row, a card. The small buttons take a 14px
+  label to match their 28px height, which is the app's meta step.
+- **A destructive action that is not the point of the screen no longer shouts.**
+  "Clear all" on the History page and "Delete all" in Data & Privacy were
+  solid red pills that outweighed the page they sat on; they are now outlined
+  red (a new `destructive-outline` variant), and the solid red is kept for
+  the button inside a confirmation dialog.
+- **The "Change" button's label is no longer black.** It came out black
+  because the outline variant sets no colour of its own and, without
+  Tailwind's preflight, a button does not inherit the colour of the text
+  around it - it takes the browser's own `buttontext`. The one piece of
+  preflight this app needs is now explicit (`button { color: inherit }`),
+  and the outline and ghost variants name their foreground.
+- **Four colour pairs failed WCAG's 4.5:1 and now pass.** The brand's mute
+  (#868685) is 3.0:1 on the sage card, so the app's mute is a step darker -
+  the same warm grey, far enough from the surface to read. DESIGN.md already
+  answers the semantic pair: negative-darkest (#a7000d) is documented as the
+  highest-emphasis destructive text and positive-deep (#054d28) is the deep
+  green of the positive family, so the destructive and positive *text* takes
+  those steps while the fills keep the brand's brightness. All fifteen
+  audited pairs now pass 4.5:1 in both themes.
+- **The tab had no focus indicator at all** - it removed the outline and
+  replaced it with nothing. It and the hotkey field now take the brand's ring
+  colour, the way the shadcn controls do. And the app now honours
+  `prefers-reduced-motion`: the transitions and the animations stop, while
+  the one spinner keeps turning, because a spinner that has stopped looks
+  like a broken control.
+- Verified by driving the app at both the default size (1350 x 850) and the
+  minimum (1140 x 750): every page, both themes, the settings dialog and all
+  five settings pages. The measured type sizes on screen are 14 / 16 / 18 /
+  24 / 32 where the scale says they should be, and the "Change" label
+  measures #0e0f0c - the brand's ink - in both themes. 31/31 cargo tests
+  pass, `tsc -p tsconfig.web.json` is clean and `npm run build` succeeds.
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.
