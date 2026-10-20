@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { InsightsData, RecState, SoravoSettings, Theme, TranscriptEntry } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
+import ShortcutRow from './components/pages/ShortcutRow'
+import { TrashIcon } from './components/pages/icons'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -611,45 +613,103 @@ function SettingsModal({
                     </>
                   }
                 >
-                  <p className="shortcut-section">Dictation</p>
-                  <div className="shortcut-grid">
-                    <span className="shortcut-label">Dictate</span>
-                    <HotkeyCapture value={hotkey} onCommit={setHotkey} />
+                  {/* The list follows Wispr Flow's shortcut section: a stack of
+                      cards, each with the label on the left and the control on
+                      the right. */}
+                  <div className="shortcut-items">
+                    <ShortcutRow
+                      title="Push to talk"
+                      description="Hold to say something short"
+                      control={
+                        <Switch
+                          checked={holdToTalk}
+                          onCheckedChange={(c) => setHoldToTalk(c === true)}
+                          aria-label="Push to talk"
+                        />
+                      }
+                    />
+                    <ShortcutRow
+                      title="Dictate"
+                      description={
+                        holdToTalk
+                          ? 'Hold the shortcut to record, release to transcribe'
+                          : 'Press the shortcut to start, press again to stop'
+                      }
+                      control={
+                        <div className="shortcut-item-keys">
+                          <HotkeyCapture value={hotkey} onCommit={setHotkey} />
+                        </div>
+                      }
+                    />
+                    <ShortcutRow
+                      title="Paste last"
+                      description="Paste the last thing you dictated"
+                      control={
+                        <div className="shortcut-item-keys">
+                          <HotkeyCapture
+                            value={pasteHotkey}
+                            allowEmpty
+                            onCommit={setPasteHotkey}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => setPasteHotkey('')}
+                            title="Remove this shortcut"
+                            aria-label="Remove this shortcut"
+                          >
+                            <TrashIcon size={15} />
+                          </Button>
+                        </div>
+                      }
+                    />
+                    <ShortcutRow
+                      title="Copy last"
+                      description="Copy the last thing you dictated"
+                      control={
+                        <div className="shortcut-item-keys">
+                          <HotkeyCapture
+                            value={copyHotkey}
+                            allowEmpty
+                            onCommit={setCopyHotkey}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => setCopyHotkey('')}
+                            title="Remove this shortcut"
+                            aria-label="Remove this shortcut"
+                          >
+                            <TrashIcon size={15} />
+                          </Button>
+                        </div>
+                      }
+                    />
+                    <ShortcutRow
+                      title="Open Scratchpad"
+                      description="Open the scratchpad window from anywhere in the hub"
+                      control={
+                        <div className="shortcut-item-keys">
+                          <HotkeyCapture
+                            value={scratchpadHotkey}
+                            allowEmpty
+                            onCommit={setScratchpadHotkey}
+                          />
+                          {scratchpadHotkey ? (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => setScratchpadHotkey('')}
+                              title="Remove this shortcut"
+                              aria-label="Remove this shortcut"
+                            >
+                              <TrashIcon size={15} />
+                            </Button>
+                          ) : null}
+                        </div>
+                      }
+                    />
                   </div>
-                  <div className="shortcut-grid" style={{ marginTop: 12 }}>
-                    <span className="shortcut-label">Push to talk</span>
-                    <div>
-                      <Checkbox
-                        checked={holdToTalk}
-                        onCheckedChange={(c) => setHoldToTalk(c === true)}
-                        aria-label="Push to talk"
-                      />
-                    </div>
-                  </div>
-                  <p className="page-dialog-note" style={{ marginTop: 12 }}>
-                    {holdToTalk
-                      ? 'Hold the dictate shortcut to record. Release to transcribe.'
-                      : 'Press to start, press again to stop and transcribe.'}
-                  </p>
-                  <div className="shortcut-grid" style={{ marginTop: 12 }}>
-                    <span className="shortcut-label">Paste last</span>
-                    <HotkeyCapture value={pasteHotkey} allowEmpty onCommit={setPasteHotkey} />
-                  </div>
-                  <div className="shortcut-grid" style={{ marginTop: 12 }}>
-                    <span className="shortcut-label">Copy last</span>
-                    <HotkeyCapture value={copyHotkey} allowEmpty onCommit={setCopyHotkey} />
-                  </div>
-
-                  <hr className="shortcut-divider" />
-
-                  <p className="shortcut-section">Scratchpad</p>
-                  <div className="shortcut-grid">
-                    <span className="shortcut-label">Open Scratchpad</span>
-                    <HotkeyCapture value={scratchpadHotkey} allowEmpty onCommit={setScratchpadHotkey} />
-                  </div>
-                  <p className="page-dialog-note" style={{ marginTop: 12 }}>
-                    Press to jump straight to the Scratchpad tab from anywhere in the hub.
-                  </p>
 
                   <p className="page-dialog-note" style={{ marginTop: 16 }}>
                     Shortcuts accept any key on its own (CapsLock, F-keys, letters) or any mouse

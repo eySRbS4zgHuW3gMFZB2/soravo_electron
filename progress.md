@@ -653,6 +653,50 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   31/31 cargo tests pass, `tsc -p tsconfig.web.json` is clean and
   `npm run build` succeeds.
 
+#### Round 8: the brand's own green, and Wispr's shortcut section
+- **The green is the brand's green.** The fill behind a label is now
+  `ink-deep` (#163300) - DESIGN.md's own deep forest green - with white text
+  on it, instead of the invented #4a7a2e. The lime stays the accent for marks
+  and meters: the progress bars, the heatmap, the switch, the focus ring.
+- **The shortcut section follows Wispr Flow's, to the measurements.** REA on
+  the hub bundle gives the copy ("Push to talk" / "Hold to say something
+  short", "Hands-free mode" / "Dictate hands-free by pressing this hotkey to
+  start and stop", "Paste last transcript" / "Paste the last thing you
+  dictated") and the layout: a stack of cards, each with the label on the
+  left and the control on the right. Ghidra on the native binary confirms
+  there is no shortcut surface there to copy - not one string in the image
+  names a shortcut - so the whole section is renderer-side and a rebuild
+  misses nothing.
+- **The shortcut is a row of key chips** - the shadcn `Kbd` component, one
+  chip per key - in a field that reads as an input: a canvas surface, a
+  12px radius and a 1px hairline. The hairline is the muted border, not the
+  ink: in the dark theme the ink is the text colour, and an ink border drew a
+  hard white line around the field.
+- **Push to talk is a toggle** - a switch, in the row's right-hand slot -
+  and the row's description changes with it, so the setting says what it
+  does.
+- **The Clear button moved into the row**, next to the chips as a trash
+  button, so it sits on the field's centre line.
+- **One bug fixed that had been hiding in plain sight**: the preflight
+  reset that gives a button the colour of the text around it was unlayered,
+  and an unlayered rule outranks every cascade layer - so it was beating
+  every colour utility in the app, and every button label took the inherited
+  colour instead of the one its variant asked for. It sits in the base layer
+  now.
+- **The dictionary is tested on real speech.** LibriSpeech test-clean
+  1089-134686-0001 says "stuff it into you"; the engine hears "stuffed into
+  you", which is exactly what a dictionary entry is for. The new test runs
+  the app's own path - the engine, then the vocabulary - and asserts the
+  phrase is rewritten and the rest of the line is untouched. The audio is
+  not in the repository, so the test skips unless `SORAVO_TEST_WAV` points
+  at the 16 kHz mono WAV of the sample.
+- Verified by driving the app: the shortcut section reads like Wispr's in
+  both themes, the key chips and the trash button sit on the field's centre
+  line, the deep green carries white text in both themes, and the dictionary
+  test passes against the real engine and the real recording. 32/32 cargo
+  tests pass, `tsc -p tsconfig.web.json` is clean and `npm run build`
+  succeeds.
+
 #### Round 6: one scale, one button system, and the contrast that was failing
 - **The type scale is now a true modular scale: 12 / 14 / 16 / 18 / 24 / 32.**
   It had drifted to 12 / 16 / 18 / 20 / 24 / 32, where 18 and 20 sat two

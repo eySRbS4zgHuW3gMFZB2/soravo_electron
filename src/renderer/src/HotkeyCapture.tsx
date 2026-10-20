@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import ShortcutKeys from '@/components/pages/ShortcutKeys'
 
 /**
  * Hotkey capture: click the field, press the combination (or just the key /
@@ -248,16 +248,14 @@ export default function HotkeyCapture({
 
   if (!listening) {
     return (
-      <div className="hotkey-row">
-        <button className="hotkey-field" onClick={() => setListening(true)} title="Click to change">
-          {prettyHotkey(value)}
-        </button>
-        {allowEmpty && value && (
-          <Button type="button" variant="secondary" size="sm" onClick={() => onCommit('')}>
-            Clear
-          </Button>
-        )}
-      </div>
+      <button
+        type="button"
+        className="hotkey-field"
+        onClick={() => setListening(true)}
+        title="Click to change"
+      >
+        {value ? <ShortcutKeys value={value} /> : <span className="hotkey-empty">Not set</span>}
+      </button>
     )
   }
 

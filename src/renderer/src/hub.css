@@ -2386,65 +2386,104 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   border-top: 1px solid var(--soravo-canvas-soft);
 }
 
-.shortcut-grid {
-  display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
+/* The shortcuts list.
+   Wispr Flow's shortcut section is a stack of cards: the label on the left,
+   the control on the right, so the eye scans the labels down and the keys
+   across. The measurements come from Wispr's own styles. */
+.shortcut-items {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: center;
 }
 
-.shortcut-label {
-  font-size: var(--t-body-sm);
-  line-height: var(--lh-body-sm);
+.shortcut-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--soravo-canvas-soft);
+}
+
+.shortcut-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.shortcut-item-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.shortcut-item-title {
+  margin: 0;
+  font-size: var(--t-body-md);
+  line-height: var(--lh-body-md);
   font-weight: 600;
   color: var(--soravo-ink);
 }
 
-.shortcut-section {
-  margin: 0 0 10px;
+.shortcut-item-desc {
+  margin: 0;
   font-size: var(--t-caption);
-  font-weight: 600;
-  letter-spacing: 1.3px;
-  text-transform: uppercase;
-  color: var(--soravo-mute);
+  line-height: var(--lh-caption);
+  font-weight: 400;
+  color: var(--soravo-body);
+  max-width: 280px;
 }
 
-.shortcut-divider {
-  height: 1px;
-  background: var(--soravo-canvas-soft);
-  border: none;
-  margin: 20px 0 16px;
+/* The control cluster: the key chips and the buttons that go with them. */
+.shortcut-item-keys {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* The fields are one width, so the column of them reads as a column. */
+.shortcut-item-keys .hotkey-field {
+  width: 200px;
+  justify-content: flex-start;
 }
 
 /* --- Hotkey capture -------------------------------------------------------- */
-
-.hotkey-row {
-  flex: 1;
-  display: flex;
-  gap: 8px;
-  min-width: 0;
-}
 
 .hotkey-capture {
   flex: 1;
   min-width: 0;
 }
 
+/* The field that shows the shortcut and takes the click that records a new
+   one. It is the brand's text-input - a canvas surface, a 1px hairline and the
+   12px radius - so it reads as an input rather than a button. The hairline is
+   the muted border, not the ink: in the dark theme the ink is the text
+   colour, and an ink border draws a hard white line around the field. */
 .hotkey-field {
-  flex: 1;
-  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font: inherit;
   font-size: var(--t-body-sm);
   line-height: var(--lh-body-md);
   font-weight: 400;
   color: var(--soravo-ink);
-  background: var(--soravo-canvas-soft);
-  border: 1px solid var(--soravo-ink);
+  background: var(--soravo-canvas);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   cursor: pointer;
   text-align: left;
-  min-width: 0;
+}
+
+.hotkey-field:hover {
+  border-color: var(--soravo-mute);
 }
 
 .hotkey-field.listening {
@@ -2452,6 +2491,10 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   box-shadow: 0 0 0 2px var(--soravo-primary);
   outline: none;
   cursor: text;
+}
+
+.hotkey-empty {
+  color: var(--soravo-mute);
 }
 
 .hotkey-error {
@@ -2532,11 +2575,19 @@ html[data-theme='dark'] .dictation-feed {
 
 html[data-theme='dark'] .page-editor-field,
 html[data-theme='dark'] .page-dialog-input,
-html[data-theme='dark'] .hotkey-field,
 html[data-theme='dark'] .row input,
 html[data-theme='dark'] .row select {
   background: var(--soravo-canvas-soft);
   border-color: var(--soravo-ink);
+  color: var(--soravo-ink);
+}
+
+/* The shortcut field keeps the canvas surface and the muted hairline in both
+   themes. The dark-mode rule above would paint it the same colour as the
+   card it sits on, and the ink border would draw a hard white line. */
+html[data-theme='dark'] .hotkey-field {
+  background: var(--soravo-canvas);
+  border-color: var(--border);
   color: var(--soravo-ink);
 }
 

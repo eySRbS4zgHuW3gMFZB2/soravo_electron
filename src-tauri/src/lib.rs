@@ -2230,3 +2230,97 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
     }
 }
+    /// The dictionary, end to end, on real speech.
+    ///
+    /// The sample is the first line of the LibriSpeech test-clean set
+    /// (1089-134686-0001): the recording says "stuff it into you" and the
+    /// engine hears "stuffed into you" - which is exactly what a dictionary
+    /// entry is for. The test runs the path the app runs: the engine, then
+    /// the vocabulary.
+    ///
+    /// The audio is not in the repository, so the test is skipped unless the
+    /// WAV is pointed at:
+    ///
+    ///   SORAVO_TEST_WAV=.../1089-134686-0001.wav cargo test dictionary_rewrites
+    ///
+    /// The WAV is the LibriSpeech FLAC converted to 16 kHz mono PCM:
+    ///
+    ///   ffmpeg -i 1089-134686-0001.flac -ar 16000 -ac 1 -c:a pcm_s16le out.wav
+    #[test]
+    fn dictionary_rewrites_a_misheard_word() {
+        let Ok(wav) = std::env::var("SORAVO_TEST_WAV") else {
+            eprintln!("skipping: SORAVO_TEST_WAV is not set");
+            return;
+        };
+        if !std::path::Path::new(&wav).exists() {
+            eprintln!("skipping: {} does not exist", wav);
+            return;
+        }
+
+        // The engine and the model have to be installed for this to mean
+        // anything; without them there is nothing to test.
+        let current_dir = std::env::current_dir().unwrap_or_default();
+        let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
+        let roots = [current_dir.clone(), project_root.clone()];
+        let Some(whisper) = find_crispasr_binary(&roots) else {
+            eprintln!("skipping: CrispASR is not installed");
+            return;
+        };
+        let _ = &whisper;
+        let model_dir = dirs::data_dir()
+            .unwrap_or_default()
+            .join("com.soravo.app")
+            .join("models");
+        let Some(model) = ["base.en", "small.en", "tiny.en"]
+            .iter()
+            .map(|m| model_dir.join(format!("ggml-{}.bin", m)))
+            .find(|p| p.exists())
+        else {
+            eprintln!("skipping: no model is installed");
+            return;
+        };
+        let model_id = model
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .trim_start_matches("ggml-")
+            .trim_end_matches(".bin")
+            .to_string();
+
+        // The engine, exactly as the app runs it.
+        let raw = transcribe_wav(
+            &wav,
+            &model_id,
+            "en",
+            &project_root,
+            &model_dir,
+        )
+        .expect("the engine should transcribe the sample");
+        let raw = raw.trim().to_string();
+
+        // The engine mishears the phrase; that is the point of the sample.
+        assert!(
+            raw.to_lowercase().contains("stuffered into you"),
+            "expected the engine to mishear the phrase, got: {}",
+            raw
+        );
+
+        // The dictionary entry the user would add for it.
+        let mut vocabulary = std::collections::HashMap::new();
+        vocabulary.insert("stuffered into you".to_string(), "Stuff it into you".to_string());
+
+        let (text, applied) = apply_vocabulary(&raw, &vocabulary);
+        assert_eq!(applied, 1, "the entry should have matched once");
+        assert!(
+            text.contains("Stuff it into you"),
+            "the dictionary should have rewritten the phrase, got: {}",
+            text
+        );
+        // The rest of the line is untouched.
+        assert!(
+            text.contains("his belly counseled him"),
+            "the rest of the transcript should be untouched, got: {}",
+            text
+        );
+    }
+

@@ -17,7 +17,7 @@
   /* A green surface that carries text. The lime is the accent for marks and
      meters; a pill with a label on it needs a fill white text can read, so
      it takes the brand's deep green and white text. */
-  --soravo-primary-fill: #4a7a2e;
+  --soravo-primary-fill: #163300;
   --soravo-on-primary-fill: #ffffff;
   --soravo-ink: #0e0f0c;
   --soravo-body: #454745;
@@ -143,9 +143,15 @@ html[data-theme='dark'] {
 /* One piece of Tailwind's preflight that this app needs: a button takes the
    colour of the text around it. Without it the browser's own button colour
    wins, and a button with no explicit text colour - the outline and ghost
-   variants - comes out black on a dark surface. */
-button {
-  color: inherit;
+   variants - comes out black on a dark surface.
+
+   It sits in the base layer so it does not beat the colour utilities: an
+   unlayered rule outranks every layer, which would leave every button label
+   on the inherited colour instead of the one its variant asks for. */
+@layer base {
+  button {
+    color: inherit;
+  }
 }
 
 /* The app's motion is small - a colour transition, a spinner - but it is
