@@ -137,6 +137,10 @@ export interface SoravoAPI {
   defaultModelsFolder(): Promise<string>
   /** Open a folder in the operating system's file manager. */
   openFolder(path: string): Promise<void>
+  /** Open an https link in the operating system's browser. */
+  openLink(url: string): Promise<void>
+  /** The running app's version. */
+  appVersion(): Promise<string>
   validateBinding(accel: string): Promise<boolean>
   bindingHelp(): Promise<Record<string, string[]>>
 }
@@ -310,6 +314,8 @@ export const soravo: SoravoAPI = {
   modelsFolder: () => invoke<string>('models_folder'),
   defaultModelsFolder: () => invoke<string>('default_models_folder'),
   openFolder: (path) => invoke<void>('open_folder', { path }),
+  openLink: (url) => invoke<void>('open_link', { url }),
+  appVersion: () => invoke<string>('app_version'),
 }
 
 // Expose on window for compatibility

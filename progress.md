@@ -559,6 +559,66 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   Settings pages render. 31/31 cargo tests pass, `tsc -p tsconfig.web.json` is clean and
   `npm run build` succeeds.
 
+#### Round 5: one type scale, one button tier, Wispr's window and account page
+- **The type scale is now a set of tokens**, so it cannot drift again:
+  `--t-caption` 12, `--t-body-sm` 16, `--t-body-md` 18, `--t-body-lg` 20,
+  `--t-display-xs` 24, `--t-display-sm` 32, each with its line height. The
+  brand's steps are 12 / 14 / 16 / 20 / 24 / 32; the body tier was raised two
+  pixels (14 -> 16, 16 -> 18) because at app density 14px read as fine print.
+  The headings keep the brand's display steps. The model card name stays at 16
+  because the Models grid was tuned separately, and the shadcn primitives moved
+  with the scale (`text-sm` -> `text-base`, the field and select -> `text-lg`).
+- **The select keeps its own fill and only its label was wrong.** The white
+  surface added last round read as a hole in the sage card, and the muted
+  default label was unreadable on it. The fill is the input fill it has
+  everywhere else, and the label takes the theme's foreground - white in the
+  dark theme, ink in the light one. The same applies to the microphone select
+  in the sub-dialog.
+- **Two button tiers.** The page-level actions (Add new, Import, Save, Close,
+  Done) are 36px. The utility actions that sit inside a row (Change, Reset,
+  Add word, Remove, Delete all, Quit, Refresh, Clear all, and the model cards'
+  Download / Set Active / Delete) are 28px, so a row of small controls no
+  longer outweighs the actions around it. The Change button also became an
+  outline rather than a filled pill, which is what made its edge look rough.
+- **The close control is a bare cross**, not a disc.
+- **The theme button in the title bar is one click.** It flips between light and
+  dark; the three-way choice (Light / Dark / System) stays in Settings.
+- **The Models page can be searched, filtered and sorted**: a search field over
+  the name, id and licence, an All / Downloaded / Not downloaded filter, and a
+  sort by name, status or size.
+- **The account page follows Wispr Flow's shape.** REA on the hub bundle shows
+  the account page opening with the person before the details (an avatar, a
+  name, then the rows), so Soravo's opens with the local profile - the monogram
+  mark, "Local profile", and a line saying the device is the whole account -
+  followed by a card of rows. A Ghidra pass on the native binary confirmed
+  there is nothing to port: of the 1274 imports it draws no window, menu or
+  dialog of its own (`CreateWindowEx`, `CreateMenu`, `CreatePopupMenu`,
+  `Shell_NotifyIcon`, `DialogBox`, `MessageBox` are all absent; only
+  `TrackPopupMenu` and `DwmSetWindowAttribute` are there, both Chromium
+  internals), and every string in the image that says "account", "settings" or
+  "update" belongs to Chromium, V8 or Node - not to Wispr. The account page,
+  the settings rail and the update check are all renderer-side in Wispr, which
+  is where Soravo has them.
+- **A small update check sits at the foot of the settings rail**, the way
+  Wispr Flow has one there. It shows the running version and opens the
+  project's releases page, where the newest build is published; Soravo has no
+  auto-updater, so it does not pretend to have one. Ghidra shows why the two
+  differ: Wispr's check drives Electron's own `autoUpdater` (the native
+  `checking-for-update` / `update-available` / `update-downloaded` events and
+  `squirrel-update-win.ts`), so it can offer "update and restart"; Soravo is
+  Tauri with no updater plugin, so the honest action is to send the user to
+  the releases.
+- **The window matches Wispr Flow exactly.** REA on the main bundle found its
+  window constants: the hub is created at 1350 x 850 with a minimum of
+  1140 x 750 (`setMinimumSize`), and that is what Soravo now uses - the
+  default size on every cold start, and the smallest the window can be
+  dragged.
+- Verified by driving the app: the theme flips on one click, the selects are
+  readable in both themes, the update row shows the version, the account page
+  renders with its profile header, the model search and filter narrow the grid,
+  and the hub window opens at 1350 x 850. 31/31 cargo tests pass,
+  `tsc -p tsconfig.web.json` is clean and `npm run build` succeeds.
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.

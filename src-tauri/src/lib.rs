@@ -368,6 +368,40 @@ fn open_folder(path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// The running app's version, for the settings footer.
+#[tauri::command]
+fn app_version(app: tauri::AppHandle) -> String {
+    app.package_info().version.to_string()
+}
+
+/// Open a link in the operating system's browser.
+///
+/// Only https links are accepted, and only the app's own release page is ever
+/// passed in - the shell plugin's `open` is path-scoped, so the app does it
+/// itself rather than widening a capability.
+#[tauri::command]
+fn open_link(url: String) -> Result<(), String> {
+    if !url.starts_with("https://") {
+        return Err(format!("Refusing to open {}: only https links are allowed", url));
+    }
+    #[cfg(target_os = "windows")]
+    let mut command = std::process::Command::new("cmd");
+    #[cfg(target_os = "macos")]
+    let mut command = std::process::Command::new("open");
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let mut command = std::process::Command::new("xdg-open");
+    #[cfg(target_os = "windows")]
+    {
+        command.arg("/C").arg("start").arg("").arg(&url);
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        command.arg(&url);
+    }
+    command.spawn().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// The resolved models folder, for the front end to show and to open.
 #[tauri::command]
 fn models_folder(app: tauri::AppHandle) -> String {
@@ -1852,6 +1886,8 @@ pub fn run() {
             models_folder,
             default_models_folder,
             open_folder,
+            open_link,
+            app_version,
             win_min,
             win_max,
             win_close,

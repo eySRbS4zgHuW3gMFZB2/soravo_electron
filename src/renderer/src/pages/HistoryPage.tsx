@@ -52,11 +52,11 @@ export default function HistoryPage({
       <div className="page-head">
         <h1 className="page-head-title">History</h1>
         <div className="page-head-actions">
-          <Button variant="secondary" onClick={onRefresh}>
+          <Button variant="secondary" size="sm" onClick={onRefresh}>
             Refresh
           </Button>
           {history.length > 0 ? (
-            <Button variant="destructive" onClick={() => setClearOpen(true)}>
+            <Button variant="destructive" size="sm" onClick={() => setClearOpen(true)}>
               Clear all
             </Button>
           ) : null}

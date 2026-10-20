@@ -51,15 +51,13 @@ import {
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Info as InfoIcon } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
+import { RefreshIcon } from '@/components/pages/icons'
 
 type Page = 'dictation' | 'history' | 'insights' | 'dictionary' | 'snippets' | 'style' | 'models' | 'scratchpad'
 type SettingsTab = 'general' | 'system' | 'account' | 'billing' | 'privacy'
+
+/** Where the builds are published. The update check opens this page. */
+const RELEASES_URL = 'https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron/releases'
 
 function fmtHotkey(accelerator: string): string {
   return accelerator.replace(/CommandOrControl/gi, 'Ctrl').split('+').join(' + ')
@@ -72,12 +70,16 @@ interface MicDevice {
 
 function Titlebar({
   theme,
+  resolved,
   onTheme,
+  onToggleTheme,
   sidebarOpen,
   onToggleSidebar
 }: {
   theme: 'light' | 'dark' | 'system'
+  resolved: 'light' | 'dark'
   onTheme: (next: 'light' | 'dark' | 'system') => void
+  onToggleTheme: () => void
   sidebarOpen: boolean
   onToggleSidebar: () => void
 }) {
@@ -98,27 +100,17 @@ function Titlebar({
         </Button>
       </div>
       <div className="hub-titlebar-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="hub-winbtn" title="Theme">
-              {theme === 'dark' ? <MoonIcon /> : theme === 'system' ? <MonitorIcon /> : <SunIcon />}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => onTheme('light')}>
-              <SunIcon />
-              Light
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onTheme('dark')}>
-              <MoonIcon />
-              Dark
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onTheme('system')}>
-              <MonitorIcon />
-              System
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* One click flips the theme. The three-way choice lives in Settings. */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="hub-winbtn"
+          title={resolved === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme'}
+          aria-label={resolved === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme'}
+          onClick={onToggleTheme}
+        >
+          {resolved === 'dark' ? <MoonIcon /> : <SunIcon />}
+        </Button>
         <Button variant="ghost" size="icon-sm" className="hub-winbtn" title="Minimize" onClick={() => void window.soravo.winMin()}>
           <MinimizeIcon />
         </Button>
@@ -313,13 +305,32 @@ function SettingsModal({
   const [sub, setSub] = useState<null | 'shortcuts' | 'microphone' | 'language'>(null)
   const [savedTick, setSavedTick] = useState(false)
   const [modelsFolder, setModelsFolder] = useState('')
+  const [version, setVersion] = useState('')
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
 
   useEffect(() => {
     window.soravo
       .modelsFolder()
       .then(setModelsFolder)
       .catch(() => setModelsFolder(''))
+    window.soravo
+      .appVersion()
+      .then(setVersion)
+      .catch(() => setVersion(''))
   }, [settings.modelsDir])
+
+  const updateLabel = checkingUpdate ? 'Checking for updates…' : version ? `Soravo ${version}` : 'Check for updates'
+
+  /** Look for a newer build. Soravo has no auto-updater, so this opens the
+      project's releases page, where the newest build is published. */
+  const checkForUpdates = () => {
+    if (checkingUpdate) return
+    setCheckingUpdate(true)
+    window.soravo
+      .openLink(RELEASES_URL)
+      .catch((e) => console.error('Could not open the releases page', e))
+      .finally(() => setTimeout(() => setCheckingUpdate(false), 1200))
+  }
 
   useEffect(() => {
     navigator.mediaDevices
@@ -473,6 +484,17 @@ function SettingsModal({
               </div>
             )
           })}
+          {/* The update check sits at the foot of the rail, the way it does
+              in Wispr Flow's settings. */}
+          <button
+            type="button"
+            className="modal-update"
+            onClick={checkForUpdates}
+            title="Check for updates"
+          >
+            <RefreshIcon size={14} className={checkingUpdate ? 'animate-spin' : undefined} />
+            <span>{updateLabel}</span>
+          </button>
         </aside>
         <div className="modal-content">
           <Button variant="ghost" size="icon-sm" className="modal-close" title="Close without saving" onClick={onClose}>
@@ -491,7 +513,7 @@ function SettingsModal({
                     </span>
                   </div>
                   <div className="settings-row-control">
-                    <Button variant="secondary" onClick={() => setSub('shortcuts')}>
+                    <Button variant="outline" size="sm" onClick={() => setSub('shortcuts')}>
                       Change
                     </Button>
                   </div>
@@ -503,7 +525,7 @@ function SettingsModal({
                     <span className="settings-row-desc">{microphoneLabel}</span>
                   </div>
                   <div className="settings-row-control">
-                    <Button variant="secondary" onClick={() => setSub('microphone')}>
+                    <Button variant="outline" size="sm" onClick={() => setSub('microphone')}>
                       Change
                     </Button>
                   </div>
@@ -515,7 +537,7 @@ function SettingsModal({
                     <span className="settings-row-desc">{language || 'en'}</span>
                   </div>
                   <div className="settings-row-control">
-                    <Button variant="secondary" onClick={() => setSub('language')}>
+                    <Button variant="outline" size="sm" onClick={() => setSub('language')}>
                       Change
                     </Button>
                   </div>
@@ -768,7 +790,7 @@ function SettingsModal({
                           <span className="settings-row-desc">Written as {to}</span>
                         </div>
                         <div className="settings-row-control">
-                          <Button variant="ghost" onClick={() => removeWord(from)}>
+                          <Button variant="ghost" size="sm" onClick={() => removeWord(from)}>
                             Remove
                           </Button>
                         </div>
@@ -797,7 +819,7 @@ function SettingsModal({
                       />
                     </div>
                     <div className="settings-row-control">
-                      <Button variant="secondary" onClick={addWord}>
+                      <Button variant="outline" size="sm" onClick={addWord}>
                         Add word
                       </Button>
                     </div>
@@ -821,11 +843,11 @@ function SettingsModal({
                       </button>
                     </div>
                     <div className="settings-row-control">
-                      <Button variant="secondary" onClick={chooseModelsFolder}>
+                      <Button variant="outline" size="sm" onClick={chooseModelsFolder}>
                         Change
                       </Button>
                       {settings.modelsDir ? (
-                        <Button variant="ghost" onClick={resetModelsFolder}>
+                        <Button variant="ghost" size="sm" onClick={resetModelsFolder}>
                           Reset
                         </Button>
                       ) : null}
@@ -835,7 +857,7 @@ function SettingsModal({
               </div>
 
               <div className="settings-section">
-                <Button variant="destructive" className="system-quit" onClick={onQuit}>
+                <Button variant="destructive" size="sm" className="system-quit" onClick={onQuit}>
                   Quit Soravo
                 </Button>
               </div>
@@ -845,15 +867,26 @@ function SettingsModal({
           {tab === 'account' && (
             <div className="modal-scroll">
               <h2 className="settings-page-title">Account</h2>
-              <p className="modal-sub">
-                Soravo has no accounts. There is nothing to sign in to, because nothing leaves this
-                device.
-              </p>
+              {/* The profile header, the way Wispr Flow's account page opens
+                  with the person before the details. Soravo's profile is the
+                  local one, so the mark stands in for an avatar. */}
+              <div className="account-profile">
+                <span className="account-avatar" aria-hidden="true">
+                  S
+                </span>
+                <div className="account-profile-text">
+                  <p className="account-profile-name">Local profile</p>
+                  <p className="account-profile-sub">
+                    This device is the whole account. Nothing is signed in and nothing is sent
+                    anywhere.
+                  </p>
+                </div>
+              </div>
               <div className="settings-card">
                 <div className="settings-row">
                   <div className="settings-row-text">
                     <span className="settings-row-label">Signed in as</span>
-                    <span className="settings-row-desc">Nobody - this is a local profile.</span>
+                    <span className="settings-row-desc">Nobody - Soravo has no accounts.</span>
                   </div>
                 </div>
                 <div className="settings-row">
@@ -873,6 +906,14 @@ function SettingsModal({
                     >
                       {modelsFolder}
                     </button>
+                  </div>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-row-text">
+                    <span className="settings-row-label">Version</span>
+                    <span className="settings-row-desc">
+                      {version ? `Soravo ${version}` : 'alpha'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -940,7 +981,7 @@ function SettingsModal({
                     <span className="settings-row-desc">{historyCount} on this machine.</span>
                   </div>
                   <div className="settings-row-control">
-                    <Button variant="destructive" onClick={onClearHistory}>
+                    <Button variant="destructive" size="sm" onClick={onClearHistory}>
                       Delete all
                     </Button>
                   </div>
@@ -1136,12 +1177,18 @@ export default function HubApp() {
     setSettings(updated)
   }
 
+  // What the app is actually showing right now, whether that is the chosen
+  // theme or the system's.
+  const resolvedTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme
+
   return (
       <div className="hub-root">
         <Titlebar
           theme={theme}
+          resolved={resolvedTheme}
           sidebarOpen={sidebarOpen}
           onTheme={(next) => void saveSettings({ theme: next })}
+          onToggleTheme={() => void saveSettings({ theme: resolvedTheme === 'dark' ? 'light' : 'dark' })}
           onToggleSidebar={() => {
             const next = !sidebarOpen
             setSidebarOpen(next)

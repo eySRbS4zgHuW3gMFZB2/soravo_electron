@@ -19,6 +19,7 @@
     "core:event:default",
     "core:event:allow-listen",
     "core:event:allow-emit",
+    "core:app:default",
     "shell:allow-open",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",

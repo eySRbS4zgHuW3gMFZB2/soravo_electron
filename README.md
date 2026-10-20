@@ -6,9 +6,10 @@ Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcriptio
 
 - **Push-to-talk dictation** — global hotkey, mic capture, local Whisper transcription, text injection into any app
 - **Pill overlay** — compact floating pill with recording/transcribing/error states, animated bars, cancel/finish buttons
-- **Hub window** — a navigation rail (brand block, page list, local-and-private card, Settings and Help) beside a rounded content panel, with Dictation, History, Insights, Dictionary, Snippets, Style, Models, Scratchpad and Settings. The rail folds away to an icon strip from the panel toggle in the title bar, the way Wispr Flow's does, and the choice is remembered.
+- **Hub window** — a navigation rail (brand block, page list, local-and-private card, Settings and Help) beside a rounded content panel, with Dictation, History, Insights, Dictionary, Snippets, Style, Models, Scratchpad and Settings. The rail folds away to an icon strip from the panel toggle in the title bar, the way Wispr Flow's does, and the choice is remembered. The window opens at 1350 x 850 and cannot be dragged smaller than 1140 x 750.
 - **Settings** — hotkey capture (press-to-capture) for dictate, paste last, copy last and the Scratchpad; mic selection, model/language, smart cleanup, custom vocabulary, sounds, theme, retention, launch at login, and the models folder; General, System, Account, Plans & Billing and Data & Privacy, grouped the way Wispr Flow groups them
-- **Theme** — Light, Dark, or System, which follows the operating system's own light/dark setting while the app is open
+- **Theme** — Light, Dark, or System, which follows the operating system's own light/dark setting while
+  the app is open. The title bar has a one-click toggle for the first two.
 - **Models** — download, manage, and switch between 30 ASR models (Whisper, Moonshine, Parakeet, Canary, and more); see [MODELS.md](MODELS.md) for the full catalog and licenses. The folder they download into is a link that opens it, and it can be pointed anywhere on disk
 - **Insights** — a tabbed dashboard: words-per-minute gauge, fixes made, total words, when-you-dictate rhythm chart, a 26-week activity heat-map, top words and repeated phrases
 - **Dictionary** — the personal word list as a first-class page: say "sore avo" and it is written as "Soravo". Add, edit, remove, import and export the list
@@ -94,14 +95,15 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
   browser's own shortcuts (Ctrl+F find-in-page, Ctrl+P print, Ctrl+S save, F12 devtools and friends).
   The app's own shortcuts and the text fields keep working normally. See
   `src/renderer/src/appShortcuts.ts`.
-- **One control family.** Every pill button is 36px, the inputs and selects are 36px, the icon buttons are 32px
-  and the switch is 24 x 44px, so a settings row reads as a single set of controls.
-- **One type scale, one pair of faces.** Every heading and label sits on an exact DESIGN.md token
-  (32 / 24 / 20 / 16 / 14 / 12, with 600 as the weight below the hero and 900 for the display
-  moments). The only typeface is Inter - DESIGN.md names "Soravo Sans" for display and lists Inter
-  at weight 900 as its substitute, so no second family is bundled.
+- **One control family.** The page-level actions are 36px and the small in-row
+  actions (Change, Delete all, Refresh) are 28px, so a row of controls never
+  outweighs the actions around it.
+- **One type scale, one pair of faces.** The scale is a set of tokens, so it cannot drift:
+  12 / 16 / 18 / 20 / 24 / 32, with the headings on the brand's display steps and the body tier
+  two pixels above the brand's 14 / 16, which read as fine print at app density. The only
+  typeface is Inter, which DESIGN.md names as the substitute for the display face.
 - **Model downloads report their progress.** The bar is followed by the completed percentage and
-  the live transfer rate.
+  the live transfer rate, and the models can be searched, filtered and sorted.
 
 ## Tech Stack
 
