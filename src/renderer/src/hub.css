@@ -469,7 +469,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   line-height: 38.4px;
   letter-spacing: -0.96px;
   color: var(--hero-fg);
-  max-width: 640px;
+  max-width: 780px;
 }
 
 /* The brand accent, not a slanted style: DESIGN.md's card-feature-dark pairs
