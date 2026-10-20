@@ -280,6 +280,79 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   across close/reopen, 30/30 cargo tests pass
 - Merged via PR #9
 
+### Phase 14: Snippets & Scratchpad rebuilt (branch `feature/snippets-scratchpad`)
+- Reverse-engineered Wispr Flow 1.6.1174 from `app.asar` -> `.webpack/renderer/hub/index.js`
+  (REA application graph, 228 files / 3527 modules) and recovered the CSS modules behind both
+  pages: 73570 (page shell), 85087 (hero banner), 15813 (banner examples), 24323 (tabs),
+  63136 (snippet list), 43395 (note list), 75559 (banner mockup)
+- Captured the live Wispr Flow Snippets and Scratchpad pages for a layout reference
+- Added `src/renderer/src/pages.css` plus `components/pages/` (hero band, tab strip,
+  icons) as reusable hub page primitives
+- **The look is Soravo's, not Wispr's.** The page STRUCTURE came from the reverse
+  engineering, but every surface, radius, type size and colour comes from DESIGN.md:
+
+  | element       | DESIGN.md token     | value                          |
+  |---------------|---------------------|--------------------------------|
+  | hero band     | card-feature-dark   | ink surface, brand green, 24px |
+  | page title    | display-xs          | 26px / 800                     |
+  | list card     | card-content        | white surface, 24px, 24px pad  |
+  | empty state   | ex-empty-state-card | white surface, 24px, 48px pad  |
+  | tab label     | body-sm-strong      | 14px / 600, primary indicator  |
+  | badge         | badge-positive      | pale green pill                 |
+  | field         | text-input          | 12px radius, 16px, 1px ink     |
+
+  The global Button and Input primitives were brought in line with the same spec
+  (24px pill buttons with 16px/600 labels and 12px/24px padding, 12px radius inputs
+  with 16px type) so the new pages sit inside the app's own design language
+- Snippets page: title, Import/Add new, All/Personal tabs (the "Shared with team" tab is
+  deliberately left out), search/sort/refresh utilities, hero band with example chips,
+  white list card with hover edit/delete actions, empty state, JSON import
+- Scratchpad page: title with Beta badge, "Add to Flow Bar" toggle, its own shortcut pill,
+  hero band with the little window mockup, sticky "Recents" strip, note cards, inline editor
+- **Bug fixed**: `Snippet` and `ScratchpadNote` were missing `#[serde(rename_all = "camelCase")]`,
+  so the front end read `createdAt`/`isAutoLearned` as undefined and every sort threw
+  `Cannot read properties of undefined (reading 'localeCompare')`. Regression test added
+- **Bug fixed**: the sticky "Recents" strip (z-index 500) painted over Radix dialogs (z-50)
+- **Bug fixed**: the "Open Scratchpad" dialog overflowed its card, leaving the Cancel button
+  outside it - the 480px min-width now lives on the dialog panel itself
+- Added the `scratchpadHotkey` setting, and a **Scratchpad section in Settings > General >
+  Shortcuts** with its own shortcut capture, so the shortcut can be bound in one place
+- The Shortcuts sub-modal rows were rebuilt on a two column grid; the hotkey fields used to
+  overflow the dialog and the "Push to talk" checkbox did not line up with the rows above it
+- Verified: add/edit/delete/search/sort/bulk delete/import/banner chip/dismiss, note
+  create/type/autosave/pin/copy/delete/search/refresh, Flow Bar toggle, shortcut capture,
+  Settings > General > Shortcuts, in both light and dark themes
+- 31/31 cargo tests pass; Dictation, History, Insights, Models and Settings are unaffected
+
+#### Self-review fixes (before merge)
+- **Bug fixed**: `loadNotes` read `activeId` from the state captured when the Scratchpad page
+  mounted. The `scratchpad-changed` event fires after every add, edit and delete - including
+  the autosave when the editor loses focus - so any event moved the selection back to the first
+  note and replaced the draft. A draft typed into note B was silently discarded. The active id
+  is now mirrored in a ref, so a change event refreshes the list without touching the
+  selection or the draft.
+- **Bug fixed**: the note card had no `position: relative`, so the absolutely positioned action
+  cluster (pin/copy/delete) anchored to the scroll container instead of the card and every note
+  stacked its actions in the same corner. The card is now the containing block.
+- **Bug fixed**: the action cluster used `z-index: 600`. The card does not open a stacking
+  context, so that value resolved in the root context and would have painted over the Radix
+  dialogs (`z-50`). It is now `z-index: 1`.
+- The selected note and the selected snippet row now use a tint of the brand green over the card
+  surface. The old `canvas-soft` fill was identical to the page surface in dark mode, which made
+  the selected note look like it had no card at all.
+- The Input primitive used `rounded-xl`. The theme sets `--radius` to 0.75rem, so `rounded-xl`
+  is 16.8px, not the 12px that DESIGN.md asks for on a text input. It is now `rounded-lg`
+  (12px). Buttons keep `rounded-3xl`, which is 24px - the non-negotiable pill.
+- The tab indicator no longer animates on the first paint; the transition is gated on the
+  measured state.
+- Renamed `components/wispr/` to `components/pages/` (`WisprBanner` -> `PageHero`,
+  `WisprTabs` -> `PageTabs`). The page structure came from the reverse engineering, but these
+  are Soravo components and should not be named after another product.
+- Reverted the `img-src` addition to the Content-Security-Policy. It was only needed for the
+  hero photos, which are gone; the app has no images left.
+- Removed the dead `.page-dialog-textarea` rule and the unused `ReactNode` re-export from the
+  icon module.
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.
