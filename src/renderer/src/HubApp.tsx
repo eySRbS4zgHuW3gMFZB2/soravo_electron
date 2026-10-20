@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { InsightsData, RecState, SoravoSettings, TranscriptEntry } from './soravo'
+import type { InsightsData, RecState, SoravoSettings, Theme, TranscriptEntry } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -9,18 +9,22 @@ import {
   ChartIcon,
   CloseIcon,
   DictionaryIcon,
+  FolderIcon,
   HelpIcon,
   HistoryIcon,
   MaximizeIcon,
   MicIcon,
   MinimizeIcon,
+  MonitorIcon,
   MoonIcon,
+  PanelIcon,
   SettingsIcon,
   SnippetsIcon,
   ScratchpadIcon,
   StyleIcon,
   SunIcon
 } from '@/components/icons'
+import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import ScratchpadPage from './pages/ScratchpadPage'
 import SnippetsPage from './pages/SnippetsPage'
 import DictationPage from './pages/DictationPage'
@@ -55,7 +59,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 type Page = 'dictation' | 'history' | 'insights' | 'dictionary' | 'snippets' | 'style' | 'models' | 'scratchpad'
-type SettingsTab = 'general' | 'system' | 'privacy'
+type SettingsTab = 'general' | 'system' | 'account' | 'billing' | 'privacy'
 
 function fmtHotkey(accelerator: string): string {
   return accelerator.replace(/CommandOrControl/gi, 'Ctrl').split('+').join(' + ')
@@ -68,21 +72,36 @@ interface MicDevice {
 
 function Titlebar({
   theme,
-  onTheme
+  onTheme,
+  sidebarOpen,
+  onToggleSidebar
 }: {
-  theme: 'light' | 'dark'
-  onTheme: (next: 'light' | 'dark') => void
+  theme: 'light' | 'dark' | 'system'
+  onTheme: (next: 'light' | 'dark' | 'system') => void
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
 }) {
   return (
     <div className="hub-titlebar">
       {/* The wordmark lives in the navigation rail, the way Wispr Flow does it.
-          The strip itself stays empty so the window can be dragged by it. */}
-      <div className="hub-titlebar-left" />
+          The strip carries the rail toggle and the window buttons. */}
+      <div className="hub-titlebar-left">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="hub-winbtn"
+          title={sidebarOpen ? 'Collapse the sidebar' : 'Expand the sidebar'}
+          aria-label={sidebarOpen ? 'Collapse the sidebar' : 'Expand the sidebar'}
+          onClick={onToggleSidebar}
+        >
+          <PanelIcon />
+        </Button>
+      </div>
       <div className="hub-titlebar-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" className="hub-winbtn" title="Theme">
-              {theme === 'dark' ? <MoonIcon /> : <SunIcon />}
+              {theme === 'dark' ? <MoonIcon /> : theme === 'system' ? <MonitorIcon /> : <SunIcon />}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -93,6 +112,10 @@ function Titlebar({
             <DropdownMenuItem onSelect={() => onTheme('dark')}>
               <MoonIcon />
               Dark
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onTheme('system')}>
+              <MonitorIcon />
+              System
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -113,29 +136,51 @@ function Titlebar({
 function Sidebar({
   page,
   go,
+  open,
   onOpenSettings,
   onOpenHelp
 }: {
   page: Page
   go: (p: Page) => void
+  open: boolean
   onOpenSettings: () => void
   onOpenHelp: () => void
 }) {
   // Nav items are full-bleed rows, so they must not inherit the button's
-  // default centring or inset padding.
+  // default centring or inset padding. Each one carries a floating label that
+  // appears on hover while the rail is collapsed, the way Wispr Flow's does.
   const navItem = (target: Page, label: string, icon: React.ReactNode) => (
     <Button
       variant="ghost"
       className={cn('hub-nav w-full justify-start', page === target && 'active')}
       onClick={() => go(target)}
+      aria-current={page === target ? 'page' : undefined}
+      data-testid={`sidebar-item-${target}`}
     >
       {icon}
-      <span>{label}</span>
+      <span className="hub-nav-label">{label}</span>
+      <span className="hub-nav-hint" aria-hidden="true">
+        {label}
+      </span>
+    </Button>
+  )
+
+  const footItem = (label: string, icon: React.ReactNode, onClick: () => void, extra?: string) => (
+    <Button
+      variant="ghost"
+      className={cn('hub-nav w-full justify-start', extra)}
+      onClick={onClick}
+    >
+      {icon}
+      <span className="hub-nav-label">{label}</span>
+      <span className="hub-nav-hint" aria-hidden="true">
+        {label}
+      </span>
     </Button>
   )
 
   return (
-    <aside className="hub-sidebar">
+    <aside className={cn('hub-sidebar', !open && 'hub-sidebar-collapsed')}>
       <div className="hub-brand">
         <span className="hub-brand-mark" aria-hidden="true">
           S
@@ -147,28 +192,24 @@ function Sidebar({
         <Badge className="hub-badge h-auto inline-block border-0">Local</Badge>
       </div>
 
-      {navItem('dictation', 'Dictation', <MicIcon />)}
-      {navItem('history', 'History', <HistoryIcon />)}
-      {navItem('insights', 'Insights', <ChartIcon />)}
-      {navItem('dictionary', 'Dictionary', <DictionaryIcon />)}
-      {navItem('snippets', 'Snippets', <SnippetsIcon />)}
-      {navItem('style', 'Style', <StyleIcon />)}
-      {navItem('models', 'Models', <BrainIcon />)}
-      {navItem('scratchpad', 'Scratchpad', <ScratchpadIcon />)}
+      <nav className="hub-nav-list" aria-label="Main">
+        {navItem('dictation', 'Dictation', <MicIcon />)}
+        {navItem('history', 'History', <HistoryIcon />)}
+        {navItem('insights', 'Insights', <ChartIcon />)}
+        {navItem('dictionary', 'Dictionary', <DictionaryIcon />)}
+        {navItem('snippets', 'Snippets', <SnippetsIcon />)}
+        {navItem('style', 'Style', <StyleIcon />)}
+        {navItem('models', 'Models', <BrainIcon />)}
+        {navItem('scratchpad', 'Scratchpad', <ScratchpadIcon />)}
+      </nav>
 
       <div className="hub-sidebar-foot">
         <div className="hub-local-card">
           <p className="hub-local-title">Local &amp; private</p>
           <p className="hub-local-text">No account. No cloud. Audio never leaves this PC.</p>
         </div>
-        <Button variant="ghost" className="hub-nav w-full justify-start" onClick={onOpenSettings}>
-          <SettingsIcon />
-          <span>Settings</span>
-        </Button>
-        <Button variant="ghost" className="hub-nav hub-nav-external w-full justify-start" onClick={onOpenHelp}>
-          <HelpIcon />
-          <span>Help</span>
-        </Button>
+        {footItem('Settings', <SettingsIcon />, onOpenSettings)}
+        {footItem('Help', <HelpIcon />, onOpenHelp, 'hub-nav-external')}
       </div>
     </aside>
   )
@@ -266,11 +307,19 @@ function SettingsModal({
   const [newFrom, setNewFrom] = useState('')
   const [newTo, setNewTo] = useState('')
   const [launchAtLogin, setLaunchAtLogin] = useState(settings.launchAtLogin)
-  const [theme, setTheme] = useState<'light' | 'dark'>(settings.theme)
+  const [theme, setTheme] = useState<Theme>(settings.theme)
   const [retention, setRetention] = useState<'all' | '30days' | 'session'>(settings.retention)
   const [devices, setDevices] = useState<MicDevice[]>([])
   const [sub, setSub] = useState<null | 'shortcuts' | 'microphone' | 'language'>(null)
   const [savedTick, setSavedTick] = useState(false)
+  const [modelsFolder, setModelsFolder] = useState('')
+
+  useEffect(() => {
+    window.soravo
+      .modelsFolder()
+      .then(setModelsFolder)
+      .catch(() => setModelsFolder(''))
+  }, [settings.modelsDir])
 
   useEffect(() => {
     navigator.mediaDevices
@@ -314,8 +363,35 @@ function SettingsModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const addWord = () => {
-    const from = newFrom.trim()
+  /** Pick a folder for the transcription models. */
+  const chooseModelsFolder = async () => {
+    try {
+      const picked = await openDialog({
+        directory: true,
+        multiple: false,
+        title: 'Choose the models folder'
+      })
+      if (typeof picked === 'string' && picked) {
+        await onSave({ modelsDir: picked })
+        setModelsFolder(picked)
+      }
+    } catch (e) {
+      console.error('Could not choose a models folder', e)
+    }
+  }
+
+  /** Go back to the default location under the app data directory. */
+  const resetModelsFolder = async () => {
+    try {
+      await onSave({ modelsDir: '' })
+      const fallback = await window.soravo.defaultModelsFolder()
+      setModelsFolder(fallback)
+    } catch (e) {
+      console.error('Could not reset the models folder', e)
+    }
+  }
+
+  const addWord = () => {    const from = newFrom.trim()
     const to = newTo.trim()
     if (!from || !to) return
     setVocabulary((v) => ({ ...v, [from]: to }))
@@ -358,10 +434,14 @@ function SettingsModal({
     ? (devices.find((d) => d.deviceId === microphoneId)?.label ?? 'Custom device')
     : 'Auto-detect'
 
-  const tabs: Array<{ id: SettingsTab; label: string; group: 'settings' | 'data' }> = [
+  // The shell matches Wispr Flow's: SETTINGS holds the app's own pages,
+  // ACCOUNT holds the ones that describe who you are and what you pay.
+  const tabs: Array<{ id: SettingsTab; label: string; group: 'settings' | 'account' }> = [
     { id: 'general', label: 'General', group: 'settings' },
     { id: 'system', label: 'System', group: 'settings' },
-    { id: 'privacy', label: 'Data & Privacy', group: 'data' }
+    { id: 'account', label: 'Account', group: 'account' },
+    { id: 'billing', label: 'Plans & Billing', group: 'account' },
+    { id: 'privacy', label: 'Data & Privacy', group: 'account' }
   ]
 
   return (
@@ -374,18 +454,25 @@ function SettingsModal({
         <DialogTitle className="sr-only">Settings</DialogTitle>
         <aside className="modal-sidebar">
           <p className="modal-heading">Settings</p>
-          {tabs.map((t) => (
-            <div key={t.id}>
-              {t.group === 'data' ? <p className="modal-group">Data</p> : null}
-              <Button
-                variant="ghost"
-                className={cn('modal-tab w-full justify-start', tab === t.id && 'active')}
-                onClick={() => setTab(t.id)}
-              >
-                {t.label}
-              </Button>
-            </div>
-          ))}
+          {tabs.map((t, index) => {
+            // The group label heads the first item of its group only.
+            const startsGroup =
+              index === 0 || tabs[index - 1].group !== t.group
+            return (
+              <div key={t.id}>
+                {startsGroup && t.group === 'account' ? (
+                  <p className="modal-group">Account</p>
+                ) : null}
+                <Button
+                  variant="ghost"
+                  className={cn('modal-tab w-full justify-start', tab === t.id && 'active')}
+                  onClick={() => setTab(t.id)}
+                >
+                  {t.label}
+                </Button>
+              </div>
+            )
+          })}
         </aside>
         <div className="modal-content">
           <Button variant="ghost" size="icon-sm" className="modal-close" title="Close without saving" onClick={onClose}>
@@ -437,10 +524,10 @@ function SettingsModal({
                 <div className="settings-row">
                   <div className="settings-row-text">
                     <span className="settings-row-label">Theme</span>
-                    <span className="settings-row-desc">Light or dark, across the whole app.</span>
+                    <span className="settings-row-desc">Light, dark, or follow the system.</span>
                   </div>
                   <div className="settings-row-control">
-                    <Select value={theme} onValueChange={(v) => setTheme(v as 'light' | 'dark')}>
+                    <Select value={theme} onValueChange={(v) => setTheme(v as 'light' | 'dark' | 'system')}>
                       <SelectTrigger style={{ width: 160 }}>
                         <SelectValue placeholder="Select theme" />
                       </SelectTrigger>
@@ -453,6 +540,10 @@ function SettingsModal({
                           <SelectItem value="dark">
                             <MoonIcon />
                             Dark
+                          </SelectItem>
+                          <SelectItem value="system">
+                            <MonitorIcon />
+                            System
                           </SelectItem>
                         </SelectGroup>
                       </SelectContent>
@@ -677,7 +768,7 @@ function SettingsModal({
                           <span className="settings-row-desc">Written as {to}</span>
                         </div>
                         <div className="settings-row-control">
-                          <Button variant="ghost" size="sm" onClick={() => removeWord(from)}>
+                          <Button variant="ghost" onClick={() => removeWord(from)}>
                             Remove
                           </Button>
                         </div>
@@ -706,7 +797,7 @@ function SettingsModal({
                       />
                     </div>
                     <div className="settings-row-control">
-                      <Button variant="secondary" size="sm" onClick={addWord}>
+                      <Button variant="secondary" onClick={addWord}>
                         Add word
                       </Button>
                     </div>
@@ -715,9 +806,99 @@ function SettingsModal({
               </div>
 
               <div className="settings-section">
-                <Button variant="destructive" size="sm" className="system-quit" onClick={onQuit}>
+                <p className="settings-section-title">Models folder</p>
+                <div className="settings-card">
+                  <div className="settings-row">
+                    <div className="settings-row-text">
+                      <span className="settings-row-label">Downloads to</span>
+                      <button
+                        type="button"
+                        className="settings-link"
+                        onClick={() => void window.soravo.openFolder(modelsFolder)}
+                        title="Open the models folder"
+                      >
+                        {modelsFolder}
+                      </button>
+                    </div>
+                    <div className="settings-row-control">
+                      <Button variant="secondary" onClick={chooseModelsFolder}>
+                        Change
+                      </Button>
+                      {settings.modelsDir ? (
+                        <Button variant="ghost" onClick={resetModelsFolder}>
+                          Reset
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <Button variant="destructive" className="system-quit" onClick={onQuit}>
                   Quit Soravo
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {tab === 'account' && (
+            <div className="modal-scroll">
+              <h2 className="settings-page-title">Account</h2>
+              <p className="modal-sub">
+                Soravo has no accounts. There is nothing to sign in to, because nothing leaves this
+                device.
+              </p>
+              <div className="settings-card">
+                <div className="settings-row">
+                  <div className="settings-row-text">
+                    <span className="settings-row-label">Signed in as</span>
+                    <span className="settings-row-desc">Nobody - this is a local profile.</span>
+                  </div>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-row-text">
+                    <span className="settings-row-label">Active model</span>
+                    <span className="settings-row-desc">{settings.model || 'none selected'}</span>
+                  </div>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-row-text">
+                    <span className="settings-row-label">Models folder</span>
+                    <button
+                      type="button"
+                      className="settings-link"
+                      onClick={() => void window.soravo.openFolder(modelsFolder)}
+                      title="Open the models folder"
+                    >
+                      {modelsFolder}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tab === 'billing' && (
+            <div className="modal-scroll">
+              <h2 className="settings-page-title">Plans &amp; Billing</h2>
+              <p className="modal-sub">
+                Soravo is free, and there is no bill. There is no subscription to manage, no card on
+                file and no invoice to download.
+              </p>
+              <div className="settings-card">
+                <div className="settings-row">
+                  <div className="settings-row-text">
+                    <span className="settings-row-label">Current plan</span>
+                    <span className="settings-row-desc">Free, forever - everything runs on this device.</span>
+                  </div>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-row-text">
+                    <span className="settings-row-label">Billing details</span>
+                    <span className="settings-row-desc">None. Soravo never contacts a payment provider.</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -759,7 +940,7 @@ function SettingsModal({
                     <span className="settings-row-desc">{historyCount} on this machine.</span>
                   </div>
                   <div className="settings-row-control">
-                    <Button variant="destructive" size="sm" onClick={onClearHistory}>
+                    <Button variant="destructive" onClick={onClearHistory}>
                       Delete all
                     </Button>
                   </div>
@@ -843,6 +1024,17 @@ export default function HubApp() {
   const [insights, setInsights] = useState<InsightsData | null>(null)
   const [settings, setSettings] = useState<SoravoSettings | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  // The operating system's light/dark preference, for the "system" theme.
+  const [systemDark, setSystemDark] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+  )
+  // Kept locally as well as in the settings, so the rail reacts to the toggle
+  // at once and never flips while the settings are being read.
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+
+  useEffect(() => {
+    if (settings?.sidebarOpen !== undefined) setSidebarOpen(settings.sidebarOpen)
+  }, [settings?.sidebarOpen])
 
   const refreshHistory = () => {
     window.soravo.getHistory(200).then(setHistory).catch(() => {})
@@ -871,9 +1063,21 @@ export default function HubApp() {
     }
   }, [])
 
+  // "system" follows the operating system, so it has to track the OS setting
+  // changing while the app is open.
   useEffect(() => {
-    document.documentElement.dataset.theme = settings?.theme ?? 'light'
-  }, [settings])
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => setSystemDark(media.matches)
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
+  const theme = settings?.theme ?? 'light'
+
+  useEffect(() => {
+    document.documentElement.dataset.theme =
+      theme === 'system' ? (systemDark ? 'dark' : 'light') : theme
+  }, [theme, systemDark])
 
   // The Scratchpad tab can rebind its own shortcut, so re-read the settings
   // whenever the hub navigates back out of a tab.
@@ -932,18 +1136,23 @@ export default function HubApp() {
     setSettings(updated)
   }
 
-  const theme = settings?.theme ?? 'light'
-
   return (
       <div className="hub-root">
         <Titlebar
           theme={theme}
+          sidebarOpen={sidebarOpen}
           onTheme={(next) => void saveSettings({ theme: next })}
+          onToggleSidebar={() => {
+            const next = !sidebarOpen
+            setSidebarOpen(next)
+            void saveSettings({ sidebarOpen: next })
+          }}
         />
         <div className="hub-body">
           <Sidebar
             page={page}
             go={setPage}
+            open={sidebarOpen}
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenHelp={() => setHelpOpen(true)}
           />

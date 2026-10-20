@@ -261,7 +261,7 @@ export default function ScratchpadPage() {
           </span>
         </h1>
         <div className="page-head-actions">
-          <Button variant="secondary" size="sm" onClick={() => setShortcutOpen(true)}>
+          <Button variant="secondary" onClick={() => setShortcutOpen(true)}>
             {scratchpadHotkey ? prettyHotkey(scratchpadHotkey) : 'Click to enable shortcut'}
           </Button>
         </div>
@@ -449,16 +449,16 @@ export default function ScratchpadPage() {
             {activeNote ? (
               <div className="page-editor">
                 <div className="page-editor-toolbar">
-                  <Button variant="secondary" size="sm" onClick={handleNew}>
+                  <Button variant="secondary" onClick={handleNew}>
                     <PlusIcon size={14} /> New note
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => void handlePin(activeNote.id)}>
+                  <Button variant="ghost" onClick={() => void handlePin(activeNote.id)}>
                     <PinIcon size={14} /> {activeNote.pinned ? 'Unpin' : 'Pin'}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={handleCopy}>
+                  <Button variant="ghost" onClick={handleCopy}>
                     <CopyIcon size={14} /> Copy
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => void handleDelete(activeNote.id)}>
+                  <Button variant="ghost" onClick={() => void handleDelete(activeNote.id)}>
                     <TrashIcon size={14} /> Delete
                   </Button>
                   <span className="page-editor-status">{saving ? 'Saving…' : ''}</span>

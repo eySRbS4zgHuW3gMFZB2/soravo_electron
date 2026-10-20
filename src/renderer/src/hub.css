@@ -101,7 +101,9 @@ html[data-theme='dark'] {
 }
 
 .hub-titlebar-right,
-.hub-titlebar-right button {
+.hub-titlebar-left,
+.hub-titlebar-right button,
+.hub-titlebar-left button {
   -webkit-app-region: no-drag;
 }
 
@@ -165,8 +167,75 @@ html[data-theme='dark'] {
   flex-direction: column;
   gap: 2px;
   padding: 4px 10px 12px 12px;
-  overflow-y: auto;
+  position: relative;
+  /* The rail has to sit above the content panel: the collapsed rail's hover
+     label is drawn outside its own box. */
+  z-index: 20;
+  transition: width 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Collapsed: a narrow icon rail, the way Wispr Flow's hub folds away. */
+.hub-sidebar-collapsed {
+  width: 72px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.hub-sidebar-collapsed .hub-brand {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.hub-sidebar-collapsed .hub-brand-name,
+.hub-sidebar-collapsed .hub-badge,
+.hub-sidebar-collapsed .hub-nav-label,
+.hub-sidebar-collapsed .hub-local-card {
+  display: none;
+}
+
+.hub-sidebar-collapsed .hub-nav {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.hub-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-height: 0;
+  /* No overflow: the collapsed rail's hover label is drawn outside the list
+     and would be clipped by it. */
+  overflow: visible;
+}
+
+/* The name of a page, shown next to the icon while the rail is collapsed. */
+.hub-nav-hint {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 60;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--soravo-ink);
+  color: var(--soravo-canvas);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(14, 15, 12, 0.28);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.hub-sidebar-collapsed .hub-nav:hover .hub-nav-hint,
+.hub-sidebar-collapsed .hub-nav:focus-visible .hub-nav-hint {
+  opacity: 1;
+  visibility: visible;
 }
 
 .hub-brand {
@@ -2088,6 +2157,42 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 .settings-row-control [data-slot='button']:not([data-variant='destructive']):hover {
   background: var(--soravo-canvas-soft);
   color: var(--soravo-ink);
+}
+
+/* A select on the sage card needs a surface of its own: the translucent
+   input fill reads as a muddy hole there. */
+.settings-row-control [data-slot='select-trigger'] {
+  background: #ffffff;
+  color: var(--soravo-ink);
+  border-color: var(--soravo-ink);
+}
+
+.settings-row-control [data-slot='select-trigger']:hover {
+  background: #ffffff;
+  border-color: var(--soravo-ink);
+}
+
+/* A path that opens the folder it points at. */
+.settings-link {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  color: var(--soravo-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  word-break: break-all;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.settings-link:hover {
+  color: var(--soravo-primary);
 }
 
 .settings-section {

@@ -33,10 +33,10 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        // 40px - the default control height of the app
-        default: "h-10 gap-2 px-5",
-        xs: "h-7 gap-1 px-3 text-xs",
-        sm: "h-8 gap-1.5 px-4 text-sm",
+        // One pill size across the app: 36px. A second, smaller text size is
+        // what made the buttons read as "inconsistent size" next to the 24px
+        // switch and the 32px icon buttons.
+        default: "h-9 gap-2 px-5",
         lg: "h-11 gap-2 px-6",
         // Circular icon button: {rounded.full}
         icon: "size-9 rounded-full",

@@ -37,8 +37,8 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 ### UI — Hub Window
 - [x] Navigation rail: brand block, Dictation, History, Insights, Dictionary, Snippets, Style, Models,
       Scratchpad, a "Local & private" card, Settings and Help
-- [x] Content panel with a 24px corner, its own scroll area, and a pinned page header
-- [x] Title bar with a theme menu plus minimize/maximize/close
+- [x] The rail folds to a 72px icon strip from a panel toggle in the title bar, with a floating
+      page-name hint on hover, and remembers the choice
 - [x] Dictation page: greeting with the shortcut spelled out as key chips, hero band, dated
       transcript feed with copy/delete, and a right-hand rail (word counts, voice profile, daily goal)
 - [x] History page: date-grouped transcript feed with search, copy, delete, clear all
@@ -46,9 +46,10 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
       chart, 26-week heat-map, top words, repeated phrases
 - [x] Dictionary page: personal word list with add, edit, remove, import and export
 - [x] Style page: clean-up, punctuation and language rules as cards
-- [x] Models page: card grid of downloadable transcription models
+- [x] Models page: card grid of downloadable models, with the download percentage and speed
 - [x] Snippets page: phrase expansion with search, sort, bulk delete and import
 - [x] Scratchpad page: notes list with pin/copy/delete and an inline editor
+- [x] Theme: Light, Dark or System, which follows the operating system's own setting
 - [x] Transparent window with rounded corners, no shadow/border
 
 ### Settings (Wispr-style sub-modals)
@@ -522,6 +523,41 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   then put back the way they were found. 31/31 cargo tests pass,
   `tsc -p tsconfig.web.json` is clean, `npm run build` succeeds, and a
   token audit of every rule in the app reports no off-scale size or weight.
+
+#### Round 4: the collapsible rail, the system theme, the models folder
+- **REA on the Wispr Flow hub bundle** recovered how its navigation rail folds away. The sidebar item
+  is a `<button>` with a 20px icon and a label `<span>` that is hidden when the rail is collapsed
+  (`isCollapsed && sYe.hidden`), the brand mark stays while the wordmark and the plan pill hide, and
+  the collapsed rail shows the page name in a floating hint on hover (`sYe.hoverHint`). The open/closed
+  state is a persisted user preference flipped by a panel toggle in the title bar
+  (`onToggleSidebarVisibility` -> `renderOptions.sidebarOpen`).
+- **Ghidra on the native `Wispr Flow.exe`** confirms the rail is entirely renderer-side: the binary
+  defines **no string at all** that names a sidebar, rail, nav or panel, and the only UI-creating
+  Win32 APIs it imports are `TrackPopupMenu` and `DwmSetWindowAttribute` (Chromium's own). No
+  `CreateWindowEx`, `CreatePopupMenu`, `CreateMenu` or `Shell_NotifyIcon`. The 58 imported libraries are
+  the stock Chromium/Electron set.
+- **Soravo's rail now folds the same way**: a panel toggle in the title bar collapses it to a 72px
+  icon strip, the wordmark, the "Local" pill and the page labels hide, and hovering an item shows its
+  name in a floating hint. The state is a new `sidebarOpen` setting, so it is remembered.
+- **The theme has a third option, "system".** It follows the operating system's light/dark setting
+  and keeps following it while the app is open, via a `prefers-color-scheme` listener.
+- **The models folder is a real setting.** The path on the Models page and in Settings is a link that
+  opens the folder, Settings > System has a "Models folder" row with a folder picker and a reset to
+  the default, and the Rust side reads the setting when it lists, downloads and transcribes with a
+  model. A new `open_folder` command opens it in Explorer (the shell plugin's `open` is path-scoped,
+  and the user can put the models anywhere on disk).
+- **The Settings shell matches Wispr Flow's**: SETTINGS holds General and System, ACCOUNT holds
+  Account, Plans & Billing and Data & Privacy. The old DATA header is gone. Soravo has no accounts
+  and no bill, so those two pages say so plainly and Account shows the local profile instead.
+- **One control family.** Every pill button is now 36px - the `sm` size is gone from the app - and
+  the inputs and selects are 36px too, so a settings row is one set of controls. The Theme select was
+  the odd one out: a translucent input fill on the sage card read as a muddy hole, so it now has a
+  white surface of its own.
+- Verified by driving the app: the rail folds and unfolds and remembers, the hover hint appears,
+  "System" repaints the app when the OS preference is dark or light, the folder picker opens the
+  native "Choose the models folder" dialog, the path link opens the folder in Explorer, and all five
+  Settings pages render. 31/31 cargo tests pass, `tsc -p tsconfig.web.json` is clean and
+  `npm run build` succeeds.
 
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so

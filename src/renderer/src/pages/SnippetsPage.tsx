@@ -409,7 +409,7 @@ export default function SnippetsPage() {
           <span style={{ fontSize: 14, fontWeight: 600 }}>{selectedCount} selected</span>
           <Button
             variant="secondary"
-            size="sm"
+           
             onClick={() => {
               setDeleteIds([...selectedIds])
               setDeleteTarget(null)
@@ -418,7 +418,7 @@ export default function SnippetsPage() {
           >
             <TrashIcon size={14} /> Delete
           </Button>
-          <Button variant="ghost" size="sm" onClick={clearSelection}>
+          <Button variant="ghost" onClick={clearSelection}>
             Clear
           </Button>
         </div>
@@ -462,13 +462,13 @@ export default function SnippetsPage() {
                     }}
                   >
                     <span className="page-hero-example-tag">
-                      <Button variant="secondary" size="sm" tabIndex={-1}>
+                      <Button variant="secondary" tabIndex={-1}>
                         &ldquo;{example.trigger}&rdquo;
                       </Button>
                     </span>
                     <span className="page-hero-example-arrow">→</span>
                     <span className="page-hero-example-tag">
-                      <Button variant="secondary" size="sm" tabIndex={-1}>
+                      <Button variant="secondary" tabIndex={-1}>
                         {example.expansion}
                       </Button>
                     </span>

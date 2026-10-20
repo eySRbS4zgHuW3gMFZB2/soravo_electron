@@ -281,13 +281,13 @@ export default function DictionaryPage({ settings, onSave, onRefresh }: Dictiona
                     }}
                   >
                     <span className="page-hero-example-tag">
-                      <Button variant="secondary" size="sm" tabIndex={-1}>
+                      <Button variant="secondary" tabIndex={-1}>
                         &ldquo;{example.from}&rdquo;
                       </Button>
                     </span>
                     <span className="page-hero-example-arrow">→</span>
                     <span className="page-hero-example-tag">
-                      <Button variant="secondary" size="sm" tabIndex={-1}>
+                      <Button variant="secondary" tabIndex={-1}>
                         {example.to}
                       </Button>
                     </span>

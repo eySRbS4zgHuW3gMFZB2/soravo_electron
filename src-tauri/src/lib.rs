@@ -97,6 +97,12 @@ pub struct SoravoSettings {
     /// Shortcut that jumps to the Scratchpad tab from anywhere in the hub.
     /// Empty means the shortcut is not bound.
     pub scratchpad_hotkey: String,
+    /// Whether the navigation rail shows its labels. False collapses it to a
+    /// narrow icon rail, the way Wispr Flow's hub does.
+    pub sidebar_open: bool,
+    /// Folder the transcription models are downloaded into. Empty means the
+    /// default location under the app data directory.
+    pub models_dir: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,6 +136,8 @@ impl Default for SoravoSettings {
             theme: "light".to_string(),
             retention: "all".to_string(),
             scratchpad_hotkey: String::new(),
+            sidebar_open: true,
+            models_dir: String::new(),
         }
     }
 }
@@ -322,9 +330,54 @@ const MODEL_CATALOG: &[(&str, &str, u64, &str, &str)] = &[
     ("canary-1b-v2", "Canary 1B v2 (Multilingual)", 1_000_000_000, "https://huggingface.co/nvidia/canary-1b-v2", "CC-BY-4.0"),
 ];
 
-fn models_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
+/// The default folder for the transcription models.
+fn default_models_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
     app.path().app_data_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
         .join("models")
+}
+
+/// The folder the models live in: the one the user picked, or the default.
+fn models_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
+    let configured = load_settings(app).models_dir;
+    if configured.trim().is_empty() {
+        default_models_dir(app)
+    } else {
+        std::path::PathBuf::from(configured)
+    }
+}
+
+/// Open a folder in the operating system's file manager.
+///
+/// The shell plugin's `open` is scoped, and the user can put the models
+/// anywhere on disk, so the app opens the folder itself instead. The path has
+/// to be a directory that exists.
+#[tauri::command]
+fn open_folder(path: String) -> Result<(), String> {
+    let dir = std::path::PathBuf::from(&path);
+    if !dir.is_dir() {
+        return Err(format!("Not a folder: {}", path));
+    }
+    #[cfg(target_os = "windows")]
+    let mut command = std::process::Command::new("explorer.exe");
+    #[cfg(target_os = "macos")]
+    let mut command = std::process::Command::new("open");
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let mut command = std::process::Command::new("xdg-open");
+    command.arg(&dir);
+    command.spawn().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// The resolved models folder, for the front end to show and to open.
+#[tauri::command]
+fn models_folder(app: tauri::AppHandle) -> String {
+    models_dir(&app).to_string_lossy().to_string()
+}
+
+/// The default models folder, for the front end to offer as a reset.
+#[tauri::command]
+fn default_models_folder(app: tauri::AppHandle) -> String {
+    default_models_dir(&app).to_string_lossy().to_string()
 }
 
 fn model_path(app: &tauri::AppHandle, id: &str) -> std::path::PathBuf {
@@ -482,6 +535,8 @@ fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
         if let Some(v) = s.get("theme") { if let Some(s) = v.as_str() { settings.theme = s.to_string(); } }
         if let Some(v) = s.get("retention") { if let Some(s) = v.as_str() { settings.retention = s.to_string(); } }
         if let Some(v) = s.get("scratchpadHotkey") { if let Some(s) = v.as_str() { settings.scratchpad_hotkey = s.to_string(); } }
+        if let Some(v) = s.get("sidebarOpen") { if let Some(b) = v.as_bool() { settings.sidebar_open = b; } }
+        if let Some(v) = s.get("modelsDir") { if let Some(s) = v.as_str() { settings.models_dir = s.to_string(); } }
         settings
     } else {
         SoravoSettings::default()
@@ -506,6 +561,8 @@ fn save_settings(app: &tauri::AppHandle, settings: &SoravoSettings) -> Result<()
     store.set("theme", serde_json::json!(settings.theme));
     store.set("retention", serde_json::json!(settings.retention));
     store.set("scratchpadHotkey", serde_json::json!(settings.scratchpad_hotkey));
+    store.set("sidebarOpen", serde_json::json!(settings.sidebar_open));
+    store.set("modelsDir", serde_json::json!(settings.models_dir));
     store.save().map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -1390,9 +1447,15 @@ async fn set_settings(
         settings.launch_at_login = v;
     }
     if let Some(v) = patch.get("theme").and_then(|v| v.as_str()) {
-        if v == "light" || v == "dark" {
+        if v == "light" || v == "dark" || v == "system" {
             settings.theme = v.to_string();
         }
+    }
+    if let Some(v) = patch.get("sidebarOpen").and_then(|v| v.as_bool()) {
+        settings.sidebar_open = v;
+    }
+    if let Some(v) = patch.get("modelsDir").and_then(|v| v.as_str()) {
+        settings.models_dir = v.to_string();
     }
     if let Some(v) = patch.get("retention").and_then(|v| v.as_str()) {
         if v == "all" || v == "30days" || v == "session" {
@@ -1786,6 +1849,9 @@ pub fn run() {
             download_model,
             delete_model,
             set_active_model,
+            models_folder,
+            default_models_folder,
+            open_folder,
             win_min,
             win_max,
             win_close,

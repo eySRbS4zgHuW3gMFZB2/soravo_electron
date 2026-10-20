@@ -27,7 +27,8 @@ export interface TranscriptEntry {
 }
 
 export type Retention = 'all' | '30days' | 'session'
-export type Theme = 'light' | 'dark'
+/** "system" follows the operating system's light/dark preference. */
+export type Theme = 'light' | 'dark' | 'system'
 
 export interface SoravoSettings {
   hotkey: string
@@ -46,6 +47,10 @@ export interface SoravoSettings {
   retention: Retention
   /** Shortcut that jumps to the Scratchpad tab. Empty means unbound. */
   scratchpadHotkey: string
+  /** Whether the navigation rail shows its labels. */
+  sidebarOpen: boolean
+  /** Where the transcription models are downloaded. Empty means the default. */
+  modelsDir: string
 }
 
 export interface ModelInfo {
@@ -126,6 +131,12 @@ export interface SoravoAPI {
   deleteSnippet(id: number): Promise<void>
   getSettings(): Promise<SoravoSettings>
   setSettings(patch: Partial<SoravoSettings>): Promise<SoravoSettings>
+  /** The folder the transcription models are downloaded into. */
+  modelsFolder(): Promise<string>
+  /** The default models folder, for the "reset" action. */
+  defaultModelsFolder(): Promise<string>
+  /** Open a folder in the operating system's file manager. */
+  openFolder(path: string): Promise<void>
   validateBinding(accel: string): Promise<boolean>
   bindingHelp(): Promise<Record<string, string[]>>
 }
@@ -147,6 +158,8 @@ function settingsToTauri(s: SoravoSettings): Record<string, unknown> {
     theme: s.theme,
     retention: s.retention,
     scratchpadHotkey: s.scratchpadHotkey,
+    sidebarOpen: s.sidebarOpen,
+    modelsDir: s.modelsDir,
   }
 }
 
@@ -167,6 +180,8 @@ function settingsFromTauri(s: any): SoravoSettings {
     theme: s.theme ?? 'light',
     retention: s.retention ?? 'all',
     scratchpadHotkey: s.scratchpadHotkey ?? s.scratchpad_hotkey ?? '',
+    sidebarOpen: s.sidebarOpen ?? s.sidebar_open ?? true,
+    modelsDir: s.modelsDir ?? s.models_dir ?? '',
   }
 }
 
@@ -285,11 +300,16 @@ export const soravo: SoravoAPI = {
     if (patch.theme !== undefined) tauriPatch.theme = patch.theme
     if (patch.retention !== undefined) tauriPatch.retention = patch.retention
     if (patch.scratchpadHotkey !== undefined) tauriPatch.scratchpadHotkey = patch.scratchpadHotkey
+    if (patch.sidebarOpen !== undefined) tauriPatch.sidebarOpen = patch.sidebarOpen
+    if (patch.modelsDir !== undefined) tauriPatch.modelsDir = patch.modelsDir
     const raw = await invoke<any>('set_settings', { patch: tauriPatch })
     return settingsFromTauri(raw)
   },
   validateBinding: (accel) => invoke<boolean>('validate_binding', { accel }),
   bindingHelp: () => invoke<Record<string, string[]>>('binding_help'),
+  modelsFolder: () => invoke<string>('models_folder'),
+  defaultModelsFolder: () => invoke<string>('default_models_folder'),
+  openFolder: (path) => invoke<void>('open_folder', { path }),
 }
 
 // Expose on window for compatibility

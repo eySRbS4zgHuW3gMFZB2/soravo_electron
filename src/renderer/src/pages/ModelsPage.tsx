@@ -25,6 +25,14 @@ export default function ModelsPage() {
   const [speed, setSpeed] = useState(0)
   const [error, setError] = useState('')
   const [runtime, setRuntime] = useState<{ binary: boolean; model: string; modelPresent: boolean } | null>(null)
+  const [modelsFolder, setModelsFolder] = useState('')
+
+  useEffect(() => {
+    window.soravo
+      .modelsFolder()
+      .then(setModelsFolder)
+      .catch(() => setModelsFolder(''))
+  }, [])
 
   // The last progress sample, so the speed is measured between two events
   // rather than averaged from the start of the transfer.
@@ -156,14 +164,14 @@ export default function ModelsPage() {
                     ) : null}
                     <div className="model-card-actions">
                       {!m.installed && downloading !== m.id ? (
-                        <Button variant="secondary" size="sm" onClick={() => handleDownload(m.id)}>
+                        <Button variant="secondary" onClick={() => handleDownload(m.id)}>
                           Download
                         </Button>
                       ) : null}
                       {downloading === m.id ? (
                         <Button
                           variant="secondary"
-                          size="sm"
+                         
                           onClick={() => {
                             setDownloading(null)
                             setProgress(0)
@@ -174,10 +182,10 @@ export default function ModelsPage() {
                       ) : null}
                       {m.installed && !m.active ? (
                         <>
-                          <Button variant="secondary" size="sm" onClick={() => handleActivate(m.id)}>
+                          <Button variant="secondary" onClick={() => handleActivate(m.id)}>
                             Set Active
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(m.id)}>
+                          <Button variant="ghost" onClick={() => handleDelete(m.id)}>
                             Delete
                           </Button>
                         </>
@@ -189,7 +197,16 @@ export default function ModelsPage() {
             )}
 
             <p className="hub-note">
-              Models are downloaded to %APPDATA%/soravo/models/. Larger models are more accurate but slower.
+              Models are downloaded to{' '}
+              <button
+                type="button"
+                className="settings-link"
+                onClick={() => void window.soravo.openFolder(modelsFolder)}
+                title="Open the models folder"
+              >
+                {modelsFolder}
+              </button>
+              . Larger models are more accurate but slower.
             </p>
           </div>
         </div>
