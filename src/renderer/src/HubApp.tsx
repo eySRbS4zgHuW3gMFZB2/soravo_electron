@@ -37,7 +37,6 @@ import {
   DialogContent,
   DialogTitle
 } from '@/components/ui/dialog'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
@@ -47,6 +46,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Info as InfoIcon } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -175,24 +175,23 @@ function Sidebar({
 }
 
 /**
- * Explanatory "i" affordance beside a label. The bubble keeps the app's own
- * look via .hint-bubble; Radix supplies the positioning, collision handling
- * and keyboard wiring.
+ * Explanatory "i" affordance beside a label.
+ *
+ * The bubble is drawn by CSS rather than by a Radix portal: inside a modal
+ * dialog a portalled bubble fights the dialog's own layer stack, and a plain
+ * hover/focus bubble behaves the same in both themes. The text stays in the
+ * DOM and is wired up with aria-describedby, so a screen reader reads it.
  */
 function Hint({ text }: { text: string }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button type="button" className="hint-dot" aria-label={text}>
-          i
-        </button>
-      </TooltipTrigger>
-      {/* side/align reproduce the old hand-rolled placement, which put the
-          bubble 8px below the dot and left-aligned to it. */}
-      <TooltipContent className="hint-bubble" side="bottom" align="start" sideOffset={8}>
+    <span className="hint-wrap">
+      <button type="button" className="hint-dot" aria-label={text} aria-describedby="hint-bubble">
+        <InfoIcon aria-hidden="true" />
+      </button>
+      <span role="tooltip" id="hint-bubble" className="hint-bubble">
         {text}
-      </TooltipContent>
-    </Tooltip>
+      </span>
+    </span>
   )
 }
 
@@ -395,7 +394,7 @@ function SettingsModal({
 
           {tab === 'general' && (
             <div className="modal-scroll">
-              <h2 className="modal-title">General</h2>
+              <h2 className="settings-page-title">General</h2>
               <div className="settings-card">
                 <div className="settings-row">
                   <div className="settings-row-text">
@@ -583,7 +582,7 @@ function SettingsModal({
 
           {tab === 'system' && (
             <div className="modal-scroll">
-              <h2 className="modal-title">System</h2>
+              <h2 className="settings-page-title">System</h2>
 
               <div className="settings-section">
                 <p className="settings-section-title">App settings</p>
@@ -707,7 +706,7 @@ function SettingsModal({
                       />
                     </div>
                     <div className="settings-row-control">
-                      <Button variant="secondary" onClick={addWord}>
+                      <Button variant="secondary" size="sm" onClick={addWord}>
                         Add word
                       </Button>
                     </div>
@@ -716,7 +715,7 @@ function SettingsModal({
               </div>
 
               <div className="settings-section">
-                <Button variant="destructive" className="system-quit" onClick={onQuit}>
+                <Button variant="destructive" size="sm" className="system-quit" onClick={onQuit}>
                   Quit Soravo
                 </Button>
               </div>
@@ -725,7 +724,7 @@ function SettingsModal({
 
           {tab === 'privacy' && (
             <div className="modal-scroll">
-              <h2 className="modal-title">Data &amp; Privacy</h2>
+              <h2 className="settings-page-title">Data &amp; Privacy</h2>
               <div className="hub-local-card" style={{ marginBottom: 20 }}>
                 <p className="hub-local-title">Everything stays on this PC</p>
                 <p className="hub-local-text">
@@ -760,7 +759,7 @@ function SettingsModal({
                     <span className="settings-row-desc">{historyCount} on this machine.</span>
                   </div>
                   <div className="settings-row-control">
-                    <Button variant="destructive" onClick={onClearHistory}>
+                    <Button variant="destructive" size="sm" onClick={onClearHistory}>
                       Delete all
                     </Button>
                   </div>
@@ -936,7 +935,6 @@ export default function HubApp() {
   const theme = settings?.theme ?? 'light'
 
   return (
-    <TooltipProvider delayDuration={200}>
       <div className="hub-root">
         <Titlebar
           theme={theme}
@@ -1001,6 +999,5 @@ export default function HubApp() {
         ) : null}
         <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       </div>
-    </TooltipProvider>
   )
 }

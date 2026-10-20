@@ -95,6 +95,12 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
   `src/renderer/src/appShortcuts.ts`.
 - **One control family.** Buttons, selects and inputs are 40px, small buttons 32px and the switch is
   24 x 44px, so a settings row reads as a single set of controls.
+- **One type scale, one pair of faces.** Every heading and label sits on an exact DESIGN.md token
+  (32 / 24 / 20 / 16 / 14 / 12, with 600 as the weight below the hero and 900 for the display
+  moments). The only typeface is Inter - DESIGN.md names "Soravo Sans" for display and lists Inter
+  at weight 900 as its substitute, so no second family is bundled.
+- **Model downloads report their progress.** The bar is followed by the completed percentage and
+  the live transfer rate.
 
 ## Tech Stack
 

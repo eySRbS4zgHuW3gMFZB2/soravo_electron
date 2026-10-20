@@ -9,8 +9,11 @@
    rail of stat cards.
 
    The LOOK is Soravo's own design language (DESIGN.md): the sage canvas, the
-   lime brand accent, 24px card and button radii, Inter at 400/600 for
-   everything below the hero and the serif display face for hero headlines.
+   lime brand accent, 24px card and button radii, and two faces - Inter at
+   400/600 for everything below the hero, and Inter at 900 for the display
+   moments (hero headlines, the numbers in a stat card). DESIGN.md names
+   "Soravo Sans" for the display face and lists Inter at weight 900 as its
+   substitute, so no second typeface is bundled.
 
    HERO IMAGERY
    Wispr Flow's hero bands use licensed photography. Soravo ships gradients
@@ -34,7 +37,6 @@
   --soravo-negative: #d03238;
   --soravo-radius: 24px;
   --soravo-font: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --soravo-serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
 
   /* Hero band: card-feature-dark, inverted in dark mode so the lime accent
      keeps enough contrast to stay readable. */
@@ -207,8 +209,9 @@ html[data-theme='dark'] {
   background: transparent;
   color: var(--soravo-ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
+  line-height: 20px;
   cursor: pointer;
   text-align: left;
   position: relative;
@@ -270,8 +273,8 @@ html[data-theme='dark'] {
 
 .hub-local-text {
   margin: 0;
-  font-size: 13px;
-  line-height: 19px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--soravo-body);
 }
 
@@ -460,17 +463,19 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .page-hero-title {
-  font-family: var(--soravo-serif);
+  font-family: var(--soravo-font);
   font-size: 32px;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.2px;
+  font-weight: 900;
+  line-height: 38.4px;
+  letter-spacing: -0.96px;
   color: var(--hero-fg);
   max-width: 640px;
 }
 
+/* The brand accent, not a slanted style: DESIGN.md's card-feature-dark pairs
+   the ink surface with the brand green. */
 .page-hero-title em {
-  font-style: italic;
+  font-style: normal;
   color: var(--hero-accent);
 }
 
@@ -914,8 +919,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   border-radius: 12px;
   background: var(--soravo-canvas-soft);
   color: var(--soravo-ink);
-  font-size: 15px;
-  line-height: 22px;
+  font-size: 16px;
+  line-height: 24px;
   font-weight: 400;
   outline: none;
 }
@@ -962,7 +967,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   display: inline-block;
   padding: 4px 14px;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 28px;
   background: var(--soravo-primary);
   color: var(--soravo-on-primary);
@@ -972,7 +977,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .hub-hotkey-plus {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--soravo-ink);
 }
 
@@ -1208,8 +1213,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .insights-card-note {
-  font-size: 13px;
-  line-height: 19px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--soravo-body);
   margin: 0;
 }
@@ -1249,7 +1254,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .heatmap-year {
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 16px;
   font-weight: 600;
   color: var(--soravo-mute);
   margin-left: 4px;
@@ -1324,7 +1330,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   flex: 1;
   display: flex;
   gap: 3px;
-  font-size: 10px;
+  font-size: 12px;
+  line-height: 16px;
   color: var(--soravo-mute);
 }
 
@@ -1344,7 +1351,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 10px;
+  font-size: 12px;
+  line-height: 16px;
   color: var(--soravo-mute);
 }
 
@@ -1366,8 +1374,9 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   border-radius: 9999px;
   background: transparent;
   color: var(--soravo-ink);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
+  line-height: 20px;
   height: auto;
   padding: 6px 16px;
 }
@@ -1403,7 +1412,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .hub-bar-col span {
-  font-size: 10px;
+  font-size: 12px;
+  line-height: 16px;
   color: var(--soravo-mute);
   white-space: nowrap;
 }
@@ -1450,7 +1460,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .toprow-count {
   flex: none;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--soravo-body);
   font-weight: 600;
   min-width: 28px;
@@ -1476,10 +1487,9 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .model-card-name {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 30px;
-  letter-spacing: -0.2px;
+  line-height: 24px;
   color: var(--soravo-ink);
   margin: 0;
 }
@@ -1497,6 +1507,38 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   gap: 8px;
   margin-top: auto;
   flex-wrap: wrap;
+}
+
+/* The download bar with its percentage and transfer rate on the right. */
+.model-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.model-progress [data-slot='progress'] {
+  flex: 1;
+  min-width: 0;
+}
+
+.model-progress-pct {
+  flex: none;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--soravo-ink);
+  min-width: 34px;
+  text-align: right;
+}
+
+.model-progress-speed {
+  flex: none;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--soravo-mute);
+  min-width: 64px;
+  text-align: right;
 }
 
 /* --- Style page ------------------------------------------------------------ */
@@ -1754,8 +1796,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   border-radius: 12px;
   background: var(--soravo-canvas-soft);
   color: var(--soravo-ink);
-  font-size: 15px;
-  line-height: 22px;
+  font-size: 16px;
+  line-height: 24px;
   font-weight: 400;
   outline: none;
   box-sizing: border-box;
@@ -1860,7 +1902,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .modal-heading {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 1.4px;
   text-transform: uppercase;
   color: var(--soravo-mute);
@@ -1897,8 +1939,9 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .modal-group {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
   letter-spacing: 1.3px;
   text-transform: uppercase;
   color: var(--soravo-mute);
@@ -1933,10 +1976,22 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 }
 
 .modal-title {
-  font-family: var(--soravo-serif);
-  font-size: 30px;
+  font-family: var(--soravo-font);
+  font-size: 24px;
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 31.2px;
+  letter-spacing: -0.48px;
+  color: var(--soravo-ink);
+  margin: 0 0 20px;
+}
+
+/* The settings shell's own page title - a step above a sub-dialog title. */
+.settings-page-title {
+  font-family: var(--soravo-font);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 38.4px;
+  letter-spacing: -0.96px;
   color: var(--soravo-ink);
   margin: 0 0 20px;
 }
@@ -1982,6 +2037,12 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   border-bottom: 1px solid var(--soravo-canvas);
 }
 
+/* A row that carries a field stacks its label above the input, so the control
+   on the right has to line up with the input rather than with the label. */
+.settings-row:has([data-slot='input']) {
+  align-items: flex-end;
+}
+
 .settings-row:last-child {
   border-bottom: none;
 }
@@ -2016,14 +2077,15 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 /* The row control sits on the sage card, so a secondary (canvas-soft) button
    would disappear into it. DESIGN.md's button-tertiary - canvas surface with a
-   1px ink border - is the treatment that reads on that surface. */
-.settings-row-control [data-slot='button'] {
+   1px ink border - is the treatment that reads on that surface. A destructive
+   control keeps its own colour. */
+.settings-row-control [data-slot='button']:not([data-variant='destructive']) {
   background: var(--soravo-canvas);
   color: var(--soravo-ink);
   border-color: var(--soravo-ink);
 }
 
-.settings-row-control [data-slot='button']:hover {
+.settings-row-control [data-slot='button']:not([data-variant='destructive']):hover {
   background: var(--soravo-canvas-soft);
   color: var(--soravo-ink);
 }
@@ -2034,7 +2096,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .settings-section-title {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 1.3px;
   text-transform: uppercase;
   color: var(--soravo-mute);
@@ -2103,7 +2165,7 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 .shortcut-section {
   margin: 0 0 10px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 1.3px;
   text-transform: uppercase;
   color: var(--soravo-mute);
@@ -2156,7 +2218,8 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 
 .hotkey-error {
   margin: 6px 0 0;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--soravo-negative);
 }
 

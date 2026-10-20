@@ -1,7 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ModelInfo } from '../soravo'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+
+/** "3.4 MB/s" - the download rate, refreshed as the transfer runs. */
+function formatSpeed(bytesPerSecond: number): string {
+  if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) return '0 MB/s'
+  const mb = bytesPerSecond / (1024 * 1024)
+  if (mb >= 1) return `${mb.toFixed(1)} MB/s`
+  return `${Math.max(1, Math.round(bytesPerSecond / 1024))} KB/s`
+}
 
 /**
  * The Models page.
@@ -14,8 +22,13 @@ export default function ModelsPage() {
   const [models, setModels] = useState<ModelInfo[]>([])
   const [downloading, setDownloading] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
+  const [speed, setSpeed] = useState(0)
   const [error, setError] = useState('')
   const [runtime, setRuntime] = useState<{ binary: boolean; model: string; modelPresent: boolean } | null>(null)
+
+  // The last progress sample, so the speed is measured between two events
+  // rather than averaged from the start of the transfer.
+  const sample = useRef<{ at: number; received: number } | null>(null)
 
   const refresh = () => {
     window.soravo.listModels().then(setModels).catch(() => setModels([]))
@@ -25,11 +38,26 @@ export default function ModelsPage() {
   useEffect(() => {
     refresh()
     const offProgress = window.soravo.onModelDownloadProgress((p) => {
-      if (p.id === downloading) setProgress(p.percent)
+      if (p.id === downloading) {
+        setProgress(p.percent)
+        const now = Date.now()
+        const previous = sample.current
+        if (previous) {
+          const seconds = (now - previous.at) / 1000
+          if (seconds > 0.2) {
+            setSpeed((p.received - previous.received) / seconds)
+            sample.current = { at: now, received: p.received }
+          }
+        } else {
+          sample.current = { at: now, received: p.received }
+        }
+      }
     })
     const offComplete = window.soravo.onModelDownloadComplete((p) => {
       setDownloading(null)
       setProgress(0)
+      setSpeed(0)
+      sample.current = null
       refresh()
       // Auto-activate if no active model
       window.soravo.getSettings().then((s) => {
@@ -42,11 +70,15 @@ export default function ModelsPage() {
   const handleDownload = (id: string) => {
     setDownloading(id)
     setProgress(0)
+    setSpeed(0)
+    sample.current = null
     setError('')
     window.soravo.downloadModel(id).catch((e) => {
       setError(String(e))
       setDownloading(null)
       setProgress(0)
+      setSpeed(0)
+      sample.current = null
     })
   }
 
@@ -116,9 +148,10 @@ export default function ModelsPage() {
                       ) : null}
                     </div>
                     {downloading === m.id ? (
-                      <div style={{ width: '100%' }}>
+                      <div className="model-progress">
                         <Progress value={progress} />
-                        <div style={{ fontSize: 11, marginTop: 2 }}>{progress}%</div>
+                        <span className="model-progress-pct">{progress}%</span>
+                        <span className="model-progress-speed">{formatSpeed(speed)}</span>
                       </div>
                     ) : null}
                     <div className="model-card-actions">

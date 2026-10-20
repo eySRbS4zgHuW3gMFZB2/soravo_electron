@@ -473,6 +473,56 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   settings tabs, the shortcuts sub-dialog, and the add/edit/delete flows for
   snippets, dictionary entries and notes.
 
+#### Round 3: the type scale, the tooltip and the download meter
+- **The serif is gone.** The hero headline and the settings titles were set in
+  EB Garamond, a face Wispr Flow uses but DESIGN.md does not: the brand is
+  "Soravo Sans" for display and Inter for everything else, with Inter at weight
+  900 documented as the substitute for the display face. The hero headline is
+  now **Inter 900** - the brand display moment - and the dialog and settings
+  titles are Inter. The two EB Garamond woff2 files were removed with it.
+- **Every piece of text is now on an exact DESIGN.md token.** The app had 10, 11,
+  13, 15, 18, 20, 26 and 30px type, none of which is a token:
+
+  | element | now | token |
+  |---|---|---|
+  | page title, settings page title | 32 / 600 | display-sm |
+  | dialog title | 24 / 600 | display-xs |
+  | card title | 20 / 600 | body-lg at 600 |
+  | list key, row label, field | 16 / 600 | body-md-strong |
+  | list value, card body | 16 / 400 | body-md |
+  | card description, row hint | 14 / 400 | body-sm |
+  | eyebrow, heat-map axis, meter | 12 / 400 or 600 | caption |
+  | nav link | 14 / 600 | body-sm-strong (nav-link) |
+
+  The shadcn primitives moved with it: the registry's `font-medium` (500) is
+  now `font-semibold` (600) across the badge, card, dialog, dropdown, label,
+  tabs and toggle, and the tooltip bubble steps up to body-sm.
+- **The "Add word" button lines up with the field.** The custom-vocabulary rows
+  stack their label above the input, so the control on the right sat between
+  the two. Rows that carry a field now align their control with the input, and
+  the button itself is a small (32px) secondary rather than a full-size one.
+  "Delete all" in Data & Privacy and "Quit Soravo" in System are small too.
+- **The tooltip trigger is a real icon.** The affordance was a grey circle with
+  a letter "i" in it; it is now a 15px lucide Info glyph in a 20px ghost
+  button that picks up the surface on hover.
+- **The tooltip bubble actually appears.** The Radix tooltip never opened - the
+  bubble was portalled into the body while the settings dialog held the
+  body's pointer events, and the hover never reached the trigger. The bubble
+  is now drawn in CSS from the trigger's own wrapper, so it works inside a
+  modal, in both themes, and it is still wired up with `role="tooltip"` and
+  `aria-describedby`.
+- **The Models page type is smaller** - the card names step down to
+  body-md-strong (16 / 600) and the metadata to body-sm, so the long model
+  names stop wrapping over three lines.
+- **The download meter shows the percentage and the transfer rate.** The bar is
+  followed by the completed percentage and, further right, the live speed
+  (measured between two progress events, e.g. "4%  2.3 MB/s").
+- Verified by driving the app: a real model download showed the bar, the
+  percentage and the speed; the downloaded model and the active model were
+  then put back the way they were found. 31/31 cargo tests pass,
+  `tsc -p tsconfig.web.json` is clean, `npm run build` succeeds, and a
+  token audit of every rule in the app reports no off-scale size or weight.
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.

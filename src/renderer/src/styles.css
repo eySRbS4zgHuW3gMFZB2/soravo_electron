@@ -26,34 +26,6 @@
   --soravo-negative: #d03238;
   --soravo-radius: 24px;
   --soravo-font: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  /* EB Garamond is used for the settings page titles, matching Wispr Flow.
-     OFL-licensed, bundled locally because the app's CSP only allows
-     'self' and data: font sources. */
-  --soravo-serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
-}
-
-/* EB Garamond (OFL 1.1) - settings page titles.
-   Served from public/ so the URL is absolute in both dev and the bundle. */
-@font-face {
-  font-family: 'EB Garamond';
-  font-style: normal;
-  font-weight: 400 600;
-  font-display: swap;
-  src: url('/fonts/eb-garamond-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
-    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-    U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-  font-family: 'EB Garamond';
-  font-style: normal;
-  font-weight: 400 600;
-  font-display: swap;
-  src: url('/fonts/eb-garamond-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
-    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
-    U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /* ---------------------------------------------------------------------------
@@ -262,47 +234,67 @@ body {
 
 .hint-dot {
   flex: none;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: var(--soravo-mute);
-  color: var(--soravo-canvas);
-  font-size: 10px;
-  font-weight: 700;
-  font-style: normal;
-  line-height: 15px;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--soravo-mute);
   cursor: help;
   user-select: none;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
 .hint-dot:hover,
-.hint-dot:focus {
-  background: var(--soravo-ink);
+.hint-dot:focus-visible {
+  background: var(--soravo-canvas-soft);
+  color: var(--soravo-ink);
   outline: none;
 }
 
-/* The bubble now renders through Radix's Tooltip portal, which positions it
-   itself, so the old position: fixed / inline top+left are dropped. */
-/* Fills from the shadcn Tooltip are left at the registry defaults, so the
-   bubble takes its colours from the app's surface tokens instead. Using
-   --soravo-ink as the background made it render as a white box with black
-   text in dark mode, which sat badly against the rest of the UI. */
-.hint-bubble {
-  z-index: 300;
-  width: 250px;
-  padding: 9px 11px;
-  border-radius: 10px;
-  background: var(--soravo-canvas);
-  color: var(--soravo-ink);
-  border: 1px solid var(--soravo-canvas-soft);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.45;
-  box-shadow: 0 8px 24px rgba(14, 15, 12, 0.24);
-  pointer-events: none;
+.hint-dot svg {
+  width: 15px;
+  height: 15px;
 }
 
+.hint-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+/* The bubble flips with the theme: ink surface with canvas text, so it always
+   reads against whatever is behind it. */
+.hint-bubble {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 300;
+  width: 250px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--soravo-ink);
+  color: var(--soravo-canvas);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  box-shadow: 0 8px 24px rgba(14, 15, 12, 0.28);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease;
+}
+
+.hint-wrap:hover .hint-bubble,
+.hint-wrap:focus-within .hint-bubble {
+  opacity: 1;
+  visibility: visible;
+}
 .row input,
 .row select {
   flex: 1;
