@@ -1339,6 +1339,38 @@ export default function HubApp() {
     document.documentElement.dataset.theme = settings?.theme ?? 'light'
   }, [settings])
 
+  // The Scratchpad tab can rebind its own shortcut, so re-read the settings
+  // whenever the hub navigates back out of a tab.
+  useEffect(() => {
+    window.soravo.getSettings().then(setSettings).catch(() => {})
+  }, [page])
+
+  // The Scratchpad shortcut jumps to that tab from anywhere in the hub.
+  useEffect(() => {
+    const accelerator = settings?.scratchpadHotkey
+    if (!accelerator) return
+    const parts = accelerator.toLowerCase().split('+')
+    const needsCtrl = parts.includes('commandorcontrol') || parts.includes('ctrl') || parts.includes('control')
+    const needsAlt = parts.includes('alt')
+    const needsShift = parts.includes('shift')
+    const trigger = parts.filter(
+      (p) => !['commandorcontrol', 'ctrl', 'control', 'alt', 'shift', 'meta', 'super'].includes(p)
+    )[0]
+    if (!trigger) return
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return
+      if (needsCtrl !== (e.ctrlKey || e.metaKey)) return
+      if (needsAlt !== e.altKey) return
+      if (needsShift !== e.shiftKey) return
+      if (e.key.toLowerCase() !== trigger) return
+      e.preventDefault()
+      setPage('scratchpad')
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [settings?.scratchpadHotkey])
+
   useEffect(() => {
     window.soravo.getInsights().then(setInsights).catch(() => setInsights(null))
   }, [page, lastText])

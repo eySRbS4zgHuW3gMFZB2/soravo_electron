@@ -5,6 +5,7 @@ import App from './App'
 import HubApp from './HubApp'
 import './styles.css'
 import './hub.css'
+import './wispr.css'
 import './soravo'
 
 const rootEl = document.getElementById('root')

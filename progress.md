@@ -280,6 +280,30 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   across close/reopen, 30/30 cargo tests pass
 - Merged via PR #9
 
+### Phase 14: Snippets & Scratchpad rebuilt to Wispr Flow (branch `feature/snippets-scratchpad`)
+- Reverse-engineered Wispr Flow 1.6.1174 from `app.asar` -> `.webpack/renderer/hub/index.js`
+  (REA application graph, 228 files / 3527 modules) and recovered the CSS modules behind both
+  pages: 73570 (page shell), 85087 (hero banner), 15813 (banner examples), 24323 (tabs),
+  63136 (snippet list), 43395 (note list), 75559 (banner mockup)
+- Captured the live Wispr Flow Snippets and Scratchpad pages for a pixel reference
+- Added `src/renderer/src/wispr.css` plus `components/wispr/` (banner, underline tabs, icons)
+  as reusable Wispr Flow page primitives, mapped onto the app's own design tokens
+- Snippets page rebuilt: serif title, Import/Add new, All/Personal tabs (the
+  "Shared with team" tab is intentionally left out), search/sort/refresh utilities, hero banner
+  with example chips, bordered snippet table with hover edit/delete actions, empty state
+- Snippets gained a working JSON import (Wispr Flow imports a JSON file too)
+- Scratchpad page rebuilt: title with Beta badge, "Add to Flow Bar" toggle, its own shortcut
+  pill, hero banner with the fake window mockup, sticky "Recents" strip, note cards, empty state
+- The editor stays inline so dictation keeps working from the tab
+- **Bug fixed**: `Snippet` and `ScratchpadNote` were missing `#[serde(rename_all = "camelCase")]`,
+  so the front end read `createdAt`/`isAutoLearned` as undefined and every sort threw
+  `Cannot read properties of undefined (reading 'localeCompare')`. Regression test added
+- **Bug fixed**: the sticky "Recents" strip (z-index 500) painted over Radix dialogs (z-50)
+- Added the `scratchpadHotkey` setting so the Scratchpad shortcut survives a restart
+- Verified: add/edit/delete/search/sort/bulk delete/import/banner chip/dismiss, note
+  create/type/autosave/pin/copy/delete/search/refresh, Flow Bar toggle, shortcut capture
+- 31/31 cargo tests pass; Dictation, History, Insights, Models and Settings are unaffected
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.

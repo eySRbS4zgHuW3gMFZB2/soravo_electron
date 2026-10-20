@@ -44,6 +44,8 @@ export interface SoravoSettings {
   launchAtLogin: boolean
   theme: Theme
   retention: Retention
+  /** Shortcut that jumps to the Scratchpad tab. Empty means unbound. */
+  scratchpadHotkey: string
 }
 
 export interface ModelInfo {
@@ -139,6 +141,7 @@ function settingsToTauri(s: SoravoSettings): Record<string, unknown> {
     launchAtLogin: s.launchAtLogin,
     theme: s.theme,
     retention: s.retention,
+    scratchpadHotkey: s.scratchpadHotkey,
   }
 }
 
@@ -158,6 +161,7 @@ function settingsFromTauri(s: any): SoravoSettings {
     launchAtLogin: s.launchAtLogin ?? s.launch_at_login ?? true,
     theme: s.theme ?? 'light',
     retention: s.retention ?? 'all',
+    scratchpadHotkey: s.scratchpadHotkey ?? s.scratchpad_hotkey ?? '',
   }
 }
 
@@ -275,6 +279,7 @@ export const soravo: SoravoAPI = {
     if (patch.launchAtLogin !== undefined) tauriPatch.launchAtLogin = patch.launchAtLogin
     if (patch.theme !== undefined) tauriPatch.theme = patch.theme
     if (patch.retention !== undefined) tauriPatch.retention = patch.retention
+    if (patch.scratchpadHotkey !== undefined) tauriPatch.scratchpadHotkey = patch.scratchpadHotkey
     const raw = await invoke<any>('set_settings', { patch: tauriPatch })
     return settingsFromTauri(raw)
   },
