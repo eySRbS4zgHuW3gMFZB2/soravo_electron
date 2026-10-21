@@ -66,15 +66,6 @@ export interface ModelInfo {
   present: boolean
   active: boolean
   url: string
-  language: string
-  microphoneId: string
-  sounds: boolean
-  smartCleanup: boolean
-  addPunctuation: boolean
-  vocabulary: Record<string, string>
-  launchAtLogin: boolean
-  theme: Theme
-  retention: Retention
 }
 
 export interface InsightsData {

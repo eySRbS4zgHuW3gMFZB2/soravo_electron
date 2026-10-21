@@ -766,6 +766,36 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   transcribe. 36/36 cargo tests pass, `tsc -p tsconfig.web.json` is clean
   and `npm run build` succeeds.
 
+#### Round 11: AGENTS.md, for whoever comes next
+- **The repository now has an `AGENTS.md`**, and the README points at it.
+  It is not a style guide - it is the list of things that are true, are not
+  obvious from the code, and are easy to break:
+  - the engine is a separate program, so every assumption about a model
+    file is an assumption about what that program does with it;
+  - the three model rules - a companion file beside the model, a truncated
+    file that looks whole, and a catalog URL that has to point at a file
+    and not a repository page;
+  - the two hotkey paths, and why both have to work and both have to be
+    measured;
+  - the key naming lives in one module, and the browser's `event.key` is
+    not that naming;
+  - the colour rules - a label on green is never white, the lime is for
+    marks and not for fills;
+  - Tailwind without preflight, so unlayered CSS outranks every utility;
+  - where the app's data lives, and the branch convention.
+- **The self-review turned up two things while writing it.** The
+  `ModelInfo` type on the front end carried nine settings fields -
+  `theme`, `vocabulary`, `launchAtLogin` and the rest - that the Rust
+  struct has never sent; they were a copy-paste leftover and are gone.
+  And the logic that decides whether a shared companion file survives its
+  model being deleted was tangled inside the delete command, so it is now
+  a named function with a test: the Moonshine tokenizer is read by both
+  Moonshine models, and deleting one must not take it from the other.
+- The new test caught a mistake in the test itself on the first run - the
+  helper was written to answer "is it needed elsewhere", and the
+  assertion had it backwards. Fixed, and 37/37 cargo tests pass with
+  `tsc -p tsconfig.web.json` clean and `npm run build` succeeding.
+
 #### Round 10: the merge, and a type check that actually runs
 - **The type check was a no-op.** `npm run typecheck` and the build's first
   step both pointed at `tsconfig.json`, which is the solution config and

@@ -2,6 +2,11 @@
 
 Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcription runs on-device via whisper.cpp — no accounts, no cloud, no telemetry.
 
+> **Changing this code? Read [AGENTS.md](AGENTS.md) first.** It records the
+> things that are not obvious from the code and that break the app in ways
+> that look like something else entirely — the engine's model rules, the two
+> hotkey paths, and the colour rules the design depends on.
+
 ## Features
 
 - **Push-to-talk dictation** — global hotkey, mic capture, local Whisper transcription, text injection into any app
@@ -76,6 +81,7 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 | `src/renderer/src/hub.css` | The whole hub design layer: shell, page primitives and the hero gradients |
 | `src/renderer/src/soravo.ts` | Tauri API shim (window.soravo compatible) |
 | `src/main/history.ts` | (Legacy Electron) SQLite CRUD + insights |
+| `AGENTS.md` | Working notes for anyone changing this repository |
 | `progress.md` | Full development history |
 
 ## Notes

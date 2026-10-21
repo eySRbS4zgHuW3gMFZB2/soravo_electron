@@ -704,20 +704,11 @@ async fn delete_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
     // both Moonshine models.
     if let Some(model) = catalog_model(&id) {
         for companion in model.companions {
-            let needed_elsewhere = MODEL_CATALOG.iter().any(|other| {
-                other.id != model.id
-                    && other
-                        .companions
-                        .iter()
-                        .any(|c| c.file == companion.file)
-                    && model_is_installed(&dir, other)
-            });
-            if needed_elsewhere {
-                continue;
-            }
-            let companion_path = dir.join(companion.file);
-            if companion_path.exists() {
-                let _ = std::fs::remove_file(companion_path);
+            if !companion_is_needed_elsewhere(&dir, model, companion) {
+                let companion_path = dir.join(companion.file);
+                if companion_path.exists() {
+                    let _ = std::fs::remove_file(companion_path);
+                }
             }
         }
     }
@@ -728,6 +719,19 @@ async fn delete_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
         save_settings(&app, &settings)?;
     }
     Ok(())
+}
+
+/// Does another installed model read this same file from its own folder?
+fn companion_is_needed_elsewhere(
+    dir: &std::path::Path,
+    model: &CatalogModel,
+    companion: &ModelCompanion,
+) -> bool {
+    MODEL_CATALOG.iter().any(|other| {
+        other.id != model.id
+            && other.companions.iter().any(|c| c.file == companion.file)
+            && model_is_installed(dir, other)
+    })
 }
 
 #[tauri::command]
@@ -2529,6 +2533,47 @@ mod tests {
         assert!(
             !model_is_installed(&dir, model),
             "a short weight file is a broken download, not a small model"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The Moonshine tokenizer is shared by both Moonshine models, so
+    /// deleting one of them must not take the file the other one reads.
+    #[test]
+    fn a_shared_companion_survives_the_model_that_is_deleted() {
+        let dir = std::env::temp_dir().join(format!("soravo-shared-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let tiny = catalog_model("moonshine-tiny").unwrap();
+        let streaming = catalog_model("moonshine-streaming-tiny").unwrap();
+        let tokenizer = &tiny.companions[0];
+
+        // Both models are installed and they read the same tokenizer.
+        for model in [tiny, streaming] {
+            std::fs::write(
+                dir.join(format!("ggml-{}.bin", model.id)),
+                vec![0u8; model.size as usize],
+            )
+            .unwrap();
+        }
+        std::fs::write(dir.join(tokenizer.file), vec![0u8; tokenizer.size as usize]).unwrap();
+        assert!(model_is_installed(&dir, tiny));
+        assert!(model_is_installed(&dir, streaming));
+
+        // Deleting one leaves the other one working: the tokenizer is still
+        // needed, so it stays.
+        assert!(
+            companion_is_needed_elsewhere(&dir, tiny, tokenizer),
+            "the streaming model still reads the tokenizer"
+        );
+
+        // With the other model gone, the file goes too.
+        std::fs::remove_file(dir.join(format!("ggml-{}.bin", streaming.id))).unwrap();
+        assert!(
+            !companion_is_needed_elsewhere(&dir, tiny, tokenizer),
+            "nothing else reads the tokenizer now"
         );
 
         let _ = std::fs::remove_dir_all(&dir);
