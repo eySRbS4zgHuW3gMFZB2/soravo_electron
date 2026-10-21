@@ -10,7 +10,8 @@ Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcriptio
 - **Settings** — hotkey capture (press-to-capture) for dictate, paste last, copy last and the Scratchpad; mic selection, model/language, smart cleanup, custom vocabulary, sounds, theme, retention, launch at login, and the models folder; General, System, Account, Plans & Billing and Data & Privacy, grouped the way Wispr Flow groups them
 - **Theme** — Light, Dark, or System, which follows the operating system's own light/dark setting while
   the app is open. The title bar has a one-click toggle for the first two.
-- **Models** — download, manage, and switch between 30 ASR models (Whisper, Moonshine, Parakeet, Canary, and more); see [MODELS.md](MODELS.md) for the full catalog and licenses. The folder they download into is a link that opens it, and it can be pointed anywhere on disk
+- **Models** — download, manage, and switch between 30 ASR models (Whisper, Moonshine, Parakeet, Canary, and more); see [MODELS.md](MODELS.md) for the full catalog and licenses. The folder they download into is a link that opens it, and it can be pointed anywhere on disk. The list can be searched, filtered by what is downloaded, and sorted
+- **Shortcuts** — the shortcuts section follows Wispr Flow's: a stack of cards, the label on the left and the control on the right, each shortcut shown as key chips. Push-to-talk is a toggle, and the key names come from one place, so a binding is named the same way wherever it is shown
 - **Insights** — a tabbed dashboard: words-per-minute gauge, fixes made, total words, when-you-dictate rhythm chart, a 26-week activity heat-map, top words and repeated phrases
 - **Dictionary** — the personal word list as a first-class page: say "sore avo" and it is written as "Soravo". Add, edit, remove, import and export the list
 - **Style** — the rules Soravo applies to every dictation (clean-up, punctuation, language), as a page rather than a settings row
