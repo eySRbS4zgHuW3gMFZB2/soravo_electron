@@ -104,7 +104,7 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
   for the display face.
 - **The colour passes its contrast check.** Every text and surface pair in the app clears WCAG's
   4.5:1 in both themes, and the motion honours `prefers-reduced-motion`.
-- **A green that carries text is the brand's deep green with white text** - DESIGN.md's `ink-deep`. The lime stays the
+- **A green that carries text is the brand's positive green with white text** - DESIGN.md's `positive`. The lime stays the
   accent for marks and meters - the progress bars, the heatmap, the switch, the focus ring.
 - **The shortcut section follows Wispr Flow's**: a stack of cards, the label on the left and the control on the right, with the
   shortcut shown as key chips and push-to-talk as a toggle.

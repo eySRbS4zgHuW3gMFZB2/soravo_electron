@@ -17,7 +17,7 @@
   /* A green surface that carries text. The lime is the accent for marks and
      meters; a pill with a label on it needs a fill white text can read, so
      it takes the brand's deep green and white text. */
-  --soravo-primary-fill: #163300;
+  --soravo-primary-fill: #2ead4b;
   --soravo-on-primary-fill: #ffffff;
   --soravo-ink: #0e0f0c;
   --soravo-body: #454745;
