@@ -21,7 +21,10 @@ const buttonVariants = cva(
       variant: {
         // Lime: the app's old .btn.primary
         // The primary action: the brand's deep green, with white text.
-        default: "bg-primary-fill text-primary-fill-foreground hover:brightness-90",
+        // The primary action: the brand's lime with the brand's on-primary
+        // ink on it, the way wise.com pairs them. The hover is the brand's
+        // primary-active, one step lighter.
+        default: "bg-primary-fill text-primary-fill-foreground hover:bg-primary-active",
         // Canvas surface: the app's old .btn
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_8%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",

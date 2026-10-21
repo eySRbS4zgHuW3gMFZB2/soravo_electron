@@ -13,12 +13,15 @@
 
 :root {
   --soravo-primary: #9fe870;
+  --soravo-primary-active: #cdffad;
   --soravo-on-primary: #0e0f0c;
-  /* A green surface that carries text. The lime is the accent for marks and
-     meters; a pill with a label on it needs a fill white text can read, so
-     it takes the brand's deep green and white text. */
-  --soravo-primary-fill: #2ead4b;
-  --soravo-on-primary-fill: #ffffff;
+  /* A green surface that carries a label.
+     The two greens invert each other, the way they do on wise.com: the lime
+     takes the brand's on-primary ink, the deep green takes the lime. A label
+     on green is never white - the lime and the ink are the only pair that
+     works, and white on either of them does not clear 4.5:1. */
+  --soravo-primary-fill: #9fe870;
+  --soravo-on-primary-fill: #0e0f0c;
   --soravo-ink: #0e0f0c;
   --soravo-body: #454745;
   /* The brand's mute (#868685) is 3.0:1 on the sage card, which is too
@@ -113,9 +116,10 @@ html[data-theme='dark'] {
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-active: var(--soravo-primary-active);
   --color-primary-foreground: var(--primary-foreground);
-  --color-primary-fill: var(--soravo-primary-fill);
-  --color-primary-fill-foreground: var(--soravo-on-primary-fill);
+  --color-primary-fill: var(--soravo-primary);
+  --color-primary-fill-foreground: var(--soravo-on-primary);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);

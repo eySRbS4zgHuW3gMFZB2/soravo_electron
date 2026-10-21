@@ -654,10 +654,14 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   `npm run build` succeeds.
 
 #### Round 8: the brand's own green, and Wispr's shortcut section
-- **The green is the brand's green.** The fill behind a label is now
-  `positive` (#2ead4b) - DESIGN.md's own success green - with white text on
-  it, instead of the invented #4a7a2e. The lime stays the accent for marks
-  and meters: the progress bars, the heatmap, the switch, the focus ring.
+- **The green is the brand's green, and it is the lime again.** The fill behind a
+  label is `primary` (#9fe870) with `on-primary` (#0e0f0c) on it - the pair
+  wise.com itself ships, and the pair DESIGN.md's own `button-primary` names.
+  The two greens invert each other: the lime takes the ink, the deep green
+  takes the lime, and a label on green is never white. White on the lime is
+  1.5:1 and on the positive green 2.9:1, which is why every attempt to put
+  white on green read as broken. The lime also stays the accent for marks and
+  meters: the progress bars, the heatmap, the switch, the focus ring.
 - **The shortcut section follows Wispr Flow's, to the measurements.** REA on
   the hub bundle gives the copy ("Push to talk" / "Hold to say something
   short", "Hands-free mode" / "Dictate hands-free by pressing this hotkey to

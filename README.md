@@ -104,8 +104,8 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
   for the display face.
 - **The colour passes its contrast check.** Every text and surface pair in the app clears WCAG's
   4.5:1 in both themes, and the motion honours `prefers-reduced-motion`.
-- **A green that carries text is the brand's positive green with white text** - DESIGN.md's `positive`. The lime stays the
-  accent for marks and meters - the progress bars, the heatmap, the switch, the focus ring.
+- **A green that carries a label is the brand's lime with the brand's on-primary ink on it** - the pair wise.com
+  itself uses: the two greens invert each other, and a label on green is never white.
 - **The shortcut section follows Wispr Flow's**: a stack of cards, the label on the left and the control on the right, with the
   shortcut shown as key chips and push-to-talk as a toggle.
 - **The hotkey works wherever the app is.** A global hook catches the combination when another
