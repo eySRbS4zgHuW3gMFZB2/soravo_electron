@@ -83,11 +83,12 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 - **No admin required** for dev (portable tools used)
 - **Microphone permission** needed on first run (Windows will prompt)
 - **CrispASR binary** is included in `third-party/bin/` (crispasr.exe + openblas.dll)
-- **SQLite DB** auto-created at `%APPDATA%/soravo/soravo.sqlite`
-- **Settings** stored at `%APPDATA%/soravo/soravo-settings.json`
+- **SQLite DB** auto-created at `%APPDATA%/com.soravo.app/soravo.sqlite`
+- **Settings** stored at `%APPDATA%/com.soravo.app/soravo-settings.json`
 - **Default hotkey**: `Ctrl+Alt+Space` (configurable in Settings)
-- **EB Garamond** (OFL-1.1) is bundled in `src/renderer/public/fonts/` for the hero headlines and the settings page titles.
-  It is served locally rather than from a CDN because the app's CSP sets `font-src 'self' data:`
+- **One typeface.** Inter, at weight 900 for the hero headlines and 600 below them. DESIGN.md names
+  "Soravo Sans" for the display voice and lists Inter as its substitute, so no second family is
+  bundled and nothing is fetched at runtime.
 - **Hero bands are gradients, not photographs.** Wispr Flow ships licensed photography in its banners;
   Soravo uses a themed gradient per band so the artwork can be replaced later without touching the
   layout. Each band picks a slot through the `media` prop on `PageHero`, and the matching rule in
