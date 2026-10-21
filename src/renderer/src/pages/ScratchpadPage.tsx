@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import HotkeyCapture, { prettyHotkey } from '../HotkeyCapture'
+import HotkeyCapture from '../HotkeyCapture'
+import { prettyHotkey } from '../hotkeys'
 import {
   CloseIcon,
   CopyIcon,
@@ -145,6 +146,11 @@ export default function ScratchpadPage() {
   // When textarea is focused, disable global hook
   useEffect(() => {
     soravo.setTextareaFocus(textareaFocused).catch(() => {})
+    // Leaving the page must not leave the global hook switched off, or the
+    // dictation hotkey stops working for the rest of the session.
+    return () => {
+      soravo.setTextareaFocus(false).catch(() => {})
+    }
   }, [textareaFocused])
 
   // Reset recording flag when window loses focus (prevents transcript leak

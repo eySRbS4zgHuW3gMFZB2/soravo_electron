@@ -6,8 +6,6 @@ use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Emitter, Manager, State};
 
 mod hotkeys;
-#[cfg(target_os = "windows")]
-mod win_hook;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

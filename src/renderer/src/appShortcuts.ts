@@ -13,7 +13,7 @@
  * shortcuts.
  */
 
-import { matchesHotkey } from './pages/shared'
+import { matchesHotkey } from './hotkeys'
 
 /**
  * Chords the app itself uses.

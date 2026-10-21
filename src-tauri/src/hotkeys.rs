@@ -307,9 +307,7 @@ fn is_modifier(key: Key) -> bool {
 /// The hook only observes input and never consumes it, so normal typing and
 /// clicking keep working in every other application.
 ///
-/// On Windows the hook is installed by `win_hook`, which runs a real message
-/// pump; `rdev::listen` blocks on a null MSG pointer and loses the hook after
-/// a while. Everywhere else rdev's own listener is used.
+/// The listener blocks, so it has to be on its own thread.
 pub fn spawn_hook(config: Arc<RwLock<HookConfig>>, handles: HookHandles, textarea_focused: Arc<AtomicBool>) -> Result<(), String> {
     // Modifier state has to persist across events: by the time the
     // trigger key or mouse button arrives, the modifier press was a
@@ -418,14 +416,16 @@ pub fn spawn_hook(config: Arc<RwLock<HookConfig>>, handles: HookHandles, textare
                 }
     };
 
-    #[cfg(target_os = "windows")]
-    {
-        crate::win_hook::spawn(Box::new(callback))
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        rdev::listen(callback).map_err(|err| format!("global input hook failed: {err:?}"))
-    }
+    // The listener blocks forever, so it runs on its own thread.
+    std::thread::Builder::new()
+        .name("soravo-input-hook".into())
+        .spawn(move || {
+            if let Err(err) = rdev::listen(callback) {
+                log::error!("[soravo] global input hook failed: {err:?}");
+            }
+        })
+        .map_err(|e| format!("failed to spawn input hook thread: {e}"))?;
+    Ok(())
 }
 
 fn set_modifier(mods: &mut Modifiers, key: Key, pressed: bool) {
@@ -500,6 +500,27 @@ pub fn binding_help() -> HashMap<String, Vec<String>> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_binding_matches_the_key_the_capture_records() {
+        // The capture records a space as "Space" and the parser turns that into
+        // Key::Space, so the two have to agree.
+        let binding = parse_binding("CommandOrControl+Space").expect("the binding should parse");
+        assert!(
+            binding.matches(Trigger::Key(Key::Space), true, false, false, false),
+            "Ctrl+Space should match"
+        );
+        assert!(
+            !binding.matches(Trigger::Key(Key::Space), false, false, false, false),
+            "Space on its own should not match a Ctrl binding"
+        );
+
+        // A bare key needs the exact modifier set, so Ctrl+Shift does not fire
+        // a bare CapsLock binding.
+        let bare = parse_binding("CapsLock").expect("a bare key should parse");
+        assert!(bare.matches(Trigger::Key(Key::CapsLock), false, false, false, false));
+        assert!(!bare.matches(Trigger::Key(Key::CapsLock), true, false, false, false));
+    }
+
     use super::*;
 
     #[test]

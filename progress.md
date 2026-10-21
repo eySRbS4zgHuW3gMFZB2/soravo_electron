@@ -620,7 +620,7 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   `tsc -p tsconfig.web.json` is clean and `npm run build` succeeds.
 
 #### Round 7: the hotkey, the green, and the Snippets band
-- **The dictation hotkey was dead, and it took three faults to find it.**
+- **The dictation hotkey was dead, and it took two faults to find it.**
   - The app's own shortcut guard blocks the browser's chords, and `Ctrl+1..9`
     is one of them - the same chord as the default dictation hotkey. The guard
     swallowed the key before anything could see it, so the hotkey could not
@@ -629,21 +629,21 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   - The hub window's webview takes a key press before the global hook can
     see it, so the hook never fires while the app is focused. The window
     therefore drives the recorder itself, and the native side is idempotent,
-    so a press both paths see still starts one recording.
-  - rdev 0.5.3's Windows `listen` installs the low-level hook and then
-    blocks on `GetMessageA(null, null, 0, 0)` - a null MSG pointer and no
-    loop. A low-level hook is delivered through the installing thread's
-    message queue, so a thread without a real pump loses the hook, silently.
-    The hook is now installed in `win_hook.rs` with a proper message pump,
-    and rdev is only used for the `Key` and `Button` types. Both paths are
+    so a press both paths see still starts one recording. Both paths are
     verified: the hotkey starts a recording with the hub focused and with
     another app focused.
-- **A green that carries text is now the brand's deep green with white
-  text.** The lime stays the accent for marks and meters - the progress
-  bars, the heatmap, the switch, the focus ring - but a pill with a label on
-  it takes `--soravo-primary-fill` (#4a7a2e) and white text, so the label
-  reads. That is the primary button, the active segment, the "Local" badge,
-  the hotkey keycaps, the brand mark and the account avatar.
+  - The hook itself was never the problem. A hand-written Windows hook was
+    tried and reverted: with a real `MSG` and a `DispatchMessage` loop the
+    low-level hook procedure is never invoked at all, while rdev's listener
+    receives every event. rdev stays.
+- **The green that carries a label is the brand's lime with the brand's
+  on-primary ink on it** - the pair wise.com ships (their CTA is lime with
+  #163300 on it, their dark button is #163300 with the lime on it) and the
+  pair DESIGN.md's own `button-primary` names. The two greens invert each
+  other, and a label on green is never white: white on the lime is 1.5:1 and
+  white on the positive green 2.9:1, which is why every version with white
+  text on green read as broken. The lime also stays the accent for marks and
+  meters: the progress bars, the heatmap, the switch, the focus ring.
 - **The Snippets band lost its cross and its peach gradient.** The dismiss
   button is gone, and the band takes the same green gradient as the other
   heroes, which is the one the design already liked.
@@ -700,6 +700,33 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   test passes against the real engine and the real recording. 32/32 cargo
   tests pass, `tsc -p tsconfig.web.json` is clean and `npm run build`
   succeeds.
+
+#### Round 9: what the self-review turned up
+- **The window's own hotkey matching was broken for most keys.** It compared
+  the binding's trigger with `KeyboardEvent.key`, but the capture stores the
+  name the native side parses: a space is "Space", an arrow key is "Up" and a
+  letter is "A". Only digits and the F-keys happened to line up, so a
+  `Ctrl+A` or `Ctrl+Space` binding never fired while the hub had the focus.
+  The key naming now lives in one module (`hotkeys.ts`) that both the capture
+  and the matcher use, so a key is named the same way in both places.
+- **Releasing the modifier before the trigger left the recording running.**
+  The release was matched on the whole combination, so letting go of Ctrl
+  first meant the trigger's release no longer matched. The release is matched
+  on the trigger key alone now.
+- **The Scratchpad could leave the global hook switched off.** The flag that
+  tells the hook to stand down while a text field has the focus was only
+  cleared on blur, so leaving the page with the field focused kept it set -
+  and the hotkey stayed dead for the rest of the session. It is cleared when
+  the page goes.
+- **A hand-written Windows hook was tried and reverted.** With a real `MSG`
+  and a `DispatchMessage` loop the low-level hook procedure is never invoked
+  at all, while rdev's listener receives every event; rdev stays, and the
+  new test pins the binding the capture records to the key the parser
+  produces.
+- Verified by driving the app: `Ctrl+1` and `Ctrl+A` both start a recording
+  with the hub focused, and `Ctrl+1` starts one with another window
+  focused. 33/33 cargo tests pass, `tsc -p tsconfig.web.json` is clean and
+  `npm run build` succeeds.
 
 #### Round 6: one scale, one button system, and the contrast that was failing
 - **The type scale is now a true modular scale: 12 / 14 / 16 / 18 / 24 / 32.**

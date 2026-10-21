@@ -35,7 +35,7 @@ import InsightsPage from './pages/InsightsPage'
 import ModelsPage from './pages/ModelsPage'
 import DictionaryPage from './pages/DictionaryPage'
 import StylePage from './pages/StylePage'
-import { matchesHotkey } from './pages/shared'
+import { matchesHotkey } from './hotkeys'
 import { setAppChords } from './appShortcuts'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -1170,11 +1170,10 @@ export default function HubApp() {
     const hotkey = settings?.hotkey
     if (!hotkey) return
     const holdToTalk = settings?.holdToTalk ?? false
-    // The trigger that started the recording, so the release ends it even if
-    // the modifier was let go first.
-    let held = false
-
-    const inAField = (target: EventTarget | null) => {
+    // The key that started the recording, so the release ends it even if the
+    // modifier was let go first.
+    let held = ''
+    const heldKey = (target: EventTarget | null) => {
       const el = target as HTMLElement | null
       if (!el || !el.tagName) return false
       return (
@@ -1186,11 +1185,11 @@ export default function HubApp() {
     }
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.repeat || inAField(e.target)) return
+      if (e.repeat || heldKey(e.target)) return
       if (!matchesHotkey(e, hotkey)) return
       e.preventDefault()
       if (holdToTalk) {
-        held = true
+        held = e.code
         window.soravo.startRecording().catch(() => {})
       } else {
         window.soravo.toggle().catch(() => {})
@@ -1198,8 +1197,10 @@ export default function HubApp() {
     }
     const onKeyUp = (e: KeyboardEvent) => {
       if (!holdToTalk || !held) return
-      if (!matchesHotkey(e, hotkey)) return
-      held = false
+      // The modifier may already be up, so the release is matched on the
+      // trigger key alone.
+      if (e.code !== held) return
+      held = ''
       window.soravo.stopRecording().catch(() => {})
     }
     window.addEventListener('keydown', onKeyDown)
