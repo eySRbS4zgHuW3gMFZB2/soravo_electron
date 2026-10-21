@@ -728,6 +728,26 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   focused. 33/33 cargo tests pass, `tsc -p tsconfig.web.json` is clean and
   `npm run build` succeeds.
 
+#### Round 10: the merge, and a type check that actually runs
+- **The type check was a no-op.** `npm run typecheck` and the build's first
+  step both pointed at `tsconfig.json`, which is the solution config and
+  checks nothing - the renderer was never type-checked, and `@types/react`
+  was not even a dependency, so the check could not have run. Both now point
+  at `tsconfig.web.json`, the React types are declared, and the build fails
+  on a type error instead of shipping it.
+- **Two stale lines in the README**: the serif family was removed when the
+  heroes moved to Inter 900, and the app's data lives under the
+  `com.soravo.app` identifier, not `soravo`.
+- **The Wispr Flow shortcut section, measured.** REA on the hub bundle gives
+  the copy and the layout, and Ghidra on the native binary confirms there is
+  no shortcut surface there to copy - not one string in the image names one -
+  so the whole section is renderer-side.
+- **The green, the way Wise ships it.** Their primary CTA is the lime
+  (#9fe870) with #163300 on it, and their dark button is #163300 with the
+  lime on it: the two greens invert each other, and a label on green is
+  never white. Soravo now does the same, which is also what DESIGN.md's own
+  `button-primary` names.
+
 #### Round 6: one scale, one button system, and the contrast that was failing
 - **The type scale is now a true modular scale: 12 / 14 / 16 / 18 / 24 / 32.**
   It had drifted to 12 / 16 / 18 / 20 / 24 / 32, where 18 and 20 sat two

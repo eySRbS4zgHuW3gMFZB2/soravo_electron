@@ -114,6 +114,8 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
   window has the focus, and the hub drives the recorder itself when it has it.
 - **Model downloads report their progress.** The bar is followed by the completed percentage and
   the live transfer rate, and the models can be searched, filtered and sorted.
+- **The build type-checks.** `npm run build` and `npm run typecheck` both run `tsc` over the
+  renderer, so a type error fails the build instead of shipping.
 
 ## Tech Stack
 
