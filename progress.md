@@ -872,6 +872,40 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   measures #0e0f0c - the brand's ink - in both themes. 31/31 cargo tests
   pass, `tsc -p tsconfig.web.json` is clean and `npm run build` succeeds.
 
+#### Round 12: the Electron tree, gone
+- **Soravo has been a Tauri app for a long time, but the Electron
+  skeleton was still in the repository**: `src/main/` (the old main
+  process - window, tray, IPC, the old whisper and history code),
+  `src/preload/` (the old `contextBridge` shim), `electron.vite.config.ts`
+  and `electron-builder.yml`, plus the `electron`, `electron-builder`,
+  `electron-vite` and `electron-store` packages and a `tsconfig.node.json`
+  that existed only to typecheck them.
+- **Nothing referenced any of it.** The real build is `vite.config.ts` ->
+  `src/renderer` -> `dist`, and `tauri.conf.json` points at `../dist`.
+  The renderer talks to Rust through `soravo.ts` and `@tauri-apps/api`,
+  not through the preload. `src/main`'s history, insights, settings,
+  injection and transcription all have Rust equivalents in
+  `src-tauri/src/lib.rs`. `npm ls electron` was the last check and it
+  showed nothing but the runtime itself.
+- **Removed**, along with the `main` field in `package.json` (it pointed
+  at `./out/main/index.js`, an Electron build output), and the
+  `src/main/history.ts` row in the README's key files table.
+- **The `out/` entry stays in `.gitignore`, deliberately.** It is a stale
+  Electron build folder, and removing the ignore rule meant `git add -A`
+  swept it into the first commit of this round. The folder is gone from
+  disk and the artifacts are gone from the repository, but the rule
+  stays: it is cheap insurance that a leftover folder on someone's
+  machine can never be committed by accident.
+- **One live bug found on the way**: the "check for updates" button in
+  `HubApp.tsx` opened
+  `https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron/releases` -
+  the Electron-era repository. It now has to point wherever the binaries
+  actually live.
+- Verified after the removal: `npm ls electron` is empty, `tsc -p
+  tsconfig.web.json` is clean, `npm run build` succeeds, 37/37 cargo
+  tests pass, and a real dictation through the running app transcribes
+  with no errors in the log.
+
 ## Known Issues
 1. **Bare-key hotkeys are fire-once semantics**: a bare key such as CapsLock cannot be held, so
    push-to-talk needs a modifier in practice. Bare bindings do work in toggle mode.

@@ -80,7 +80,6 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 | `src/renderer/src/components/pages/` | Shared page primitives (hero band, tab strip, icons) |
 | `src/renderer/src/hub.css` | The whole hub design layer: shell, page primitives and the hero gradients |
 | `src/renderer/src/soravo.ts` | Tauri API shim (window.soravo compatible) |
-| `src/main/history.ts` | (Legacy Electron) SQLite CRUD + insights |
 | `AGENTS.md` | Working notes for anyone changing this repository |
 | `progress.md` | Full development history |
 
