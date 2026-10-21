@@ -113,7 +113,11 @@ pub struct ModelInfo {
     pub size_bytes: u64,
     pub size_label: String,
     pub license: String,
+    /// Is the model ready to use: the weights, whole, and the files the
+    /// engine reads from beside them?
     pub installed: bool,
+    /// Is the model's file on disk at all, even if it is incomplete?
+    pub present: bool,
     pub active: bool,
     pub url: String,
 }
@@ -289,46 +293,94 @@ fn open_db(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
 }
 
 
+/// A file the engine loads from beside the model.
+///
+/// Some backends are more than one file: Moonshine reads its tokenizer from
+/// a sibling `tokenizer.bin`, and Mini-Omni2 reads its audio codec from
+/// `snac-24khz.gguf`. CrispASR looks for them by name, in the model's own
+/// folder, so the app fetches them along with the model.
+struct ModelCompanion {
+    /// The name the engine looks for, next to the model file.
+    file: &'static str,
+    /// Where it is downloaded from.
+    url: &'static str,
+    /// Its exact size in bytes.
+    size: u64,
+}
+
+/// One model in the catalog.
+struct CatalogModel {
+    /// The id the app stores and shows.
+    id: &'static str,
+    /// The name shown in the Models page.
+    name: &'static str,
+    /// The exact size of the model file, in bytes.
+    ///
+    /// The size is what tells a finished download from a truncated one, so
+    /// it is the size the server reports rather than a round number.
+    size: u64,
+    /// Where the model file is downloaded from.
+    url: &'static str,
+    /// The licence the model is under.
+    license: &'static str,
+    /// The files the engine loads from beside the model.
+    companions: &'static [ModelCompanion],
+}
+
+/// The tokenizer Moonshine reads, from the Moonshine model repositories.
+const MOONSHINE_TOKENIZER: &[ModelCompanion] = &[ModelCompanion {
+    file: "tokenizer.bin",
+    url: "https://huggingface.co/cstr/moonshine-tiny-GGUF/resolve/main/tokenizer.bin",
+    size: 251_254,
+}];
+
 // Model catalog: MIT-licensed Whisper models available on HuggingFace.
 // CrispASR runs any of these directly (GGUF/BIN format).
-const MODEL_CATALOG: &[(&str, &str, u64, &str, &str)] = &[
+const MODEL_CATALOG: &[CatalogModel] = &[
     // Whisper family (OpenAI, MIT) — ggerganov/whisper.cpp
-    ("tiny.en", "Whisper Tiny (English, Q5)", 77_700_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin", "MIT"),
-    ("tiny", "Whisper Tiny (Multilingual, Q5)", 77_700_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin", "MIT"),
-    ("tiny.en-q8", "Whisper Tiny (English, Q8)", 41_500_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q8_0.bin", "MIT"),
-    ("tiny.en-fp16", "Whisper Tiny (English, fp16)", 74_100_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin", "MIT"),
-    ("base.en", "Whisper Base (English, Q5)", 148_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin", "MIT"),
-    ("base", "Whisper Base (Multilingual, Q5)", 148_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin", "MIT"),
-    ("small.en", "Whisper Small (English, Q5)", 466_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin", "MIT"),
-    ("small", "Whisper Small (Multilingual, Q5)", 466_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin", "MIT"),
-    ("distil-large-v3", "Distil-Whisper Large v3 (Q5)", 513_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-distil-large-v3.bin", "MIT"),
-    ("medium.en", "Whisper Medium (English)", 1_500_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin", "MIT"),
-    ("medium", "Whisper Medium (Multilingual)", 1_500_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin", "MIT"),
-    ("large-v3", "Whisper Large v3", 3_000_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin", "MIT"),
-    ("large-v3-turbo", "Whisper Large v3 Turbo", 1_600_000_000, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin", "MIT"),
+    CatalogModel { id: "tiny.en", name: "Whisper Tiny (English, f16)", size: 77_704_715, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "tiny", name: "Whisper Tiny (Multilingual, f16)", size: 77_691_713, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "tiny.en-q8", name: "Whisper Tiny (English, Q8)", size: 43_550_795, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q8_0.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "tiny.en-fp16", name: "Whisper Tiny (English, Q5_1)", size: 32_166_155, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "base.en", name: "Whisper Base (English, f16)", size: 147_964_211, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "base", name: "Whisper Base (Multilingual, f16)", size: 147_951_465, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "small.en", name: "Whisper Small (English, f16)", size: 487_614_201, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "small", name: "Whisper Small (Multilingual, f16)", size: 487_601_967, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "distil-large-v3", name: "Distil-Whisper Large v3", size: 1_519_521_155, url: "https://huggingface.co/distil-whisper/distil-large-v3-ggml/resolve/main/ggml-distil-large-v3.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "medium.en", name: "Whisper Medium (English, f16)", size: 1_533_774_781, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "medium", name: "Whisper Medium (Multilingual, f16)", size: 1_533_763_059, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "large-v3", name: "Whisper Large v3", size: 3_095_033_483, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin", license: "MIT", companions: &[] },
+    CatalogModel { id: "large-v3-turbo", name: "Whisper Large v3 Turbo", size: 1_624_555_275, url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin", license: "MIT", companions: &[] },
     // Moonshine (UsefulSensors, MIT)
-    ("moonshine-tiny", "Moonshine Tiny (Q4_K)", 20_200_000, "https://huggingface.co/cstr/moonshine-tiny-GGUF/resolve/main/moonshine-tiny-q4_k.gguf", "MIT"),
-    ("moonshine-streaming-tiny", "Moonshine Streaming Tiny (Q4_K)", 30_600_000, "https://huggingface.co/cstr/moonshine-streaming-tiny-GGUF/resolve/main/moonshine-streaming-tiny-q4_k.gguf", "MIT"),
+    CatalogModel { id: "moonshine-tiny", name: "Moonshine Tiny (Q4_K)", size: 21_199_840, url: "https://huggingface.co/cstr/moonshine-tiny-GGUF/resolve/main/moonshine-tiny-q4_k.gguf", license: "MIT", companions: MOONSHINE_TOKENIZER },
+    CatalogModel { id: "moonshine-streaming-tiny", name: "Moonshine Streaming Tiny (Q4_K)", size: 32_052_896, url: "https://huggingface.co/cstr/moonshine-streaming-tiny-GGUF/resolve/main/moonshine-streaming-tiny-q4_k.gguf", license: "MIT", companions: MOONSHINE_TOKENIZER },
     // Academic / research (MIT)
-    ("gigaam-v3", "GigaAM v3 (RNNT, Q8)", 249_000_000, "https://huggingface.co/cstr/gigaam-v3-GGUF/resolve/main/gigaam-v3-e2e-rnnt-q8_0.gguf", "MIT"),
-    ("kyutai-stt", "Kyutai STT 1B (Q4_K)", 636_000_000, "https://huggingface.co/cstr/kyutai-stt-1b-GGUF/resolve/main/kyutai-stt-1b-q4_k.gguf", "MIT"),
-    ("glm-asr-nano", "GLM-ASR Nano (Q4_K)", 1_200_000_000, "https://huggingface.co/cstr/glm-asr-nano-GGUF/resolve/main/glm-asr-nano-q4_k.gguf", "MIT"),
-    ("hikari-medium", "Hikari Medium (f16)", 1_500_000_000, "https://huggingface.co/cstr/hikari-medium-GGUF/resolve/main/hikari-medium-f16.gguf", "MIT"),
+    CatalogModel { id: "gigaam-v3", name: "GigaAM v3 (RNNT, Q8)", size: 248_765_312, url: "https://huggingface.co/cstr/gigaam-v3-GGUF/resolve/main/gigaam-v3-e2e-rnnt-q8_0.gguf", license: "MIT", companions: &[] },
+    CatalogModel { id: "kyutai-stt", name: "Kyutai STT 1B (Q4_K)", size: 666_565_184, url: "https://huggingface.co/cstr/kyutai-stt-1b-GGUF/resolve/main/kyutai-stt-1b-q4_k.gguf", license: "MIT", companions: &[] },
+    CatalogModel { id: "glm-asr-nano", name: "GLM-ASR Nano (Q4_K)", size: 1_325_316_448, url: "https://huggingface.co/cstr/glm-asr-nano-GGUF/resolve/main/glm-asr-nano-q4_k.gguf", license: "MIT", companions: &[] },
+    CatalogModel { id: "hikari-medium", name: "Hikari Medium (f16)", size: 1_533_790_688, url: "https://huggingface.co/cstr/hikari-medium-GGUF/resolve/main/hikari-medium-f16.gguf", license: "MIT", companions: &[] },
     // MOSS (OpenMOSS, MIT)
-    ("moss-transcribe", "MOSS Transcribe Preview 2B (Q4_K)", 2_690_000_000, "https://huggingface.co/cstr/MOSS-Transcribe-preview-2B-GGUF/resolve/main/moss-transcribe-preview-2b-q4_k.gguf", "MIT"),
-    ("moss-diarize", "MOSS Transcribe + Diarize 0.9B (Q4_K)", 1_130_000_000, "https://huggingface.co/cstr/MOSS-Transcribe-Diarize-GGUF/resolve/main/moss-transcribe-diarize-0.9b-q4_k.gguf", "MIT"),
-    ("moss-audio", "MOSS Audio 4B Instruct (Q4_K)", 3_920_000_000, "https://huggingface.co/cstr/MOSS-Audio-4B-Instruct-GGUF/resolve/main/moss-audio-4b-instruct-q4_k.gguf", "MIT"),
+    CatalogModel { id: "moss-transcribe", name: "MOSS Transcribe Preview 2B (Q4_K)", size: 2_818_620_352, url: "https://huggingface.co/cstr/MOSS-Transcribe-preview-2B-GGUF/resolve/main/moss-transcribe-preview-2b-q4_k.gguf", license: "MIT", companions: &[] },
+    CatalogModel { id: "moss-diarize", name: "MOSS Transcribe + Diarize 0.9B (Q4_K)", size: 1_190_110_816, url: "https://huggingface.co/cstr/MOSS-Transcribe-Diarize-GGUF/resolve/main/moss-transcribe-diarize-0.9b-q4_k.gguf", license: "MIT", companions: &[] },
+    CatalogModel { id: "moss-audio", name: "MOSS Audio 4B Instruct (Q4_K)", size: 4_111_365_280, url: "https://huggingface.co/cstr/MOSS-Audio-4B-Instruct-GGUF/resolve/main/moss-audio-4b-instruct-q4_k.gguf", license: "MIT", companions: &[] },
     // Industry (MIT)
-    ("mini-omni2", "minI-Omni2 (Q4_K)", 1_010_000_000, "https://huggingface.co/cstr/mini-omni2-GGUF/resolve/main/mini-omni2-q4_k.gguf", "MIT"),
-    ("vibevoice-streaming", "VibeVoice ASR Streaming 1.5B (Q4_K)", 1_770_000_000, "https://huggingface.co/cstr/vibevoice-asr-streaming-1.5b-GGUF/resolve/main/vibevoice-asr-streaming-1.5b-q4_k.gguf", "MIT"),
-    ("vibevoice-bitnet", "VibeVoice ASR BitNet (TQ2)", 1_550_000_000, "https://huggingface.co/cstr/vibevoice-asr-bitnet-GGUF/resolve/main/vibevoice-asr-bitnet-tq2.gguf", "MIT"),
-    ("vibevoice", "VibeVoice ASR (Q4_K)", 4_590_000_000, "https://huggingface.co/cstr/vibevoice-asr-GGUF/resolve/main/vibevoice-asr-q4_k.gguf", "MIT"),
-    ("mimo-asr", "MiMo ASR (Q4_K)", 4_310_000_000, "https://huggingface.co/cstr/mimo-asr-GGUF/resolve/main/mimo-asr-q4_k.gguf", "MIT"),
-    ("hojo-asr", "Hojo-ASR V1 (Q4_K)", 4_220_000_000, "https://huggingface.co/cstr/Hojo-ASR-Multi-V1-GGUF/resolve/main/hojo-asr-multi-v1-q4_k.gguf", "MIT"),
-    // NVIDIA Parakeet & Canary (CC-BY-4.0)
-    ("parakeet-tdt-v2", "Parakeet TDT v2 (English)", 1_100_000_000, "https://huggingface.co/nvidia/parakeet-tdt-v2.0", "CC-BY-4.0"),
-    ("canary-1b-v2", "Canary 1B v2 (Multilingual)", 1_000_000_000, "https://huggingface.co/nvidia/canary-1b-v2", "CC-BY-4.0"),
+    CatalogModel { id: "mini-omni2", name: "minI-Omni2 (Q4_K)", size: 1_058_606_336, url: "https://huggingface.co/cstr/mini-omni2-GGUF/resolve/main/mini-omni2-q4_k.gguf", license: "MIT", companions: &[ModelCompanion { file: "snac-24khz.gguf", url: "https://huggingface.co/cstr/snac-24khz-GGUF/resolve/main/snac-24khz.gguf", size: 26_323_456 }] },
+    CatalogModel { id: "vibevoice-streaming", name: "VibeVoice ASR Streaming 1.5B (Q4_K)", size: 1_860_361_920, url: "https://huggingface.co/cstr/vibevoice-asr-streaming-1.5b-GGUF/resolve/main/vibevoice-asr-streaming-1.5b-q4_k.gguf", license: "MIT", companions: &[] },
+    CatalogModel { id: "vibevoice-bitnet", name: "VibeVoice ASR BitNet (TQ2)", size: 1_624_432_256, url: "https://huggingface.co/cstr/vibevoice-asr-bitnet-GGUF/resolve/main/vibevoice-asr-bitnet-tq2.gguf", license: "MIT", companions: &[] },
+    CatalogModel { id: "vibevoice", name: "VibeVoice ASR (Q4_K)", size: 4_811_829_376, url: "https://huggingface.co/cstr/vibevoice-asr-GGUF/resolve/main/vibevoice-asr-q4_k.gguf", license: "MIT", companions: &[] },
+    CatalogModel { id: "mimo-asr", name: "MiMo ASR (Q4_K)", size: 4_517_988_832, url: "https://huggingface.co/cstr/mimo-asr-GGUF/resolve/main/mimo-asr-q4_k.gguf", license: "MIT", companions: &[] },
+    CatalogModel { id: "hojo-asr", name: "Hojo-ASR V1 (Q4_K)", size: 4_421_831_232, url: "https://huggingface.co/cstr/Hojo-ASR-Multi-V1-GGUF/resolve/main/hojo-asr-multi-v1-q4_k.gguf", license: "MIT", companions: &[] },
+    // NVIDIA Parakeet & Canary (CC-BY-4.0), in the GGUF conversions
+    // CrispASR runs. The upstream NVIDIA repositories hold PyTorch weights,
+    // which the engine cannot read.
+    CatalogModel { id: "parakeet-tdt-v2", name: "Parakeet TDT v2 (English, Q4_K)", size: 396_937_984, url: "https://huggingface.co/cstr/parakeet-tdt-0.6b-v2-GGUF/resolve/main/parakeet-tdt-0.6b-v2-q4_k.gguf", license: "CC-BY-4.0", companions: &[] },
+    CatalogModel { id: "canary-1b-v2", name: "Canary 1B v2 (Multilingual, Q4_K)", size: 610_746_016, url: "https://huggingface.co/cstr/canary-1b-v2-GGUF/resolve/main/canary-1b-v2-q4_k.gguf", license: "CC-BY-4.0", companions: &[] },
 ];
+
+/// The catalog entry for a model id.
+fn catalog_model(id: &str) -> Option<&'static CatalogModel> {
+    MODEL_CATALOG.iter().find(|m| m.id == id)
+}
 
 /// The default folder for the transcription models.
 fn default_models_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
@@ -414,10 +466,6 @@ fn default_models_folder(app: tauri::AppHandle) -> String {
     default_models_dir(&app).to_string_lossy().to_string()
 }
 
-fn model_path(app: &tauri::AppHandle, id: &str) -> std::path::PathBuf {
-    models_dir(app).join(format!("ggml-{}.bin", id))
-}
-
 /// Locate the CrispASR executable.
 ///
 /// `npm run fetch:asr` normally relocates the exe into `third-party/bin/`,
@@ -467,39 +515,151 @@ async fn list_models(app: tauri::AppHandle) -> Result<Vec<ModelInfo>, String> {
     let _ = std::fs::create_dir_all(&dir);
 
     let mut out = Vec::new();
-    for (id, name, size, url, license) in MODEL_CATALOG {
-        let path = dir.join(format!("ggml-{}.bin", id));
+    for model in MODEL_CATALOG {
+        let weights = dir.join(format!("ggml-{}.bin", model.id));
         out.push(ModelInfo {
-            id: id.to_string(),
-            name: name.to_string(),
-            size_bytes: *size,
-            size_label: size_label(*size),
-            license: license.to_string(),
-            installed: path.exists(),
-            active: *id == active,
-            url: url.to_string(),
+            id: model.id.to_string(),
+            name: model.name.to_string(),
+            size_bytes: model.size,
+            size_label: size_label(model.size),
+            license: model.license.to_string(),
+            installed: model_is_installed(&dir, model),
+            present: weights.exists(),
+            active: model.id == active,
+            url: model.url.to_string(),
         });
     }
     Ok(out)
 }
 
+/// Download a model and everything the engine loads beside it.
+///
+/// The companion files - the Moonshine tokenizer, the Mini-Omni2 codec -
+/// are separate downloads that have to land next to the model, or the engine
+/// loads the weights and then fails on the missing file.
 #[tauri::command]
 async fn download_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
-    let entry = MODEL_CATALOG.iter().find(|e| e.0 == id)
+    let model = catalog_model(&id)
         .ok_or_else(|| format!("Unknown model: {}", id))?;
-    let url = entry.3;
     let dir = models_dir(&app);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let dest = dir.join(format!("ggml-{}.bin", id));
 
-    // Stream the download with progress events.
+    // The model first, then the files the engine loads from beside it.
+    let mut files: Vec<(String, &str, u64)> = vec![(
+        format!("ggml-{}.bin", model.id),
+        model.url,
+        model.size,
+    )];
+    for companion in model.companions {
+        files.push((companion.file.to_string(), companion.url, companion.size));
+    }
+
     let client = reqwest::Client::new();
+    for (name, url, size) in files {
+        let dest = dir.join(&name);
+        // A file that is already there and whole is left alone, so repairing
+        // one missing companion does not fetch the model again.
+        if file_is_whole(&dest, size) {
+            continue;
+        }
+        fetch_file(&client, url, &dest, size, &app, &id).await?;
+    }
+
+    app.emit("soravo:model-download-complete", serde_json::json!({ "id": id })).ok();
+    Ok(())
+}
+
+/// Is the file there, and as long as it should be?
+///
+/// The length is what tells a finished download from one that was cut
+/// short, and a short model file fails to load with a message that says
+/// nothing about what went wrong.
+fn file_is_whole(path: &std::path::Path, size: u64) -> bool {
+    match std::fs::metadata(path) {
+        Ok(meta) => meta.len() == size,
+        Err(_) => false,
+    }
+}
+
+/// Is the model ready to use: the weights, and the files beside them?
+fn model_is_installed(dir: &std::path::Path, model: &CatalogModel) -> bool {
+    let weights = dir.join(format!("ggml-{}.bin", model.id));
+    if !file_is_whole(&weights, model.size) {
+        return false;
+    }
+    model.companions.iter().all(|c| file_is_whole(&dir.join(c.file), c.size))
+}
+
+/// Fetch the files the engine loads from beside a model, if they are missing.
+///
+/// Some backends are more than one file: Moonshine reads its tokenizer from
+/// a sibling `tokenizer.bin`, and Mini-Omni2 reads its codec from
+/// `snac-24khz.gguf`. The engine looks for them next to the model, so if
+/// they are not there it loads the weights and then fails on the missing
+/// file. Fetching them here means a model that was downloaded before the
+/// app knew about them starts working.
+async fn ensure_companions(
+    app: &tauri::AppHandle,
+    model: &CatalogModel,
+    models_dir: &std::path::Path,
+) -> Result<(), String> {
+    if model.companions.is_empty() {
+        return Ok(());
+    }
+
+    // The companions go beside the model file the engine will actually
+    // load, wherever that is.
+    let current_dir = std::env::current_dir().unwrap_or_default();
+    let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
+    let dir = resolve_model_path(model.id, models_dir, &current_dir, &project_root)
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| models_dir.to_path_buf());
+
+    let missing: Vec<&ModelCompanion> = model
+        .companions
+        .iter()
+        .filter(|c| !file_is_whole(&dir.join(c.file), c.size))
+        .collect();
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    let client = reqwest::Client::new();
+    for companion in missing {
+        fetch_file(
+            &client,
+            companion.url,
+            &dir.join(companion.file),
+            companion.size,
+            app,
+            model.id,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+/// Stream one file to disk, reporting progress as it lands.
+///
+/// The download goes to a temporary name and is renamed into place only
+/// once it is whole, so an interrupted download never leaves a model file
+/// that looks installed but cannot be loaded.
+async fn fetch_file(
+    client: &reqwest::Client,
+    url: &str,
+    dest: &std::path::Path,
+    expected: u64,
+    app: &tauri::AppHandle,
+    id: &str,
+) -> Result<(), String> {
     let resp = client.get(url).send().await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
         return Err(format!("Download failed: HTTP {}", resp.status()));
     }
     let total = resp.content_length().unwrap_or(0);
-    let mut file = tokio::fs::File::create(&dest).await.map_err(|e| e.to_string())?;
+
+    let part = dest.with_extension("part");
+    let mut file = tokio::fs::File::create(&part).await.map_err(|e| e.to_string())?;
     use tokio::io::AsyncWriteExt;
     let mut stream = resp.bytes_stream();
     use futures::StreamExt;
@@ -517,15 +677,49 @@ async fn download_model(app: tauri::AppHandle, id: String) -> Result<(), String>
         })).ok();
     }
     file.flush().await.map_err(|e| e.to_string())?;
-    app.emit("soravo:model-download-complete", serde_json::json!({ "id": id })).ok();
+
+    // A short file is a broken model, not a small one: drop it rather than
+    // let the app treat it as installed.
+    let want = if expected > 0 { expected } else { total };
+    if want > 0 && received != want {
+        let _ = tokio::fs::remove_file(&part).await;
+        return Err(format!(
+            "Download was cut short: got {received} of {want} bytes. Try again."
+        ));
+    }
+
+    std::fs::rename(&part, dest).map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
 async fn delete_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
-    let path = model_path(&app, &id);
+    let dir = models_dir(&app);
+    let path = dir.join(format!("ggml-{}.bin", id));
     if path.exists() {
         std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+    }
+    // The files the engine reads from beside the model go with it, unless
+    // another model still needs them: the Moonshine tokenizer is shared by
+    // both Moonshine models.
+    if let Some(model) = catalog_model(&id) {
+        for companion in model.companions {
+            let needed_elsewhere = MODEL_CATALOG.iter().any(|other| {
+                other.id != model.id
+                    && other
+                        .companions
+                        .iter()
+                        .any(|c| c.file == companion.file)
+                    && model_is_installed(&dir, other)
+            });
+            if needed_elsewhere {
+                continue;
+            }
+            let companion_path = dir.join(companion.file);
+            if companion_path.exists() {
+                let _ = std::fs::remove_file(companion_path);
+            }
+        }
     }
     // If the deleted model was active, clear the selection.
     let mut settings = load_settings(&app);
@@ -538,8 +732,10 @@ async fn delete_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn set_active_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
-    let path = model_path(&app, &id);
-    if !path.exists() {
+    let model = catalog_model(&id)
+        .ok_or_else(|| format!("Unknown model: {}", id))?;
+    let dir = models_dir(&app);
+    if !model_is_installed(&dir, model) {
         return Err(format!("Model not installed: {}", id));
     }
     let mut settings = load_settings(&app);
@@ -777,6 +973,24 @@ fn apply_snippets_to_conn(text: &str, conn: &rusqlite::Connection) -> Result<Str
     Ok(result)
 }
 
+/// Where a model's file lives: the app's models folder first, then the
+/// folder the repository ships one in.
+fn resolve_model_path(
+    model: &str,
+    models_dir: &std::path::Path,
+    current_dir: &std::path::Path,
+    project_root: &std::path::Path,
+) -> Option<std::path::PathBuf> {
+    let file = format!("ggml-{}.bin", model);
+    [
+        models_dir.join(&file),
+        current_dir.join("third-party/models").join(&file),
+        project_root.join("third-party/models").join(&file),
+    ]
+    .into_iter()
+    .find(|p| p.exists())
+}
+
 // CrispASR transcription
 fn transcribe_wav(
     wav_path: &str,
@@ -789,7 +1003,6 @@ fn transcribe_wav(
     // In a bundle the files sit next to the executable instead.
     let current_dir = std::env::current_dir().unwrap_or_default();
     let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
-    let model_file = format!("ggml-{}.bin", model);
 
     let roots = [current_dir.clone(), project_root.clone(), resource_dir.to_path_buf()];
 
@@ -798,13 +1011,7 @@ fn transcribe_wav(
     })?;
 
     // Model: look in app data dir first (downloaded via Models tab), then third-party.
-    let model_candidates = [
-        models_dir.join(&model_file),
-        current_dir.join("third-party/models").join(&model_file),
-        project_root.join("third-party/models").join(&model_file),
-    ];
-
-    let model_path = model_candidates.iter().find(|p| p.exists()).cloned()
+    let model_path = resolve_model_path(model, models_dir, &current_dir, &project_root)
         .ok_or_else(|| {
             let installed: Vec<String> = std::fs::read_dir(models_dir)
                 .or_else(|_| std::fs::read_dir(current_dir.join("third-party/models")))
@@ -845,14 +1052,44 @@ fn transcribe_wav(
         .map_err(|e| format!("Failed to run CrispASR: {}", e))?;
 
     if !output.status.success() {
-        return Err(format!(
-            "CrispASR failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
+        return Err(engine_error(&output.stderr, model));
     }
 
     let text = String::from_utf8_lossy(&output.stdout).to_string();
     Ok(text.trim().to_string())
+}
+
+/// The engine's failure, in a sentence a person can act on.
+///
+/// The engine writes several lines to stderr - the residency of the weights
+/// on the device, then the actual failure - and only the last of them says
+/// what went wrong. A missing companion file gets a name, because "the
+/// tokenizer.bin next to the model is missing" is a thing the user can fix.
+fn engine_error(stderr: &[u8], model: &str) -> String {
+    let text = String::from_utf8_lossy(stderr);
+    let lines: Vec<&str> = text.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+
+    // A file the engine could not open is the common case: name it.
+    for line in &lines {
+        if let Some(rest) = line.strip_prefix("load: failed to open '") {
+            let path = rest.trim_end_matches('\'');
+            let name = path.rsplit(['\\', '/']).next().unwrap_or(path);
+            return format!(
+                "The engine could not open {name}, which {} needs next to the model file. \
+                 Re-download the model from the Models tab.",
+                model
+            );
+        }
+    }
+
+    // Otherwise the last line is the failure, with the engine's own prefix
+    // taken off.
+    let last = lines.last().copied().unwrap_or("the engine failed");
+    let clean = last
+        .strip_prefix("crispasr: error: ")
+        .or_else(|| last.strip_prefix("crispasr: error:"))
+        .unwrap_or(last);
+    format!("CrispASR failed: {clean}")
 }
 
 // Text injection via clipboard + SendKeys (Windows)
@@ -1081,6 +1318,16 @@ async fn submit_audio(
     // Get resource directory and models dir before moving app into the closure
     let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
     let models_dir = models_dir(&app);
+
+    // Some backends load a second file from beside the model - Moonshine
+    // reads its tokenizer, Mini-Omni2 its codec. The engine looks for them
+    // next to the model, so fetch them if they are not there yet; otherwise
+    // the transcription fails on a file the user never asked for.
+    if let Some(model) = catalog_model(&model) {
+        if let Err(err) = ensure_companions(&app, model, &models_dir).await {
+            log::error!("[soravo] could not fetch the files {} needs: {err}", model.id);
+        }
+    }
 
     // Transcribe
     let result = tokio::task::spawn_blocking(move || {
@@ -1434,8 +1681,22 @@ async fn get_runtime_status(app: tauri::AppHandle, model: String) -> Result<serd
     let binary_exists = find_crispasr_binary(&roots).is_some();
 
     let md = models_dir(&app);
-    let model_path = md.join(format!("ggml-{}.bin", model));
-    let model_exists = model_path.exists() || current_dir.join("third-party/models").join(format!("ggml-{}.bin", model)).exists() || project_root.join("third-party/models").join(format!("ggml-{}.bin", model)).exists();
+    // A model counts as present only if the engine can actually load it:
+    // the weights, whole, plus the files it reads from beside them.
+    let model_exists = match catalog_model(&model) {
+        Some(entry) => {
+            model_is_installed(&md, entry)
+                || current_dir
+                    .join("third-party/models")
+                    .join(format!("ggml-{}.bin", model))
+                    .exists()
+                || project_root
+                    .join("third-party/models")
+                    .join(format!("ggml-{}.bin", model))
+                    .exists()
+        }
+        None => false,
+    };
 
     Ok(serde_json::json!({
         "binary": binary_exists,
@@ -2226,6 +2487,107 @@ mod tests {
             "bin/ must take precedence over the archive copy"
         );
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// A model is only usable when its weights are whole and the files the
+    /// engine reads from beside them are there too.
+    ///
+    /// The Moonshine tokenizer is the case this exists for: the weights load
+    /// fine and the engine then fails on the missing file, which reads like
+    /// the model is broken rather than the install being incomplete.
+    #[test]
+    fn a_model_needs_its_companion_files() {
+        let dir = std::env::temp_dir().join(format!("soravo-models-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let model = catalog_model("moonshine-tiny").expect("moonshine-tiny is in the catalog");
+        assert!(
+            !model.companions.is_empty(),
+            "moonshine-tiny needs its tokenizer"
+        );
+        let tokenizer = &model.companions[0];
+        assert_eq!(tokenizer.file, "tokenizer.bin");
+
+        // The weights alone are not enough.
+        let weights = dir.join(format!("ggml-{}.bin", model.id));
+        std::fs::write(&weights, vec![0u8; model.size as usize]).unwrap();
+        assert!(
+            !model_is_installed(&dir, model),
+            "the model is not usable without its tokenizer"
+        );
+
+        // A truncated weight file is not a model either.
+        let tokenizer_path = dir.join(tokenizer.file);
+        std::fs::write(&tokenizer_path, vec![0u8; tokenizer.size as usize]).unwrap();
+        assert!(
+            model_is_installed(&dir, model),
+            "the model is usable once the tokenizer is there"
+        );
+
+        std::fs::write(&weights, vec![0u8; 10]).unwrap();
+        assert!(
+            !model_is_installed(&dir, model),
+            "a short weight file is a broken download, not a small model"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The engine's failure is reported in one line, and a missing file is
+    /// named, because that is the one the user can do something about.
+    #[test]
+    fn an_engine_failure_is_readable() {
+        let err = engine_error(
+            b"moonshine: weight residency: gpu=9 MiB (68 tensors)\n\
+              load: failed to open 'C:\\models\\tokenizer.bin'\n\
+              crispasr: error: failed to initialise backend 'moonshine'\n",
+            "moonshine-tiny",
+        );
+        assert!(
+            err.contains("tokenizer.bin"),
+            "the missing file should be named: {err}"
+        );
+        assert!(
+            !err.contains("weight residency"),
+            "the engine's diagnostics should not be shown: {err}"
+        );
+
+        let err = engine_error(
+            b"crispasr: error: failed to initialise backend 'moonshine'\n",
+            "moonshine-tiny",
+        );
+        assert_eq!(
+            err, "CrispASR failed: failed to initialise backend 'moonshine'"
+        );
+    }
+
+    /// Every model in the catalog names its companions by the file name the
+    /// engine looks for, so a companion cannot be fetched under a name the
+    /// engine would not find.
+    #[test]
+    fn the_catalog_companions_are_named_as_the_engine_expects() {
+        for model in MODEL_CATALOG {
+            for companion in model.companions {
+                assert!(
+                    !companion.file.is_empty(),
+                    "{} names a companion without a file name",
+                    model.id
+                );
+                assert!(
+                    companion.url.starts_with("https://"),
+                    "{} companion {} is not fetched over https",
+                    model.id,
+                    companion.file
+                );
+                assert!(
+                    companion.size > 0,
+                    "{} companion {} has no size",
+                    model.id,
+                    companion.file
+                );
+            }
+        }
     }
 }
     /// The dictionary, end to end, on real speech.

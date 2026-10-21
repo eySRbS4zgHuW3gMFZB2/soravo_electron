@@ -728,6 +728,44 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
   focused. 33/33 cargo tests pass, `tsc -p tsconfig.web.json` is clean and
   `npm run build` succeeds.
 
+#### Round 10: the model that could not be loaded
+- **Moonshine is more than one file, and the app only had one of them.** The
+  engine loads the Moonshine tokenizer from a `tokenizer.bin` sitting next
+  to the model, by name. The app downloaded the weights and nothing else,
+  so the engine loaded them and then failed on the missing file - which
+  reads like a broken model rather than an incomplete install. The catalog
+  now carries the companion files each model needs, they are downloaded
+  with the model, and the app fetches a missing one by itself the first
+  time the model is used, so an install made before this change starts
+  working on its own. minI-Omni2 needs a codec file the same way.
+- **A model that was cut short counted as installed.** The download wrote
+  straight to the model's path, so an interrupted transfer left a partial
+  file that the app reported as downloaded and the engine could not load.
+  The download now goes to a temporary name and is renamed into place only
+  once it is whole, and a model counts as installed only when its file is
+  exactly the size the server said it would be. The `large-v3-turbo` on
+  this machine is such a file - 87 MB of a 1.6 GB model - and it now shows
+  as incomplete instead of failing at the first dictation.
+- **Three catalog entries pointed at nothing that could be loaded.** The
+  Parakeet and Canary entries named NVIDIA repository pages rather than
+  files (one answered 401, the other a web page), and the Distil entry
+  named a file whisper.cpp never published. They now point at the GGUF
+  conversions the engine actually reads, and every URL in the catalog was
+  fetched and loaded to confirm it.
+- **The catalog's sizes and labels were round numbers that did not match
+  the files.** They are now the byte counts the server reports, which is
+  what makes the completeness check possible, and the labels name the
+  quantisation the file really is.
+- **The engine's failure was dumped raw into the Dictation page.** The
+  error now names the file that could not be opened and says what to do
+  about it, and the engine's own diagnostics are left in the log.
+- Verified by driving the app: dictating with Moonshine Tiny fetches the
+  missing tokenizer and transcribes; the Models page shows the model as
+  incomplete with a Repair button that fetches only the missing file;
+  Parakeet, Canary, Distil and the Q5_1 Whisper model all load and
+  transcribe. 36/36 cargo tests pass, `tsc -p tsconfig.web.json` is clean
+  and `npm run build` succeeds.
+
 #### Round 10: the merge, and a type check that actually runs
 - **The type check was a no-op.** `npm run typecheck` and the build's first
   step both pointed at `tsconfig.json`, which is the solution config and

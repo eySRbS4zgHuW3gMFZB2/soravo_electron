@@ -254,6 +254,8 @@ export default function ModelsPage() {
                         <span className="page-badge">Active</span>
                       ) : m.installed ? (
                         <span className="page-badge page-badge-muted">Installed</span>
+                      ) : m.present ? (
+                        <span className="page-badge page-badge-muted">Incomplete</span>
                       ) : null}
                     </div>
                     {downloading === m.id ? (
@@ -266,7 +268,7 @@ export default function ModelsPage() {
                     <div className="model-card-actions">
                       {!m.installed && downloading !== m.id ? (
                         <Button variant="secondary" size="sm" onClick={() => handleDownload(m.id)}>
-                          Download
+                          {m.present ? 'Repair' : 'Download'}
                         </Button>
                       ) : null}
                       {downloading === m.id ? (
@@ -290,6 +292,11 @@ export default function ModelsPage() {
                             Delete
                           </Button>
                         </>
+                      ) : null}
+                      {m.present && !m.installed && downloading !== m.id ? (
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(m.id)}>
+                          Delete
+                        </Button>
                       ) : null}
                     </div>
                   </div>

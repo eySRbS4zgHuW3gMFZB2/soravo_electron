@@ -59,7 +59,11 @@ export interface ModelInfo {
   sizeBytes: number
   sizeLabel: string
   license: string
+  /** The model is ready to use: the weights, whole, and the files the
+   *  engine reads from beside them. */
   installed: boolean
+  /** The model's file is on disk, even if it is incomplete. */
+  present: boolean
   active: boolean
   url: string
   language: string
