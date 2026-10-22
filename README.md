@@ -1,15 +1,24 @@
 # Soravo
 
-Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcription runs on-device via whisper.cpp — no accounts, no cloud, no telemetry.
+Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcription runs on-device via CrispASR — no accounts, no cloud, no telemetry.
 
 > **Changing this code? Read [AGENTS.md](AGENTS.md) first.** It records the
 > things that are not obvious from the code and that break the app in ways
 > that look like something else entirely — the engine's model rules, the two
 > hotkey paths, and the colour rules the design depends on.
 
+> **Commercial release work? Read
+> [`Soravo_Fresh_Engineering_Pack/00_README.md`](Soravo_Fresh_Engineering_Pack/00_README.md)
+> first.** It is the engineering control plane for the commercial release
+> (website, accounts, entitlements, payments, dashboards, release
+> pipeline) and it has a mandatory reading gate. The pack records the
+> decisions that constrain this repo: the CrispASR engine stays in place,
+> the website is rebuilt fresh under `website/`, the rename happens only
+> after CI is green, and the production site at `soravo.xyz` stays
+> untouched until cutover.
 ## Features
 
-- **Push-to-talk dictation** — global hotkey, mic capture, local Whisper transcription, text injection into any app
+- **Push-to-talk dictation** — global hotkey, mic capture, local CrispASR transcription, text injection into any app
 - **Pill overlay** — compact floating pill with recording/transcribing/error states, animated bars, cancel/finish buttons
 - **Hub window** — a navigation rail (brand block, page list, local-and-private card, Settings and Help) beside a rounded content panel, with Dictation, History, Insights, Dictionary, Snippets, Style, Models, Scratchpad and Settings. The rail folds away to an icon strip from the panel toggle in the title bar, the way Wispr Flow's does, and the choice is remembered. The window opens at 1350 x 850 and cannot be dragged smaller than 1140 x 750.
 - **Settings** — hotkey capture (press-to-capture) for dictate, paste last, copy last and the Scratchpad; mic selection, model/language, smart cleanup, custom vocabulary, sounds, theme, retention, launch at login, and the models folder; General, System, Account, Plans & Billing and Data & Privacy, grouped the way Wispr Flow groups them
@@ -81,6 +90,7 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 | `src/renderer/src/hub.css` | The whole hub design layer: shell, page primitives and the hero gradients |
 | `src/renderer/src/soravo.ts` | Tauri API shim (window.soravo compatible) |
 | `AGENTS.md` | Working notes for anyone changing this repository |
+| `Soravo_Fresh_Engineering_Pack/` | Engineering control plane for the commercial release (PRD, TDD, implementation plan, task breakdown, DoD, security baseline, ADRs, release runbook, worktree policy) — read `00_README.md` first |
 | `progress.md` | Full development history |
 
 ## Notes

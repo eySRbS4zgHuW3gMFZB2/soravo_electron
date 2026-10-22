@@ -7,10 +7,36 @@ These rules apply to OpenCode, coding agents, CLI agents and future sessions.
 2. Inspect actual git remote, branch, status and latest commit.
 3. Inspect current source files and relevant tests. Never assume prior chat state is current.
 4. Check current CI and uncommitted user changes before editing.
-5. State the task, scope, files expected to change, risks and verification plan in a concise plan.
-6. Do not ask the owner to perform developer-only tasks if an agent with available tools can safely do them; do ask before irreversible or account/security actions.
+5. Do not ask the owner to perform developer-only tasks if an agent with available tools can safely do them; do ask before irreversible or account/security actions.
+
+## Skill selection gate — mandatory
+
+
+Before any substantive task is planned or implemented, select and load the skills that bear on it. This is a gate, not a suggestion: no substantive task may be planned or implemented until it has run and the mandatory skills are loaded.
+
+1. **Match the task to domains.** Read the skill matrix in `08_SKILLS_AND_MCP_POLICY.md` and identify the skills relevant to the task's domains (Rust, Tauri, Supabase, Cloudflare, shadcn, Playwright, security review, CodeRabbit, etc.).
+2. **Load the skill's current instructions** (`SKILL.md` under `../.agents/skills/<id>/`) and follow them. A skill you have not read is not a skill you have applied.
+3. **Use the MCP/CLI tool only if it materially helps.** Tool use must add evidence or perform a needed operation. Do not invoke every tool on every task.
+4. **Record the selection** in the task's notes: which skills were loaded, which were considered but not loaded, and why. If a skill file is unavailable, say so and use documented best practices without claiming the skill was applied.
+
+Skills are installed one level above this repository, at `../.agents/skills/`. They are outside the repository and are not tracked by Git. Never commit them, never move them into the repo, and never assume they are present on another machine without checking.
+
+Skills are knowledge; a subagent is a worker. Use a skill when the work needs the knowledge it encodes. Use a subagent when the work is independent, well-scoped and can run in parallel with the main agent's work. The two are not interchangeable.
+
+## Subagent-first orchestration — mandatory
+
+When a task has independent, well-scoped parts, delegate them to subagents rather than doing everything in the main agent. This is the default for multi-part work, not an exception.
+
+- **When to delegate:** independent research, audits or reads that can run in parallel with the main agent's edits; a second opinion on a non-trivial design or diff; verification work that does not block the next editing step; anything where the main agent would otherwise be idle waiting.
+- **When NOT to delegate:** the task is small, sequential, or depends on context only the main agent holds; the work is destructive or irreversible (renames, deletions, production changes, secret handling) — the main agent owns those, always; two agents would need to touch the same files.
+- **Isolation:** each subagent gets its own worktree or at least its own directory scope. A subagent never writes into a worktree it does not own. Subagent output is evidence, not authority — the main agent integrates, resolves conflicts, runs the tests and reviews the diff before accepting anything. A subagent's report that a change works is not a passing test.
+- **Before integration:** the main agent re-reads every file the subagent changed, runs the relevant tests itself, and inspects the diff for accidental changes and secrets. A subagent that edited a file outside its scope is a blocker, not a detail.
+- **CodeRabbit and subagents:** subagent-driven changes are reviewed by CodeRabbit on the integrated diff, not on each subagent's output. A CodeRabbit finding that traces to a subagent's work is triaged by the main agent, and the subagent is re-run if the fix is non-trivial.
+
+5. **State the task, scope, files expected to change, risks and verification plan in a concise plan.** This comes after the skill selection gate: the gate must have run before any substantive planning, because the skills may change what you plan.
 
 ## Worktrees — mandatory
+
 **Read `28_GIT_WORKTREE_POLICY.md` before changing any file.** It is binding, not advisory.
 
 - Every new feature and every independent task gets **its own dedicated worktree and branch**. One task, one worktree, one branch.
