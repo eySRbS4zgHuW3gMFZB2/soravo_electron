@@ -6,7 +6,7 @@ This file prevents agents from acting on stale summaries.
 Record the date and commit SHA. Inspect:
 - repository owner/name/visibility/default branch;
 - remote URL, local folder, current branch and dirty state;
-- **the full worktree list** — path, branch, base SHA, uncommitted file count, upstream tracking and build-output size for each. Any worktree on a detached HEAD is reported as a defect, and any worktree directory whose registration is marked `prunable` is cleaned with `git worktree prune`. See `28_GIT_WORKTREE_POLICY.md`;
+- **the full worktree list** - path, branch, base SHA, uncommitted file count, upstream tracking and build-output size for each. Any worktree on a detached HEAD is reported as a defect. A worktree directory whose registration is marked `prunable` is cleaned with `git worktree prune`, **but only after `git worktree list --porcelain` has been inspected and a rescue branch created at any detached HEAD that still holds work** — pruning removes the registration and with it the only readily identifiable reference to that commit. See `28_GIT_WORKTREE_POLICY.md`;
 - top-level file tree and key manifests;
 - workflow files and recent CI;
 - test commands and actual outputs;

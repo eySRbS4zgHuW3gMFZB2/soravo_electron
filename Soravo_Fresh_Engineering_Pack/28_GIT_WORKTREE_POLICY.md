@@ -130,7 +130,7 @@ Each worktree is a full checkout and, unless `CARGO_TARGET_DIR` is set explicitl
 
 ## Recovery
 
-**Worktree directory deleted but the registration remains.** `git worktree list` shows the entry marked `prunable`. Run `git worktree prune` to clear it. Do not hand-edit `.git/worktrees`.
+**Worktree directory deleted but the registration remains.** `git worktree list` shows the entry marked `prunable`. **Inspect `git worktree list --porcelain` first and record the HEAD of every entry before pruning anything.** If any entry is on a detached HEAD, create a rescue branch at that commit — `git branch rescue/<name> <sha>` — because pruning removes the registration, and with it the only readily identifiable reference to that commit. Prune only after that decision is recorded. Then run `git worktree prune` to clear the registration. Do not hand-edit `.git/worktrees`.
 
 **Work was on a detached HEAD.** Recover the commit SHA from the worktree's `git log` before removing anything, then create a branch at that SHA immediately: `git branch rescue/<name> <sha>`. Detached-HEAD work is recoverable from the reflog, but only until the reflog expires or the object is pruned.
 

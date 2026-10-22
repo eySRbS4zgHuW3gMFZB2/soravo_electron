@@ -187,6 +187,15 @@ A seventh review against the final content returned 3 findings. **All 3 were val
 | AG | The CI workflow resolved Markdown links only against bare filenames inside the pack, so a valid link such as `../README.md` failed, and a broken link carrying a fragment was not checked at all | **Fixed.** The validator now resolves a link target relative to the file that contains it, strips an optional fragment, skips absolute URLs, protocol-relative URLs and in-page anchors, and checks the resolved path. Verified with four new cases: a valid outside link passes, a broken link with a fragment is caught, a broken link outside the pack is caught, and external URLs and anchors are not flagged. The seven earlier failure modes were re-tested and still caught. |
 | AH | The rename runbook moved the local folder without repairing the nested worktrees, whose recorded paths move with it | **Fixed.** Every registered worktree path is recorded before the move, `git worktree repair` is run afterwards, each registration is verified, and pruning is forbidden until they are verified. |
 
+## Eighth CodeRabbit review disposition — pull request #13
+
+An eighth review against the final content returned 2 findings. **Both were valid and both are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| AI | `git worktree repair` without path arguments does not complete the repair when the main folder and its nested linked worktrees all move | **Fixed.** The runbook now supplies every new linked-worktree path, and verification uses `git worktree list --porcelain`. |
+| AJ | Pruning a worktree whose directory was deleted removed the registration before the detached-HEAD commit had been preserved, losing its only readily identifiable reference | **Fixed.** The recovery procedure and the state audit protocol now require inspecting `git worktree list --porcelain` and creating a rescue branch at any detached HEAD **before** pruning. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)
