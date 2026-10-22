@@ -473,9 +473,23 @@ fn default_models_folder(app: tauri::AppHandle) -> String {
 /// `third-party/crispasr/extracted/<build>/`, so a fresh clone has the binary
 /// in one place while the lookup expects the other. Search both, preferring
 /// `bin/` because that is what a completed fetch produces.
+///
+/// On an installed machine, the engine is bundled under
+/// `resource_dir()/crispasr/`. That location is checked first so the
+/// installed engine is always selected before any working-directory copy.
 fn find_crispasr_binary(roots: &[std::path::PathBuf]) -> Option<std::path::PathBuf> {
     let name = if cfg!(target_os = "windows") { "crispasr.exe" } else { "crispasr" };
 
+    // The Tauri resource_dir is the install-time location. Check it first so
+    // the bundled engine wins over any development-tree copy.
+    let resource_dir = roots.last().cloned().unwrap_or_default();
+    let bundled = resource_dir.join("crispasr").join(name);
+    if bundled.exists() {
+        return Some(bundled);
+    }
+
+    // Developer-machine layout: npm run fetch:asr relocates the exe into
+    // third-party/bin/, which is git-ignored.
     for root in roots {
         let in_bin = root.join("third-party").join("bin").join(name);
         if in_bin.exists() {
@@ -483,8 +497,8 @@ fn find_crispasr_binary(roots: &[std::path::PathBuf]) -> Option<std::path::PathB
         }
     }
 
-    // Fall back to the committed, not-yet-relocated copy. The versioned
-    // directory name changes per release, so probe the immediate children.
+    // Committed, not-yet-relocated copy. The versioned directory name
+    // changes per release, so probe the immediate children.
     for root in roots {
         let extracted = root.join("third-party").join("crispasr").join("extracted");
         let Ok(entries) = std::fs::read_dir(&extracted) else { continue };
@@ -1011,7 +1025,7 @@ fn transcribe_wav(
     let roots = [current_dir.clone(), project_root.clone(), resource_dir.to_path_buf()];
 
     let whisper_path = find_crispasr_binary(&roots).ok_or_else(|| {
-        "CrispASR is not installed. Run `npm run fetch:asr` to download it.".to_string()
+        "CrispASR engine is missing from this installation. Reinstall Soravo or contact support.".to_string()
     })?;
 
     // Model: look in app data dir first (downloaded via Models tab), then third-party.
