@@ -9,7 +9,7 @@ Use the installed specialist skills and connected MCP servers to their fullest *
 The skill selection matrix below is the input to a **gate** that must run before any substantive task is planned or implemented. No substantive task may be planned or implemented until it has run and the mandatory skills are loaded. This mirrors the rule in `07_AI_AGENT_OPERATING_RULES.md`.
 
 1. **Match the task to domains** using the matrix below.
-2. **Load the skill's current instructions** (`SKILL.md` under `.agents/skills/<id>/`) and follow them. A skill you have not read is not a skill you have applied.
+2. **Load the skill's current instructions** (`SKILL.md` under `../.agents/skills/<id>/`) and follow them. A skill you have not read is not a skill you have applied.
 3. **Use the MCP/CLI tool only if it materially helps.** Tool use must add evidence or perform a needed operation.
 4. **Record the selection** in the task's notes: which skills were loaded, which were considered but not loaded, and why. If a skill file is unavailable, say so and use documented best practices without claiming the skill was applied.
 

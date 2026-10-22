@@ -315,6 +315,7 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 - No application source, production configuration, repository name, existing worktree, or unrelated file was touched.
 
 ## Publication session — 2026-10-22
+
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)
 
 - The pack was published under `28_GIT_WORKTREE_POLICY.md`: a dedicated worktree and named branch created from `origin/main`, all edits made inside it, and the main working tree never edited.

@@ -1,6 +1,6 @@
 # Soravo
 
-Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcription runs on-device via whisper.cpp — no accounts, no cloud, no telemetry.
+Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcription runs on-device via CrispASR — no accounts, no cloud, no telemetry.
 
 > **Changing this code? Read [AGENTS.md](AGENTS.md) first.** It records the
 > things that are not obvious from the code and that break the app in ways
@@ -18,7 +18,7 @@ Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcriptio
 > untouched until cutover.
 ## Features
 
-- **Push-to-talk dictation** — global hotkey, mic capture, local Whisper transcription, text injection into any app
+- **Push-to-talk dictation** — global hotkey, mic capture, local CrispASR transcription, text injection into any app
 - **Pill overlay** — compact floating pill with recording/transcribing/error states, animated bars, cancel/finish buttons
 - **Hub window** — a navigation rail (brand block, page list, local-and-private card, Settings and Help) beside a rounded content panel, with Dictation, History, Insights, Dictionary, Snippets, Style, Models, Scratchpad and Settings. The rail folds away to an icon strip from the panel toggle in the title bar, the way Wispr Flow's does, and the choice is remembered. The window opens at 1350 x 850 and cannot be dragged smaller than 1140 x 750.
 - **Settings** — hotkey capture (press-to-capture) for dictate, paste last, copy last and the Scratchpad; mic selection, model/language, smart cleanup, custom vocabulary, sounds, theme, retention, launch at login, and the models folder; General, System, Account, Plans & Billing and Data & Privacy, grouped the way Wispr Flow groups them

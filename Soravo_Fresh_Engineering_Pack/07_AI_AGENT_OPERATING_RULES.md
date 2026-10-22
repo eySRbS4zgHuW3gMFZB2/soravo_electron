@@ -7,15 +7,15 @@ These rules apply to OpenCode, coding agents, CLI agents and future sessions.
 2. Inspect actual git remote, branch, status and latest commit.
 3. Inspect current source files and relevant tests. Never assume prior chat state is current.
 4. Check current CI and uncommitted user changes before editing.
-5. State the task, scope, files expected to change, risks and verification plan in a concise plan.
-6. Do not ask the owner to perform developer-only tasks if an agent with available tools can safely do them; do ask before irreversible or account/security actions.
+5. Do not ask the owner to perform developer-only tasks if an agent with available tools can safely do them; do ask before irreversible or account/security actions.
 
 ## Skill selection gate — mandatory
+
 
 Before any substantive task is planned or implemented, select and load the skills that bear on it. This is a gate, not a suggestion: no substantive task may be planned or implemented until it has run and the mandatory skills are loaded.
 
 1. **Match the task to domains.** Read the skill matrix in `08_SKILLS_AND_MCP_POLICY.md` and identify the skills relevant to the task's domains (Rust, Tauri, Supabase, Cloudflare, shadcn, Playwright, security review, CodeRabbit, etc.).
-2. **Load the skill's current instructions** (`SKILL.md` under `.agents/skills/<id>/`) and follow them. A skill you have not read is not a skill you have applied.
+2. **Load the skill's current instructions** (`SKILL.md` under `../.agents/skills/<id>/`) and follow them. A skill you have not read is not a skill you have applied.
 3. **Use the MCP/CLI tool only if it materially helps.** Tool use must add evidence or perform a needed operation. Do not invoke every tool on every task.
 4. **Record the selection** in the task's notes: which skills were loaded, which were considered but not loaded, and why. If a skill file is unavailable, say so and use documented best practices without claiming the skill was applied.
 
@@ -32,6 +32,8 @@ When a task has independent, well-scoped parts, delegate them to subagents rathe
 - **Isolation:** each subagent gets its own worktree or at least its own directory scope. A subagent never writes into a worktree it does not own. Subagent output is evidence, not authority — the main agent integrates, resolves conflicts, runs the tests and reviews the diff before accepting anything. A subagent's report that a change works is not a passing test.
 - **Before integration:** the main agent re-reads every file the subagent changed, runs the relevant tests itself, and inspects the diff for accidental changes and secrets. A subagent that edited a file outside its scope is a blocker, not a detail.
 - **CodeRabbit and subagents:** subagent-driven changes are reviewed by CodeRabbit on the integrated diff, not on each subagent's output. A CodeRabbit finding that traces to a subagent's work is triaged by the main agent, and the subagent is re-run if the fix is non-trivial.
+
+5. **State the task, scope, files expected to change, risks and verification plan in a concise plan.** This comes after the skill selection gate: the gate must have run before any substantive planning, because the skills may change what you plan.
 
 ## Worktrees — mandatory
 
