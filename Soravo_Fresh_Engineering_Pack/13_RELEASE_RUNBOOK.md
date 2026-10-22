@@ -42,7 +42,7 @@ The active source repo can become private before commercial launch. Release repo
 11. Verify the staged links resolve for the release account, without making the assets customer-accessible.
 12. Test installation on a clean machine: the installer launches, locates the bundled engine, and dictates. **This gate must pass before publication**, because it is what proves the release is not broken.
 13. Upload the verified artifacts and checksums to the public release host.
-14. Verify public links from a logged-out browser.
+14. Verify public links from a logged-out browser, then **download each published installer and verify its SHA-256 against `SHA256SUMS`**. Step 13 uploads a new copy, so the artifact tested at step 12 is not the one customers will fetch; a link that resolves is not the same as a link that serves the verified bytes.
 15. Publish release notes and installation/trust-warning guidance.
 16. Update `latest` manifest only after the release is verified.
 17. Update progress/handoff and record commit/tag/hash.

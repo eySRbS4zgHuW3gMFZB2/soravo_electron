@@ -48,7 +48,7 @@ A dedicated worktree and branch are required for:
 
 **Branch.** `<type>/<task-id>-<slug>`, where `<type>` is one of `feature`, `fix`, `docs`, `chore` — matching the repository's existing branch convention, under which `main` stays linear and each piece of work merges as its own commit.
 
-**Task ID.** Use the breakdown IDs from `06_TASK_BREAKDOWN.md` (`P0-01`, `P1-03`, `P2-08`, and so on). A worktree without a task ID has no defined scope and cannot be reviewed.
+**Task ID.** Use the breakdown IDs from `06_TASK_BREAKDOWN.md` (`P0-01`, `P1-03`, `P2-08`, and so on). A worktree without a task ID has no defined scope and cannot be reviewed. **A task that is not yet in the breakdown may be given a new ID, recorded in `06_TASK_BREAKDOWN.md` before the worktree is created** — an unplanned fix is not blocked from starting because its ID had to be invented first. The ID is assigned and recorded first, then the worktree is created against it.
 
 **Example.**
 
