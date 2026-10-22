@@ -256,6 +256,15 @@ A fourteenth review against the final content returned 3 findings, all in the wo
 | BA | Rule 4 needed its scope stated against the task-ID exception, which the rewrite removes | **Fixed.** Rule 4 is restored to plain form: all implementation and task-scoped edits happen inside the worktree, and the main working tree is not edited during a worktree task. |
 | BB | `git worktree prune` is repository-wide and can remove another task's registration during an unrelated cleanup, including the reference a detached HEAD needs | **Fixed.** The routine cleanup step now requires `git worktree list --porcelain` and the rescue check **before every prune**, not only during recovery. |
 
+## Fifteenth CodeRabbit review disposition — pull request #13
+
+A fifteenth review against the final content returned 3 findings covering 2 distinct issues. **Both were valid and both are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| BC | The release task required publishing a Linux installation guide during a Windows-only release, while Linux publication and support claims remain blocked until the Linux gate passes | **Fixed.** The Windows guide is published now; the Linux guide is published only after the Linux release gate passes. |
+| BD | The release runbook uploaded the artifacts to the public host as a normal release, so the bytes customers could fetch were only verified after they were already reachable | **Fixed.** The upload is now a **draft** on the public host: the hosted draft is downloaded and its checksum verified **before** it is published, and the public links and the published asset are re-checked from a logged-out browser afterwards. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)

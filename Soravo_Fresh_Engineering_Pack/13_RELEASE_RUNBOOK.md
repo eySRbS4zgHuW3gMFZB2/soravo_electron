@@ -41,11 +41,12 @@ The active source repo can become private before commercial launch. Release repo
 10. Upload artifacts and checksums to a **private or draft staging release** on the release host. **Do not publish them to a customer-accessible location yet.** A broken installer that customers can download is worse than a delayed release, and the clean-machine gate below is a release blocker.
 11. Verify the staged links resolve for the release account, without making the assets customer-accessible.
 12. Test installation on a clean machine: the installer launches, locates the bundled engine, and dictates. **This gate must pass before publication**, because it is what proves the release is not broken.
-13. Upload the verified artifacts and checksums to the public release host.
-14. Verify public links from a logged-out browser, then **download each published installer and verify its SHA-256 against `SHA256SUMS`**. Step 13 uploads a new copy, so the artifact tested at step 12 is not the one customers will fetch; a link that resolves is not the same as a link that serves the verified bytes.
-15. Publish release notes and installation/trust-warning guidance.
-16. Update `latest` manifest only after the release is verified.
-17. Update progress/handoff and record commit/tag/hash.
+13. Upload the verified artifacts and checksums to the public release host **as a draft**, so the bytes are hosted but not yet customer-accessible.
+14. **Verify the hosted draft**, not the local build: download the artifact from the host and verify its SHA-256 against `SHA256SUMS`. Step 13 uploads a new copy, so the artifact tested at step 12 is not the one the host will serve, and an upload can change or corrupt it. Only after the hosted copy verifies is the draft published.
+15. Publish the draft, then **re-check the public links and download the published asset once more from a logged-out browser**. A link that resolves is not a link that serves the verified bytes.
+16. Publish release notes and installation/trust-warning guidance.
+17. Update `latest` manifest only after the release is verified.
+18. Update progress/handoff and record commit/tag/hash.
 
 ## Self-signing and trust
 

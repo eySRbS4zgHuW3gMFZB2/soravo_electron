@@ -94,7 +94,7 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - P8-03: Generate SHA256SUMS and verify it.
 - P8-04: Optional minisign signing with private key outside CI/repo.
 - P8-05: Test installation from a fresh download.
-- P8-06: Publish Windows and Linux guides with security-warning disclosure.
+- P8-06: Publish the Windows guide with security-warning disclosure. Publish the Linux guide only after the Linux release gate passes.
 - P8-07: Final privacy/legal/support review.
 - P8-08: Owner approves launch; tag immutable version.
 - P8-09: **Production cutover preparation** — complete the URL inventory from P3-09, configure and test redirects, take a restorable production data snapshot, and rehearse the rollback, per `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`.
