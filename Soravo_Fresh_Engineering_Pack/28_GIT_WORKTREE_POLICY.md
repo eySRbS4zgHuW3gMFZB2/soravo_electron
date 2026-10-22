@@ -136,7 +136,7 @@ Each worktree is a full checkout and, unless `CARGO_TARGET_DIR` is set explicitl
 
 **A branch was deleted while a worktree held it.** Git refuses this, but a force-deleted branch outside git is recoverable through `git reflog` on the repository.
 
-**Worktree registration points at a missing directory.** `git worktree prune`. Nothing else is lost — the branch and its commits are unaffected.
+**Worktree registration points at a missing directory.** `git worktree prune` clears the registration. The branch and its committed history are unaffected. **Uncommitted files in the deleted directory are not recovered by pruning** — they never reached the object store. If that work mattered, it needed a separate backup or a commit; treat it as lost and recover from the reflog or an external copy if one exists.
 
 **Disk pressure from worktrees.** List them with `git worktree list`, measure each, and remove the finished ones. Report the state before deleting anything; a worktree may hold uncommitted work that exists nowhere else.
 

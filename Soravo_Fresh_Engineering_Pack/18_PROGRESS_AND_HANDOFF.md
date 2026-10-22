@@ -148,6 +148,21 @@ A fourth review, run against the final content including the CI workflow, return
 | O | The cutover step ran a **Razorpay test-mode** payment against the **production** ledger, which could record a paid production entitlement with no live charge | **Fixed.** The test-mode payment now runs against staging before cutover and verifies only staging records. Production is verified with a separately approved live payment, with approval, reconciliation and refund evidence recorded. This was a genuine revenue-integrity defect. |
 | P | The checksum command wrote `dist/`-prefixed paths into `SHA256SUMS`, which breaks `sha256sum -c` from a clean download directory, and listed a fixed two-file set | **Fixed.** Entries use bare published asset names, and the command covers exactly the installer formats that are actually published. |
 
+## Fifth CodeRabbit review disposition — pull request #13
+
+A fifth review, run against the final content including the CI workflow, returned 9 findings across repeated runs, covering 8 distinct issues. **All 8 were valid and all 8 are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| Q | The Linux release gate required a clean-runner build and a clean-machine install, but the pack prohibited any Linux build until the gate passed — making the gate impossible to complete | **Fixed.** Verification builds are permitted once P1-05 delivers the engine. Publication and support claims stay prohibited until the whole gate passes. Aligned in `05_IMPLEMENTATION_PLAN.md`, `06_TASK_BREAKDOWN.md` and `09_GITHUB_CI_POLICY.md`. |
+| R | The cutover rehearsal did not test the change-set replay, which the rollback procedure requires | **Fixed.** The rehearsal must now capture a post-snapshot change set with creates, updates and deletes, replay it, and verify by record identity. |
+| S | The rollback procedure restored traffic before freezing writers, letting the two versions interleave | **Fixed.** Freezing every writer is now step 1, before routing is restored, and the freeze is released only after the recovered state is verified. |
+| T | The staging payment check sat at step 7, after step 3 had already deployed to production | **Fixed.** The staging payment check is now a prerequisite, before the procedure. Step 7 is the production live-payment verification only. |
+| U | The worktree recovery text implied `git worktree prune` recovers work from a deleted directory | **Fixed.** It now states that the branch and committed history survive, and that uncommitted files were never in the object store and need a separate backup. |
+| V | The CI policy's rename rule still required the packaging check to be green, contradicting its own exception | **Fixed.** Non-packaging checks must be green; the packaging check must run and report its one permitted baseline result. |
+| W | `00_README.md` allowed the historical repository only as a documentation record, omitting the approved website reference | **Fixed.** Both permitted uses are now stated, with the prohibition on porting implementation retained. |
+| X | The agent rules prohibited branch deletion outright, which conflicts with the policy's mandatory merged-branch cleanup | **Fixed.** Merged task-branch cleanup is expected work; the prohibition still covers unmerged, unrelated and other-task branches. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)
@@ -168,7 +183,7 @@ A fourth review, run against the final content including the CI workflow, return
 5. Prepare and review the rename checklist (P0-03).
 6. Run a deep VM/toolchain/state audit and update `19_STATE_AUDIT_PROTOCOL.md` / `docs/engineering/STATE_AUDIT.md`.
 7. Decide the CrispASR bundled layout and record ADR-0010 (P1-03).
-8. Fix packaging and establish Windows/Linux CI baseline before commercial code.
+8. Fix packaging and establish the Windows CI baseline before commercial code. Linux CI stays behind task P1-05 and the Linux release gate; it is not part of the pre-commercial baseline.
 9. Choose the backend placement and record ADR-0003 (P2-08); choose the binary host and finalise ADR-0005 (P8-00).
 10. Create website shell and Supabase staging schema.
 11. Configure Resend SMTP; test email delivery.

@@ -26,7 +26,7 @@ These rules apply to OpenCode, coding agents, CLI agents and future sessions.
 - Never modify old `soravo_deprecated` as part of current implementation.
 - Do not port old code, schemas, migrations or workflows. The historical repository is a **behavioral and content reference only** for approved website content and behavior.
 - Do not redesign the desktop UI or replace CrispASR under this commercial-release scope.
-- Never run destructive commands, reset/clean a repo, delete branches, rotate secrets, change repo visibility, rename repos or deploy production without explicit owner approval.
+- Never run destructive commands, reset/clean a repo, delete branches, rotate secrets, change repo visibility, rename repos or deploy production without explicit owner approval. The one exception is the task branch cleanup that `28_GIT_WORKTREE_POLICY.md` requires: **deleting a merged task branch and its worktree is expected work, not a destructive action.** The prohibition still applies to unmerged branches, to branches belonging to another task, and to any branch whose work is not yet merged and pushed.
 - **Never retire, redirect or repoint `soravo.xyz`, change DNS, or alter Cloudflare production settings without explicit owner approval.** The production site stays as it is until the replacement passes its launch checklist; cutover is a separate approved step (`27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`).
 - **Do not implement against a `PROPOSED` ADR.** ADR-0003 (backend placement), ADR-0005 (binary host) and ADR-0010 (engine bundled layout) are open; each must be made ACCEPTED with a rationale first.
 - Preserve user edits. Never overwrite unknown uncommitted changes.

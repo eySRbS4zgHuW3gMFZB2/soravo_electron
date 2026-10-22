@@ -52,7 +52,9 @@ Linux has its own gate, which applies only once **P1-05** has delivered a tracke
 - a clean-machine Linux install launches the bundled engine and transcribes;
 - the microphone, hotkey hold/release, cancellation, text injection and offline path are verified on Linux.
 
-Until that gate is met, Linux may not be built, published, or described as supported. The Windows release may proceed independently.
+**Verification builds are permitted once P1-05 delivers the engine, before the gate is complete.** The gate above cannot be satisfied without a build and a clean-machine install, so forbidding those steps until the gate passes would make the gate impossible to complete. What stays prohibited until the whole gate is met is **publishing** a Linux artifact and **describing** Linux as supported. A Linux build produced under this allowance is a verification artifact, not a release.
+
+Until that gate is met, Linux may not be published or described as supported. The Windows release may proceed independently.
 
 ## Phase 2 — Commercial contracts and service setup
 - Confirm domain and product email sender ownership. Record existing DNS, MX, SPF, DKIM and DMARC exactly, so that any later DNS move can reproduce them and business email survives.

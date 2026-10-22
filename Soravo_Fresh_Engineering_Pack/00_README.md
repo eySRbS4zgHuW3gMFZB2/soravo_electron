@@ -6,7 +6,7 @@
 **Product framework:** Tauri v2 + Rust + React + TypeScript + Vite  
 **Commercial scope:** Website, accounts, subscription/lifetime entitlements, user/admin dashboards, Razorpay, releases and downloads.
 
-This pack is newly authored for the current Tauri application. It does not import the old repository's implementation, schemas, architecture, code, or Handy-fork-specific directions. The old repository may be consulted only as a historical record of the user's requested documentation discipline. The current app repository is the implementation source of truth.
+This pack is newly authored for the current Tauri application. It does not import the old repository's implementation, schemas, architecture, code, or Handy-fork-specific directions. The old repository may be consulted for two purposes only: as a historical record of the owner's requested documentation discipline, and as a **behavioral and content reference for approved website content and behavior** (the approved Phase 3 reference — page structure, pricing presentation, dashboard behaviors). Neither use permits porting its implementation, schema, migrations, Edge Functions or desktop code. The current app repository is the implementation source of truth.
 
 ## Read this first
 

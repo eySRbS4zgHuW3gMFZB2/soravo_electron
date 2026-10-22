@@ -64,7 +64,8 @@ Every item must be checked and evidenced. An unchecked item blocks cutover.
 - [ ] The URL inventory is complete and each path is classified and approved.
 - [ ] Redirects are configured and each one has been tested from a logged-out browser.
 - [ ] Business email still delivers after any DNS-related change; a test message to a non-team address has been received.
-- [ ] The rollback procedure below has been **executed as a dry run** in a representative non-production or provider-supported staging environment. The rehearsal must exercise restoring DNS and Cloudflare routing, disabling redirects, selecting the previous deployment, and restoring or reconciling a disposable data snapshot. **It must also exercise the post-migration schema:** if the cutover applied database migrations, the rehearsal must prove that the previous deployment can still run against the resulting schema, or that the migration's rollback and forward-fix path works. A rollback that fails at the schema step, before service verification, is not a rehearsal. Record the provider-specific steps, identifiers, results and evidence. **A tabletop review alone does not satisfy this item.**
+- [ ] The rollback procedure below has been **executed as a dry run** in a representative non-production or provider-supported staging environment. The rehearsal must exercise restoring DNS and Cloudflare routing, disabling redirects, selecting the previous deployment, and restoring or reconciling a disposable data snapshot. **It must also exercise the post-migration schema:** if the cutover applied database migrations, the rehearsal must prove that the previous deployment can still run against the resulting schema, or that the migration's rollback and forward-fix path works. **It must also exercise the change-set replay:** the rehearsal must capture a post-snapshot change set containing creates, updates and deletes, replay it, and verify the result by record identity — because the rollback procedure forbids a snapshot restore without that separately tested replay procedure. A rollback that fails at the schema or replay step, before service verification, is not a rehearsal. Record the provider-specific steps, identifiers, results and evidence. **A tabletop review alone does not satisfy this item.**
+- [ ] **Before cutover**, one payment has been run against the separate **staging** environment using **Razorpay test-mode credentials**, and the staging entitlement and the staging admin record have been confirmed. A test-mode event must never be run against the production ledger, because it could record a paid production entitlement with no live charge behind it.
 - [ ] Owner has given explicit approval for the cutover window.
 
 ## Cutover procedure
@@ -77,7 +78,7 @@ Perform in this order, stopping at the first failure.
 4. Verify, in a logged-out browser and on a second network: home, pricing, download, legal, privacy, support, sign-up, sign-in, recovery, account dashboard, and admin denial for an ordinary user.
 5. Verify a real download and checksum from the download page.
 6. Verify business email delivery.
-7. **Before cutover**, run one payment against the separate **staging** environment using **Razorpay test-mode credentials**, and confirm the staging entitlement and the staging admin record. A test-mode event must never be run against the production ledger, because it could record a paid production entitlement with no live charge. **After deployment to production**, use a separately approved live payment to confirm the production entitlement and the production admin record, then refund it, recording the owner approval, the reconciliation evidence and the refund evidence.
+7. **After deployment to production**, use a separately approved live payment to confirm the production entitlement and the production admin record, then refund it, recording the owner approval, the reconciliation evidence and the refund evidence.
 8. Enable redirects for classified paths.
 9. Update the live site's own references: sitemap, robots, canonical URLs, Open Graph URLs and any hard-coded absolute URLs.
 10. Record the cutover: date, commit SHA, deployment ID, versions of the site and the desktop app, and the rollback target.
@@ -89,17 +90,19 @@ Rollback must be achievable within the incident window without a code change.
 **Trigger conditions.** Roll back when the replacement is unavailable, when authentication or payment fails for real customers, when business email breaks, when legal or privacy pages are missing or wrong, when the download or checksum path fails, or when any data-integrity problem appears in production data.
 
 **Procedure.**
-1. Restore DNS and Cloudflare routing to the previous production deployment.
-2. Disable the redirects, returning the old paths to the previous site's content.
-3. **Recover the data safely.** An unqualified snapshot restore can discard real accounts, payments and entitlements created after the snapshot was taken. The recovery sequence is:
+1. **Freeze every writer that touches the production datastore** — the replacement's accounts, entitlements and payments paths, and any other service writing to it. This happens **before** traffic is restored: restoring traffic to the previous deployment while the replacement can still write lets the two versions interleave and corrupt the record. Verify the freeze is in effect, then proceed.
+2. Restore DNS and Cloudflare routing to the previous production deployment.
+3. Disable the redirects, returning the old paths to the previous site's content.
+4. **Recover the data safely.** An unqualified snapshot restore can discard real accounts, payments and entitlements created after the snapshot was taken. The recovery sequence is:
    a. **Freeze writes** to the replacement's data paths (accounts, entitlements, payments) so that no new records appear during recovery.
    b. **Export a replayable change set for every post-snapshot create, update, and delete**, and record counts by operation, so that snapshot restoration can preserve all post-snapshot changes. Creates alone are not enough: renewals, refunds and entitlement changes are updates to existing rows, and a snapshot restore would reverse them.
    c. **Apply a tested forward-fix or merge procedure** to carry that change set forward. This is the preferred outcome, because it preserves real payments and accounts.
    d. **Restore the snapshot only if** the forward-fix or merge cannot be applied or verified **and** a separately available, tested replay procedure for the exported change set is available and verified. Restoring is a last resort, and it must be followed by replaying that change set through the verified replay procedure. A procedure that is unavailable or unverified is not a fallback.
    e. **Verify the replayed change set** from step (b) by **record identity**, not only by count: every create, update and delete must be applied, and the resulting records must match the change set on stable record IDs and on the relevant fields. Equal counts alone do not prove the replay restored the same records — a missing payment can be hidden by an unrelated or duplicate record with the same count. Check explicitly for duplicates after replay.
    "Reconcile any legitimate records" is not a recovery method on its own, and must not be used as one.
-4. Verify home, pricing, download, sign-in and business email again.
-5. Record what happened, what was rolled back, and what must be fixed before the next attempt.
+5. Verify home, pricing, download, sign-in and business email again.
+6. **Unfreeze writers** only once the recovered state is verified, and record which writers were frozen and when they were released.
+7. Record what happened, what was rolled back, and what must be fixed before the next attempt.
 
 **Precondition.** The previous deployment must remain reachable and identifiable for the whole rollback window. Do not delete or overwrite it as part of cutover. "Do not silently repoint an already published version to different bytes" applies to release artifacts as well as to the site.
 

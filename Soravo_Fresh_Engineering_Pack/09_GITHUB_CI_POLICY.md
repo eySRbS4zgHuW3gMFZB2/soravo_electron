@@ -4,7 +4,7 @@
 
 While the active repository remains public, standard GitHub-hosted runner usage is generally free for public repositories. Use this period to build robust CI before changing visibility. Confirm current GitHub policy before relying on it; usage terms can change.
 
-**Establish CI before renaming.** Per ADR-0009, baseline CI and the release-packaging check must exist and be green in `soravo_electron` before any repository is renamed. A rename changes the repository URL and can invalidate workflow secret scoping, so the automation must already be proven before the name changes.
+**Establish CI before renaming.** Per ADR-0009, every **non-packaging** baseline check must exist and be **green** in `soravo_electron` before any repository is renamed, and the release-packaging check must **exist, run, and report** its one permitted baseline result (see the next paragraph). A rename changes the repository URL and can invalidate workflow secret scoping, so the automation must already be proven before the name changes.
 
 **The release-packaging check has a documented baseline exception.** The current Tauri configuration bundles no engine, so the packaging check is expected to be **red** until Phase 1 implements the bundle layout. The rename therefore requires the check to **exist, run, and report** — with its red result recorded as the known baseline — not to be green. It becomes a required green check in Phase 1, and no release may ship while it is red. A red packaging check for any *other* reason is a genuine failure and blocks the rename. See `05_IMPLEMENTATION_PLAN.md` Phase 0, "The packaging-check baseline exception".
 
@@ -16,7 +16,7 @@ While the active repository remains public, standard GitHub-hosted runner usage 
    - formatting/lint/typecheck/build where configured;
    - Rust format check, clippy and tests;
    - Windows build/test on Windows runner;
-   - **Linux build/test on a Linux runner — deferred until task P1-05 has delivered a Linux engine and the Linux release gate in `05_IMPLEMENTATION_PLAN.md` has passed.** Linux jobs become required only at that point. Until then a Linux job must not be a required check, because Phase 1 is Windows-only and the Windows release path proceeds independently of Linux;
+   - **Linux build/test on a Linux runner — deferred until task P1-05 has delivered a Linux engine.** A **verification** build is permitted once the engine exists, because the Linux release gate cannot be satisfied without one; what stays prohibited until the full gate passes is publishing a Linux artifact and describing Linux as supported. **Linux jobs become required checks only at that point.** Until then a Linux job must not be a required check, because Phase 1 is Windows-only and the Windows release path proceeds independently of Linux;
    - upload installers as temporary CI artifacts, not customer releases on every PR.
 
 2. `ci-website.yml`
