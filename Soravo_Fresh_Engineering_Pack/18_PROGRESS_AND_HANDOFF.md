@@ -367,7 +367,8 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 
 1. **Engine not bundled:** undle.resources: [] and undle.externalBin: [] in 	auri.conf.json. A release build is ~6 MB, far smaller than the ~20 MB engine.
 2. **Tracked engine:** 	hird-party/crispasr/extracted/crispasr-windows-x86_64-cpu/ contains crispasr.exe (19.2 MB), openblas.dll (1.7 MB), crispasr-quantize.exe (0.6 MB), LICENSE (MIT), THIRD_PARTY_NOTICES.txt. Git-ignored 	hird-party/bin/ has 0 tracked files.
-3. **Runtime lookup fails on installed machine:** ind_crispasr_binary() searches current_dir and project_root (don't exist on installed machine) and esource_dir (no engine because undle.resources is empty).
+3. **Runtime lookup fails on installed machine:** ind_crispasr_binary() searches current_dir and project_root (don't exist on installed machine) and 
+esource_dir (no engine because undle.resources is empty).
 4. **VC++ Redistributable dependency (NEW):** crispasr.exe depends on MSVCP140.dll, VCRUNTIME140.dll, VCRUNTIME140_1.dll, VCOMP140.DLL — none tracked, none on a clean Windows install. openblas.dll also depends on VCRUNTIME140.dll.
 5. **Licensing:** MIT (Copyright 2023-2026 The ggml authors). Redistribution permitted. LICENSE and THIRD_PARTY_NOTICES.txt must be included in bundle.
 6. **ADR-0010 is PROPOSED:** Bundled layout not yet decided. Must be resolved before packaging work begins.
@@ -381,7 +382,8 @@ MCP/CLI tools used: objdump (PE dependency inspection), Get-FileHash (SHA-256), 
 
 ### Research (delegated to subagents)
 
-- **Tauri v2 bundle.resources:** Supports array or map form. Map form recommended: {"../third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/": "crispasr"}. Engine lands at esource_dir()/crispasr/crispasr.exe. Works identically in dev and production. externalBin not recommended (single exe only, no companion DLLs).
+- **Tauri v2 bundle.resources:** Supports array or map form. Map form recommended: {"../third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/": "crispasr"}. Engine lands at 
+esource_dir()/crispasr/crispasr.exe. Works identically in dev and production. externalBin not recommended (single exe only, no companion DLLs).
 - **VC++ Redistributable:** Tauri v2 supports undle.windows.bundleVCRuntime: true which copies VC++ CRT DLLs. Microsoft permits local deployment (copying DLLs alongside exe). No fee, no attribution beyond license terms. Recommended: enable bundleVCRuntime + bundle engine via resources + optionally ship vc_redist.x64.exe as fallback.
 
 ### Minimal implementation plan
@@ -399,3 +401,34 @@ No desktop features, website/auth/payment work, repository rename, production ch
 
 ### Status
 Findings and plan reported to owner. Awaiting approval before implementation.
+
+### Implementation completed
+
+- ADR-0010 accepted: bundle.resources map form, bundleVCRuntime enabled.
+- tauri.conf.json: bundle.resources maps engine dir to crispasr/, bundle.windows.bundleVCRuntime: true.
+- lib.rs: find_crispasr_binary checks resource_dir/crispasr/ first, then dev-mode paths.
+- Error message updated to customer-friendly text.
+- Added VC++ runtime DLLs to engine dir: vcruntime140_1.dll, vcomp140.dll (from System32), plus concrt140.dll, msvcp140.dll, msvcp140_1.dll, msvcp140_2.dll, vccorlib140.dll, vcruntime140.dll (co-located for clean-machine DLL resolution).
+- scripts/verify-packaging.mjs: automated packaging check (config + tracked files + source + bundle contents).
+- .github/workflows/packaging.yml: Windows CI workflow for packaging verification.
+- CLEAN_MACHINE_VERIFICATION.md: reproducible test procedure.
+- P0-01_FINDINGS_AND_PLAN.md: audit findings and implementation plan.
+
+### Evidence
+
+- MSI installer: 16.05 MiB (was 6.15 MiB before bundling)
+- NSIS installer: 10.99 MiB (was 4.28 MiB before bundling)
+- Engine starts from extracted MSI: version 0.8.43, MSVC 1951, exit code 0
+- All 37 cargo tests pass, typecheck passes
+- Packaging verification script passes (config + bundle contents)
+- Clean-machine test (P1-06): NOT VERIFIED (no clean VM available)
+
+### CodeRabbit findings addressed
+
+1. Pin dtolnay/rust-toolchain to SHA — FIXED
+2. Source/target mapping check — FIXED
+3. --bundle requires path — FIXED
+4. CR bytes in 18_PROGRESS_AND_HANDOFF.md — FIXED
+5. VC++ DLLs co-located with engine — FIXED
+
+### Linux: BLOCKED (no Linux engine)
