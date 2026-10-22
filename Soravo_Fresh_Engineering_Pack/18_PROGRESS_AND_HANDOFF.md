@@ -246,6 +246,16 @@ A thirteenth review against the final content returned 5 findings covering 4 dis
 | AX | The pre-creation task-ID record was left uncommitted in the main working tree, so it was absent from the new worktree and left main dirty | **Fixed.** The sequence is now: assign the ID and add the entry to the breakdown → **commit that planning record to the base ref the worktree is created from** → create the worktree from that base. Every other task edit stays inside the worktree. |
 | AY | The same task-ID rule needed its scope stated against rule 4 | **Fixed.** Rule 4 is scoped to implementation and task-scoped edits, with the pre-creation planning record as the single named exception. |
 
+## Fourteenth CodeRabbit review disposition — pull request #13
+
+A fourteenth review against the final content returned 3 findings, all in the worktree policy. **All 3 were valid and all 3 are fixed.** They exposed a chain of contradictions in the task-ID rule that earlier rounds had been patching one layer at a time, so this round replaces that rule rather than adjusting it.
+
+| # | Finding | Disposition |
+|---|---|---|
+| AZ | The task-ID rule required the planning entry to be committed to the base ref before the worktree existed, but a local commit to `main` does not appear in `origin/main`, and publishing it directly to a protected `main` bypasses the required pull-request workflow — so the documented new-task path could not be followed at all | **Fixed.** The rule is replaced. The ID is **assigned** first, with nothing written to any file; the worktree and branch are created from `origin/main`; and the breakdown entry is then added **inside the new worktree** as its first edit, committed on the task branch. The main tree is never touched, the entry travels with the branch, and no commit is made directly to `main`. The lifecycle's Create step and the evidence list were updated to match. |
+| BA | Rule 4 needed its scope stated against the task-ID exception, which the rewrite removes | **Fixed.** Rule 4 is restored to plain form: all implementation and task-scoped edits happen inside the worktree, and the main working tree is not edited during a worktree task. |
+| BB | `git worktree prune` is repository-wide and can remove another task's registration during an unrelated cleanup, including the reference a detached HEAD needs | **Fixed.** The routine cleanup step now requires `git worktree list --porcelain` and the rescue check **before every prune**, not only during recovery. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)

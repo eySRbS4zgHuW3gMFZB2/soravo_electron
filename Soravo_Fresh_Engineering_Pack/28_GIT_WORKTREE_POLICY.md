@@ -34,7 +34,7 @@ A dedicated worktree and branch are required for:
 1. **One task, one worktree, one branch.** A worktree is used by exactly one task at a time.
 2. **Create the worktree from a known-good base** — normally the current `origin/main`, never a branch with uncommitted work.
 3. **Always create the worktree with an explicit named branch.** A worktree left on a detached HEAD is a defect: if the branch it was made from is deleted, the work becomes reachable only through the reflog and is easily lost. This repository currently holds worktrees on detached HEADs; that is the pattern this rule exists to end.
-4. **All implementation and task-scoped edits for the task happen inside the worktree.** The main working tree is not edited during a worktree task, except for the single pre-creation task-ID planning record described below.
+4. **All implementation and task-scoped edits for the task happen inside the worktree.** The main working tree is not edited during a worktree task.
 5. **Never touch another worktree's files, branch, index or stash.** Worktrees share one repository's object store and refs; the isolation is of the working tree, not of the history.
 6. **Never force-push, reset, rebase or delete a branch that another worktree holds.** Git will refuse most of these; where it does not, the agent must not do it.
 7. **Tests must pass in the worktree before integration.** A task that cannot demonstrate passing tests is not ready to merge. The one recorded exception is the release-packaging check during **Phase 0** (task P0-02): the check must exist, run and report while it is red for the documented missing-engine baseline, because the bundle layout is not implemented until P1-03. That exception applies to the packaging check alone and only in Phase 0; from Phase 1 onward the packaging check is mandatory and green. See `05_IMPLEMENTATION_PLAN.md` Phase 0, "The packaging-check baseline exception".
@@ -50,17 +50,19 @@ A dedicated worktree and branch are required for:
 
 **Task ID.** Use the breakdown IDs from `06_TASK_BREAKDOWN.md` (`P0-01`, `P1-03`, `P2-08`, and so on). A worktree without a task ID has no defined scope and cannot be reviewed. **A task that is not yet in the breakdown may be given a new ID.** The sequence is:
 
-1. Assign the ID and add the entry to `06_TASK_BREAKDOWN.md` in the main working tree. This is a planning record and is the only exception to rule 4; the ID must exist before the worktree does, so it cannot be the worktree's first edit.
-2. **Commit that planning record to the base ref the worktree will be created from**, so the entry is present in the new worktree and the main tree is left clean for integration. An uncommitted entry in the main tree would be absent from the worktree and would leave the main tree dirty.
-3. Create the worktree from that base.
+1. **Assign the ID** and state it in the task prompt and the progress record. Nothing is written to any file yet.
+2. **Create the worktree and branch** from the base, as in the example below.
+3. **Record the entry in `06_TASK_BREAKDOWN.md` as the first edit inside the new worktree**, and commit it on the task branch.
 
-An unplanned fix is therefore never blocked from starting because its ID had to be invented first, and the recorded entry travels with the task branch. Every other task edit happens inside the worktree.
+The ID therefore travels with the task branch, the main working tree is never touched, and no commit is made directly to `main` — which matters because `09_GITHUB_CI_POLICY.md` requires pull requests for a protected `main`, so a local planning commit to `main` would neither reach `origin/main` nor pass the required checks. An unplanned fix is never blocked from starting because its ID had to be invented first.
 
 **Example.**
 
 ```
 git fetch origin
 git worktree add --no-track .worktrees/P1-03-engine-packaging -b feature/P1-03-engine-packaging origin/main
+# then, inside the worktree:
+#   edit 06_TASK_BREAKDOWN.md to add the new task ID, and commit it on the branch
 ```
 
 `--no-track` matters. Without it, git sets the new branch's upstream to `origin/main`, so a later bare `git push` can target `main` instead of the task branch. The upstream is set deliberately, to the task branch, at push time:
@@ -74,7 +76,8 @@ Always name the task branch explicitly when pushing.
 ## Lifecycle
 
 ### 1. Create
-- Confirm the main working tree is clean apart from the task's own starting material, and record `git status` and the base SHA.
+- Confirm the main working tree is clean, and record `git status` and the base SHA.
+- **Assign the task ID** and state it in the task prompt and the progress record. If the task is not yet in `06_TASK_BREAKDOWN.md`, the entry is added inside the new worktree as its first edit, on the task branch.
 - Create the worktree and branch from `origin/main`.
 - Record the worktree path and branch in the task's progress entry.
 
@@ -100,7 +103,7 @@ Always name the task branch explicitly when pushing.
 
 ### 6. Clean up
 - Remove the worktree: `git worktree remove <path>` (add `--force` only if the tree is genuinely clean of uncommitted work and that is recorded).
-- `git worktree prune` to clear registrations left by a directory deleted out from under git.
+- **`git worktree prune` is repository-wide and can remove another task's registration.** Before every prune, run `git worktree list --porcelain` and inspect it: for each entry marked `prunable`, record its HEAD, and create a rescue branch for any entry on a detached HEAD that still holds work. Only then prune. This applies to routine cleanup, not only to recovery.
 - Delete the local branch once it is merged and pushed.
 - **Remove the worktree's build output as well.** A Rust worktree carries its own `src-tauri/target` directory, typically several gigabytes. A directory removed without its build output leaves the disk cost behind.
 
@@ -151,6 +154,7 @@ Each worktree is a full checkout and, unless `CARGO_TARGET_DIR` is set explicitl
 A task is ready to integrate only when all of the following are recorded:
 
 - the worktree path and branch;
+- the task ID, and where it is recorded in `06_TASK_BREAKDOWN.md`;
 - the base SHA the branch was created from;
 - the exact commands run and their actual output;
 - the review performed and how findings were triaged;
