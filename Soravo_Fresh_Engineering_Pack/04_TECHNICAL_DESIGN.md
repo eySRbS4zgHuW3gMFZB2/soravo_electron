@@ -6,13 +6,14 @@
 - Tauri v2 shell; Rust backend; React 18 + TypeScript + Vite renderer.
 - Local SQLite history and `tauri-plugin-store` settings remain local.
 - Current CrispASR integration is preserved. No engine migration in this project.
+- **Linux has no engine.** The repository tracks a Windows engine only (`third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`), and `find_crispasr_binary` resolves `crispasr.exe` on Windows and `crispasr` elsewhere. A Linux build today would install and then fail to transcribe. Linux stays BLOCKED until a Linux engine artifact is obtained, licensed, tracked and bundled (task P1-04) and proven by a clean-machine Linux install.
 - The renderer is untrusted for authorization. Any license decision that matters must be verified in Rust and/or by the server.
 - Commercial integration must not route audio/transcripts through Supabase, Cloudflare, Razorpay, Resend or analytics.
 
 ### Engine packaging (blocking)
 The installed application must be able to find and launch the transcription engine **without any developer-only fetch step and without a source tree present**. As audited on 2026-10-22, this does not currently hold:
 
-- `bundle.resources` and `bundle.externalBin` are both empty, so nothing from the repository is copied into the installed application.
+- `bundle.resources` and `bundle.externalBin` are both empty, so the CrispASR engine and its companion files are **not** supplied to the installed application through those two Tauri inputs. (`bundle.icon` does copy repository icon files into the bundle, so the empty fields do not mean that the bundle contains no repository files at all — only that no engine is among them.)
 - `third-party/bin/` is git-ignored and contains no tracked files. It exists only on developer machines after `npm run fetch:asr`.
 - The engine is committed at `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/` (`crispasr.exe`, `openblas.dll`, `crispasr-quantize.exe`, `LICENSE`, `THIRD_PARTY_NOTICES.txt`).
 - The runtime lookup `find_crispasr_binary` in `src-tauri/src/lib.rs` searches `<root>/third-party/bin/`, then the children of `<root>/third-party/crispasr/extracted/`, over the roots `current_dir`, `project_root` and the Tauri `resource_dir`. On an installed machine the first two do not exist and the third holds no engine.

@@ -6,6 +6,8 @@ While the active repository remains public, standard GitHub-hosted runner usage 
 
 **Establish CI before renaming.** Per ADR-0009, baseline CI and the release-packaging check must exist and be green in `soravo_electron` before any repository is renamed. A rename changes the repository URL and can invalidate workflow secret scoping, so the automation must already be proven before the name changes.
 
+**The release-packaging check has a documented baseline exception.** The current Tauri configuration bundles no engine, so the packaging check is expected to be **red** until Phase 1 implements the bundle layout. The rename therefore requires the check to **exist, run, and report** — with its red result recorded as the known baseline — not to be green. It becomes a required green check in Phase 1, and no release may ship while it is red. A red packaging check for any *other* reason is a genuine failure and blocks the rename. See `05_IMPLEMENTATION_PLAN.md` Phase 0, "The packaging-check baseline exception".
+
 ## Required workflow families
 
 1. `ci-desktop.yml`
@@ -69,7 +71,7 @@ While the active repository remains public, standard GitHub-hosted runner usage 
 - CodeRabbit review for substantive PRs where quota is available.
 - Branch protection/ruleset: protect `main`, require PR and checks; prevent force push/deletion.
 - Keep `main` deployable. Use feature branches and squash/linear merge if configured.
-- Each task is developed on its own branch in its own worktree, per `28_GIT_WORKTREE_POLICY.md`. The branch name carries the task ID, so a CI run can be traced to the task that caused it. A branch that exists only as a detached HEAD in a worktree has no reviewable diff and must not be integrated.
+- Each task is developed on its own branch in its own worktree, per `28_GIT_WORKTREE_POLICY.md`. The branch name carries the task ID, so a CI run can be traced to the task that caused it. A worktree left on a detached HEAD has no named branch, so its work is harder to attribute and easier to lose, and it must not be integrated in that state.
 
 ## Efficiency
 

@@ -75,7 +75,7 @@ If a secret is exposed:
 1. Stop and identify affected credential without repeating it.
 2. Revoke/rotate immediately in the provider dashboard.
 3. Remove it from future source history where possible; do not assume deleting the current file erases Git history.
-4. Audit logs and use.
+4. Audit logs and use them to assess impact and scope.
 5. Notify affected users/regulators if legally required after qualified assessment.
 6. Record a sanitized incident report and prevention action.
 

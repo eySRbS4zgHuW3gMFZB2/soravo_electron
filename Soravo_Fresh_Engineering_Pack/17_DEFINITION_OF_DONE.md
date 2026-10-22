@@ -52,7 +52,7 @@ A task is done only when every applicable checkbox is satisfied.
 
 ## Release
 - [ ] Clean Windows install and dictation verified on a machine with no developer tools and no source tree.
-- [ ] Clean Linux install and dictation verified.
+- [ ] Clean Linux install and dictation verified. **Blocked until task P1-05 delivers a Linux engine**; this item may not be ticked while Linux is BLOCKED, and no Linux artifact may be published.
 - [ ] CrispASR binary and all dependencies included, sourced from a git-tracked path.
 - [ ] The bundled engine layout is recorded in ADR-0010 and that ADR is ACCEPTED.
 - [ ] The app launches the bundled engine with no developer-only fetch step (`npm run fetch:asr`) and no source tree present.

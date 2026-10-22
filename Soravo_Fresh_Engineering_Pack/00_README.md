@@ -29,7 +29,7 @@ The public GitHub repo was inspected on 2026-10-22. Observed files include `READ
 - The README and progress history disagree in places about Whisper vs CrispASR. Current product decision: preserve the existing CrispASR implementation; do not switch engines as part of commercial integration.
 - The checked Tauri config showed `bundle.resources: []` and `bundle.externalBin: []`. This is a **release blocker to verify**, because CrispASR and required companion files must be present in the installed application, not merely in the development tree.
   - Re-confirmed 2026-10-22: `third-party/bin/` is git-ignored with **0 tracked files** (developer-machine only, produced by `npm run fetch:asr`); the engine is **committed** at `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`. A release build produced ~6.15 MB (MSI) / ~4.28 MB (NSIS), far smaller than the ~20 MB engine, corroborating that it is not bundled. See `23_SOURCE_AUDIT_NOTES.md` finding 3 and ADR-0010.
-- Current config sets bundle targets to `all`, but that does not prove Linux builds or Linux runtime behavior are tested. Windows and Linux are launch targets.
+- Current config sets bundle targets to `all`, but that does not prove Linux builds or Linux runtime behavior are tested. Windows is the only platform with an engine artifact in the repository; **Linux is BLOCKED** until a Linux engine is obtained, licensed, tracked and bundled (task P1-04).
 - The repository was public at audit time. Treat changing visibility to private as an explicit owner-operated launch-preparation task.
 - The website, account system, payments and dashboards are not present in the current app implementation based on the reviewed root files; this pack plans them as new work.
 - The current production site at `soravo.xyz` is served from the **historical** repository's commit via the Cloudflare Pages project `soravo`, which is deployed by direct upload rather than by Cloudflare's Git integration. This is recorded as planning context only; it is not a dependency of the new project, and the production site must remain untouched until cutover.
@@ -41,7 +41,7 @@ Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is par
 - **Website strategy:** rebuild the replacement website fresh in the active repository, following this pack. The historical `soravo` repository is a behavioral and content reference only for approved website pages, pricing presentation and dashboard behaviors; its implementation, schema, migrations, Edge Functions, workflows and Handy-derived desktop code are not ported. The current production site stays live and untouched until cutover (ADR-0008).
 - **Repository rename order:** establish baseline CI and release-packaging checks first, then prepare the rename checklist, then rename, then verify integrations (ADR-0009).
 - **Production domain:** `soravo.xyz` and its DNS and email configuration are preserved through the migration. Cutover happens only after the replacement passes its launch checklist, with a documented rollback path (`27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`).
-- Windows and Linux launch targets.
+- Windows and Linux are the intended launch targets, but **Linux is BLOCKED** pending a Linux engine artifact; Windows is the only platform with an engine today.
 - $12/month recurring subscription.
 - $50 lifetime license.
 - Enterprise is deferred; a "Contact us / coming later" placeholder may exist but must not imply purchasable entitlements.

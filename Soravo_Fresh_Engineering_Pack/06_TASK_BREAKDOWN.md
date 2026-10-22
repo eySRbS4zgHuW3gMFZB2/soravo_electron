@@ -22,10 +22,11 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - P1-02: Identify required companion DLLs and dynamic runtime dependencies; confirm redistribution rights and notices.
 - P1-03: **Decide and record the bundled layout in ADR-0010** (Tauri `bundle.resources` mapping, `externalBin` sidecar, or a deliberate rename of the tracked staging directory), then implement it. Bundled files must be tracked in git so a clean clone and a clean CI runner produce identical artifacts.
 - P1-04: Inspect the final installer contents and prove the engine and its dependencies are present.
-- P1-05: **Clean-machine install on Windows with no developer tools and no source tree:** the app must locate and launch the bundled engine with no `npm run fetch:asr` step, and must dictate. This is a release blocker.
-- P1-06: Build Linux on a clean supported runner; identify system dependencies.
-- P1-07: Test microphone, hotkey hold/release, cancellation, text injection and offline use on Linux.
-- P1-08: Produce SHA-256 manifest for test artifacts.
+- P1-05: **Linux engine artifact.** The repository tracks a Windows engine only. Obtain the Linux CrispASR build, confirm its licence permits redistribution, record its SHA-256 and origin, and place it at an explicitly chosen tracked path. Until this task is complete, **Linux support is BLOCKED**: no Linux build may be published, and Linux may not be claimed as a supported platform.
+- P1-06: **Clean-machine install on Windows with no developer tools and no source tree:** the app must locate and launch the bundled engine with no `npm run fetch:asr` step, and must dictate. This is a release blocker.
+- P1-07: Build Linux on a clean supported runner; identify system dependencies. Blocked behind P1-05.
+- P1-08: Test microphone, hotkey hold/release, cancellation, text injection and offline use on Linux. Blocked behind P1-05 and P1-07.
+- P1-09: Produce SHA-256 manifest for test artifacts.
 
 ## P2 — Auth/database design
 - P2-01: Create staging schema design; review it before migration. Do not reuse the historical project's schema.

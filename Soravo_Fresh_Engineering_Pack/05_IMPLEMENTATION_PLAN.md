@@ -3,12 +3,14 @@
 Do not begin by implementing everything in one agent run. Work in small, reviewable tasks, with a durable progress update at each handoff.
 
 ## Phase 0 — Repository identity and baseline audit
-**Order matters (owner decision memo, decision 2; ADR-0009).** The rename is **not** the first action of this phase. The order is: backup and audit → baseline CI and release-packaging checks → rename checklist preparation → rename → post-rename verification. Renaming first would hand the renamed repository automation and secret scoping that has never been proven to work.
+**Order matters (owner decision memo, decision 2; ADR-0009).** The rename is **not** the first action of this phase. The order is: backup and audit → baseline CI and release-packaging check → rename checklist preparation → rename → post-rename verification. Renaming first would hand the renamed repository automation and secret scoping that has never been proven to work.
+
+**The release-packaging check starts in Phase 0 but cannot pass until Phase 1.** The current Tauri configuration bundles no engine, so a check asserting "the engine is in the bundle" is expected to **fail** at the Phase 0 baseline. This is a known, recorded baseline failure, not a broken gate. The check is *created and wired* in Phase 0 so that the rename inherits a real, running check; it becomes **green** in Phase 1 when the bundle layout is implemented. See "The packaging-check baseline exception" below.
 
 Deliverables, in order:
 - Snapshot/backup current active repo and verify clean working tree. Record remote, default branch, HEAD SHA, branches, worktrees and existing integration configuration.
-- Establish baseline CI in the current active repository `soravo_electron`, and add the release-packaging check that proves the CrispASR engine is actually present in the built bundle.
-- Prepare the rename checklist: every integration that a repository URL change could break — GitHub Actions workflows and their secret scoping, `gh` invocations, the Cloudflare Pages source link, OAuth and deep-link allowlists, release links, and hard-coded GitHub URLs in README, docs and code.
+- Establish baseline CI in the current active repository `soravo_electron`, and add the release-packaging check that tests whether the CrispASR engine is present in the built bundle. **Record its result as the baseline.** It is expected to be red at this point, and the recorded red result is the baseline.
+- Prepare the rename checklist: every integration that a repository URL change could break - GitHub Actions workflows and their secret scoping, `gh` invocations, the Cloudflare Pages source link, OAuth and deep-link allowlists, release links, and hard-coded GitHub URLs in README, docs and code.
 - Only then, and only with explicit owner approval, rename the historical repository to `soravo_deprecated`, then the active repository to `soravo`; rename the local folder after the remote change.
 - After renaming, re-verify remotes, GitHub Actions, secrets and permissions, Cloudflare Pages integration and deployment, OAuth/deep-link allowlists, release links and documentation. Do not assume GitHub redirects guarantee every integration follows.
 - Keep the active repo public while exploiting public-repo CI; make it private before commercial source launch, after confirming workflows, secrets and release repository design. This decision is separate from the rename and is also owner-approved.
@@ -16,7 +18,16 @@ Deliverables, in order:
 - Produce `docs/engineering/STATE_AUDIT.md` with actual tree, installed toolchain, current tests and known gaps.
 - **Do not touch the live production site, DNS, or Cloudflare production settings during this phase.** The current production deployment stays exactly as it is; see `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`.
 
-Gate: repo identity and branch/remote verified; no accidental source deletion; baseline CI green or failures documented; rename checklist reviewed by the owner; production site demonstrably unchanged.
+### The packaging-check baseline exception
+
+| Stage | Packaging check state | Gate |
+|---|---|---|
+| Phase 0 (P0-02) | Created, wired, and **red** — the engine is not bundled yet | Rename requires the check to **exist, run, and report**, with its red result recorded as the known baseline. It is **not** required to be green. |
+| Phase 1 (P1-03, P1-04, P1-06) | Implemented and **green** — the bundle layout ships the engine and a clean-machine install proves it launches | The packaging check becomes a hard, required, green check. No release may ship while it is red. |
+
+The rename gate therefore requires *proof that the check works*, not *proof that the engine ships*. Requiring green in Phase 0 would be circular: the bundle layout is not chosen until P1-03, so nothing could satisfy it before the rename. If the packaging check is red in Phase 0 for a reason **other** than the known missing-engine baseline — for example it fails to run at all — that is a genuine failure and the rename must not proceed.
+
+Gate: repo identity and branch/remote verified; no accidental source deletion; baseline CI green **or** failures documented with the packaging check's red result explicitly recorded as the known baseline; rename checklist reviewed by the owner; production site demonstrably unchanged.
 
 ## Phase 1 — Desktop release readiness (blocker before selling)
 - Record the CrispASR engine's exact binary path, version, SHA-256 and licence, re-confirming the audited finding that the tracked location is `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/` and that `third-party/bin/` is untracked.
@@ -39,7 +50,7 @@ Gate: clean VM install works without dev tools and can dictate using the documen
 Gate: auth/security tests pass; no production secrets in repo or prompts; ADR-0003 ACCEPTED.
 
 ## Phase 3 — Website foundation and account system
-- Add `website/` as independent app, built **fresh** per ADR-0008. The historical `soravo` repository may be consulted for approved content and behavior only; do not port its implementation, schema, migrations or Edge Functions.
+- Add `website/` as independent app, built **fresh** per ADR-0008. The historical `soravo` repository (renamed to `soravo_deprecated` in Phase 0) may be consulted for approved content and behavior only; do not port its implementation, schema, migrations or Edge Functions.
 - Cloudflare Pages preview/production pipeline, route and environment mapping. Preview deployments must not target the production hostname or production data.
 - Build marketing pages and account pages.
 - Implement sign-up, sign-in, sign-out, recovery, email verification and safe error states.

@@ -18,9 +18,11 @@ Soravo is a local-first desktop speech-to-text/dictation application. The existi
 
 ## 3. Launch platforms
 
-Windows and Linux are the initial supported platforms. macOS is out of launch scope unless the owner separately approves a new feasibility and distribution decision. “Tauri targets all” is not evidence of platform support.
+Windows and Linux are the intended initial supported platforms. macOS is out of launch scope unless the owner separately approves a new feasibility and distribution decision. "Tauri targets all" is not evidence of platform support.
 
-Windows release formats must be selected after CI validation (likely NSIS installer and/or MSI). Linux package format(s) must be selected after testing on the supported distribution baseline. Do not claim support for all Linux distributions without testing.
+**Linux is currently BLOCKED, not merely unproven.** The audit on 2026-10-22 found that this repository tracks a Windows CrispASR engine only: `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`. There is no Linux engine binary and no Linux shared-library set in the repository, and the runtime lookup (`find_crispasr_binary`) looks for a file named `crispasr` rather than `crispasr.exe` on non-Windows targets. Until a Linux engine artifact is obtained, licensed, tracked and bundled, a Linux build would install but could not transcribe. Linux therefore becomes a launch platform only after the Linux engine task (P1-04) is complete and its clean-machine gate passes. Windows is the only platform with an engine available today.
+
+Windows release formats must be selected after CI validation (likely NSIS installer and/or MSI). Linux package format(s) must be selected after testing on the supported distribution baseline, and only once a Linux engine exists. Do not claim support for all Linux distributions without testing.
 
 ## 4. Commercial plans
 

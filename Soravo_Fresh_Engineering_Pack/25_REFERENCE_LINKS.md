@@ -26,7 +26,7 @@ Research checked on 2026-10-22. Recheck current pages during implementation beca
 
 ## Hosting notes from official research
 - GitHub documents release assets as under 2 GiB each, up to 1,000 assets per release, with no total bandwidth usage limit documented.
-- Cloudflare R2 currently lists 10 GB-month standard storage, 1 million Class A operations, 10 million Class B operations, and no egress fees in its free tier. Account setup may require an R2 subscription/payment details; the owner says no card is possible, so test eligibility before choosing.
+- Cloudflare R2 currently lists 10 GB-month standard storage, 1 million Class A operations, 10 million Class B operations, and no egress fees in its free tier. **R2 requires an R2 subscription and a checkout flow, which means a payment method.** Because the owner cannot use a card, R2 is **ineligible**: it must not be selected unless eligibility is confirmed first, and confirmation is a hard gate rather than a formality.
 - Supabase says free projects may pause after low database activity over a 7-day period. A keepalive is mitigation only.
 - Supabase says default SMTP is restricted and recommends custom SMTP for real user email flows.
 - Cloudflare Pages supports Git integration with GitHub/GitLab; do not assume private repo automatically requires Wrangler direct deploy.

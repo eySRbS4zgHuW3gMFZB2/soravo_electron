@@ -6,7 +6,7 @@
 2. Integration tests for database/RLS, migrations, API contracts and webhook signature validation.
 3. Desktop integration tests for browser callback, OS credential storage, entitlement cache and local-only dictation.
 4. Playwright E2E for public site, account flows, dashboard and admin denial.
-5. Clean-install manual tests on Windows and Linux.
+5. Clean-install manual tests on Windows, and on Linux once a Linux engine exists.
 6. Release acceptance on a clean VM without development tools.
 
 ## Required cases
@@ -58,7 +58,7 @@
 - offline transcription works;
 - hotkey works with Soravo focused and another app focused;
 - hold/release, toggle, cancel, paste/copy and text injection;
-- Linux microphone permissions/dependencies and text injection;
+- Linux microphone permissions/dependencies and text injection — blocked until task P1-05 delivers a Linux engine;
 - checksum verification on downloaded artifacts;
 - the live production site is confirmed unchanged when a release is produced from a repository whose identity changed.
 

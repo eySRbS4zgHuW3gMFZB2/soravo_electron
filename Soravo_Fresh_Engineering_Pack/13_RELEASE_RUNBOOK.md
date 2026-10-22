@@ -6,7 +6,7 @@
 - Every release is tied to an immutable Git tag and commit.
 - Build artifacts in clean CI runners and preserve logs.
 - No release if clean-install packaging fails. A clean-machine install with no developer tools and no source tree must prove the app locates and launches the bundled engine (`ADR-0010`).
-- Windows and Linux must each have a verified artifact and checksum.
+- Windows must have a verified artifact and checksum. Linux must as well **once a Linux engine exists** (task P1-05); until then Linux is BLOCKED and no Linux artifact may be published.
 - Public release assets must not expose source code unless the owner deliberately chooses that.
 - The binary host is governed by **ADR-0005**, which is currently PROPOSED. Publishing before that ADR is ACCEPTED is not permitted.
 - The live production site at `soravo.xyz` is not touched by a desktop release. Website deployment and desktop release are separate concerns with separate rollback paths.
@@ -32,7 +32,7 @@ The active source repo can become private before commercial launch. Release repo
 6. Build Windows/Linux artifacts in CI.
 7. Inspect artifact contents for secrets, test data and missing runtime files.
 8. Generate checksums:
-   `sha256sum <artifact files> > SHA256SUMS` (Linux) or an equivalent PowerShell `Get-FileHash -Algorithm SHA256` flow on Windows.
+   `sha256sum Soravo_0.2.0_x64-setup.exe Soravo_0.2.0_x64_en-US.msi > SHA256SUMS` (Linux) or an equivalent PowerShell `Get-FileHash -Algorithm SHA256` flow on Windows. Use explicit artifact paths or a glob such as `sha256sum dist/*.exe > SHA256SUMS`; never use a placeholder such as `<artifact files>`, which the shell reads as input redirection.
 9. Verify checksums from downloaded artifacts.
 10. Upload artifacts and checksums to the public release host.
 11. Verify public links from a logged-out browser.

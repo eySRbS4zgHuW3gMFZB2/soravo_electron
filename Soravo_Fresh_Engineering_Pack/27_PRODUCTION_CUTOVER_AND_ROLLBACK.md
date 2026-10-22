@@ -31,11 +31,13 @@ Before cutover, enumerate every publicly reachable URL of the existing site and 
 Each URL is classified as one of:
 
 - **Preserve** — the replacement publishes the same path with equivalent or better content. No action beyond building it.
-- **Redirect** — the replacement publishes the same path; the old path is served as a permanent redirect to it.
+- **Redirect** — the replacement publishes at a **different** path, and the old path serves a permanent redirect to it. The source and target paths must differ; a redirect whose target is its own source is a self-redirect loop.
 - **Retire** — the path intentionally disappears. This requires owner approval per path, and the page must state what happened and where to go instead.
 - **Block** — administrative or sensitive paths (for example the admin route) that must never be publicly reachable on the replacement without server-side authorization.
 
-Record the inventory as a table with: current path, current title, classification, replacement path, and owner approval. Paths classified as Retire or Block without explicit approval are treated as Preserve by default.
+**Route sensitivity is recorded separately from content disposition.** Preserve, Redirect, Retire and Block describe what happens to the *content* at a path. A separate column records the path's **sensitivity** and the **authorization it requires** — public, authenticated, or admin-only. Changing a path's content disposition must never remove its authorization requirement: a path classified as Preserve is still admin-only if it was admin-only before, and re-classifying content never grants or removes access on its own. Access is enforced server-side in the replacement, and the admin-denial check for an ordinary user is part of the cutover verification.
+
+Record the inventory as a table with: current path, current title, content disposition (Preserve/Redirect/Retire/Block), replacement path, required authorization, and owner approval. Paths classified as Retire or Block without explicit approval are treated as Preserve by default — **and their required authorization is carried over unchanged.**
 
 ## Cutover prerequisites
 
@@ -62,7 +64,7 @@ Every item must be checked and evidenced. An unchecked item blocks cutover.
 - [ ] The URL inventory is complete and each path is classified and approved.
 - [ ] Redirects are configured and each one has been tested from a logged-out browser.
 - [ ] Business email still delivers after any DNS-related change; a test message to a non-team address has been received.
-- [ ] The rollback procedure below has been rehearsed, at least as a dry run.
+- [ ] The rollback procedure below has been **executed as a dry run** in a representative non-production or provider-supported staging environment. The rehearsal must exercise restoring DNS and Cloudflare routing, disabling redirects, selecting the previous deployment, and restoring or reconciling a disposable data snapshot. Record the provider-specific steps, identifiers, results and evidence. **A tabletop review alone does not satisfy this item.**
 - [ ] Owner has given explicit approval for the cutover window.
 
 ## Cutover procedure
@@ -75,7 +77,7 @@ Perform in this order, stopping at the first failure.
 4. Verify, in a logged-out browser and on a second network: home, pricing, download, legal, privacy, support, sign-up, sign-in, recovery, account dashboard, and admin denial for an ordinary user.
 5. Verify a real download and checksum from the download page.
 6. Verify business email delivery.
-7. Send one real test payment and confirm the entitlement and the admin record, then refund it.
+7. Using **Razorpay test-mode credentials**, send one test payment and confirm the entitlement and the admin record, then refund it. If a live payment is required instead, record explicit owner approval, the reconciliation evidence, and the refund evidence.
 8. Enable redirects for classified paths.
 9. Update the live site's own references: sitemap, robots, canonical URLs, Open Graph URLs and any hard-coded absolute URLs.
 10. Record the cutover: date, commit SHA, deployment ID, versions of the site and the desktop app, and the rollback target.
@@ -89,7 +91,13 @@ Rollback must be achievable within the incident window without a code change.
 **Procedure.**
 1. Restore DNS and Cloudflare routing to the previous production deployment.
 2. Disable the redirects, returning the old paths to the previous site's content.
-3. If production data was written by the replacement and is incompatible with the previous site, restore the snapshot taken at step 2 of the cutover, then reconcile any legitimate records created after it.
+3. **Recover the data safely.** An unqualified snapshot restore can discard real accounts, payments and entitlements created after the snapshot was taken. The recovery sequence is:
+   a. **Freeze writes** to the replacement's data paths (accounts, entitlements, payments) so that no new records appear during recovery.
+   b. **Export every record created after the snapshot**, and record the count, so that nothing created after the snapshot can be lost silently.
+   c. **Apply a tested forward-fix or merge procedure** to carry those post-snapshot records forward. This is the preferred outcome, because it preserves real payments and accounts.
+   d. **Restore the snapshot only if** the forward-fix or merge cannot be applied or verified. Restoring is a last resort, and it must be followed by replaying the exported post-snapshot records through the same tested procedure.
+   e. Verify record counts against the export from step (b): no exported record may be missing afterwards.
+   "Reconcile any legitimate records" is not a recovery method on its own, and must not be used as one.
 4. Verify home, pricing, download, sign-in and business email again.
 5. Record what happened, what was rolled back, and what must be fixed before the next attempt.
 

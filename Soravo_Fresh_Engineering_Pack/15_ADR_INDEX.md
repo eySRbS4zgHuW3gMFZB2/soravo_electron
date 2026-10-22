@@ -52,6 +52,8 @@ The engine must be bundled into the installed application from a path that is **
 
 This ADR additionally records the release gate: **no release until a clean-machine install, with no developer tools and no source tree, proves the app locates and launches the bundled engine.** Redistribution rights for every bundled binary and DLL must be confirmed before bundling.
 
+**Platform scope within this ADR.** The repository currently tracks a Windows engine only, at `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`. There is no Linux CrispASR executable and no Linux shared-library set, and `find_crispasr_binary` resolves `crispasr.exe` on Windows but `crispasr` elsewhere. **Linux is therefore BLOCKED**, not merely unproven, until a Linux engine artifact is obtained, licensed, tracked and bundled (task P1-05) and a clean-machine Linux install proves it launches. This ADR must also record the Linux engine's location and licence when it exists.
+
 ## ADR template
 - Context
 - Decision

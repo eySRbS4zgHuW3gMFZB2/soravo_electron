@@ -10,7 +10,7 @@
 - Local active folder: rename to `soravo`.
 
 ## Preconditions
-- **Baseline CI and the release-packaging check exist and are green in `soravo_electron`** (task P0-02).
+- **Baseline CI exists and is green in `soravo_electron`**, with the single documented exception of the release-packaging check (task P0-02). That check is expected to be **red** at this stage, because the current Tauri configuration bundles no engine; what the rename requires is that the check **exists, runs, and reports**, with its red result recorded as the known baseline. It becomes a required green check in Phase 1. A packaging check that is red for any other reason, or that fails to run at all, blocks the rename. See `05_IMPLEMENTATION_PLAN.md` Phase 0, "The packaging-check baseline exception".
 - **The rename checklist is prepared and owner-reviewed** (task P0-03): every integration a URL change could break, listed — GitHub Actions workflows and their secret scoping, `gh` invocations, the Cloudflare Pages source link, OAuth and deep-link allowlists, release links, and hard-coded GitHub URLs in README, docs and code.
 - Confirm exact repository identities in GitHub.
 - Both repos have clean working trees or all changes committed/backed up.

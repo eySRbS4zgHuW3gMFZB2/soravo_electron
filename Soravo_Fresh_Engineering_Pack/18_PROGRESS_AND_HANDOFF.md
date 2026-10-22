@@ -4,7 +4,7 @@
 **Current status:** The pack is committed and pushed on `docs/engineering-pack`, with a pull request open into `main`. `main` is untouched. No repository rename, DNS change, production change, deployment, Supabase data change or secret operation has been performed. Implementation has not started.
 
 ## Owner-approved decisions
-- Launch Windows + Linux.
+- Launch Windows + Linux. **Linux is BLOCKED** pending a Linux engine artifact (task P1-05); Windows is the only platform with an engine today.
 - Preserve current Tauri app and CrispASR.
 - Website under `website/`, independent package/lockfile.
 - Cloudflare Pages; Supabase Auth/Postgres; Resend custom SMTP; Razorpay.
@@ -47,7 +47,7 @@
 - Current README/progress have inconsistent historical descriptions around Whisper/CrispASR; current owner decision is preserve CrispASR.
 - `src-tauri/tauri.conf.json` shows `resources: []`, `externalBin: []`; packaging must be repaired. The tracked engine path is `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`, not `third-party/bin/`.
 - Current Tauri config showed CSP `null`; must establish restrictive CSP before commercial network/auth flows.
-- Windows is most clearly documented; Linux is a launch target but needs real build/install/runtime proof.
+- Windows is most clearly documented and is the only platform with a tracked engine. **Linux is BLOCKED**: no Linux CrispASR executable or shared-library set is tracked, so a Linux build would install and then fail to transcribe. Linux becomes a launch platform only after task P1-05 and a clean-machine Linux install.
 - The source repo was public at the time of inspection.
 - Website/auth/payment/dashboard are new work in this active repo.
 
@@ -88,6 +88,29 @@ Documentation only, all inside `Soravo_Fresh_Engineering_Pack/`:
 
 Total: 20 files modified, 2 files added. The owner-supplied `SORAVO_DECISION_MEMO_2026-10-22.md` was **not modified** — verified byte-identical by SHA-256 against the pre-edit backup. Eight further documents were correctly left untouched because neither the memo nor the worktree policy required changes to them: `03_COMMERCIAL_RULES.md`, `08_SKILLS_AND_MCP_POLICY.md`, `10_SECURITY_BASELINE.md`, `11_ENVIRONMENT_AND_SECRETS.md`, `14_FREE_BINARY_HOSTING_OPTIONS.md`, `20_SERVICE_LIMITS_AND_MONITORING.md`, `22_REVERSE_ENGINEERING_AND_PROVENANCE.md`, `25_REFERENCE_LINKS.md`.
 
+## CodeRabbit review disposition — pull request #13
+
+All 15 inline findings and the summary's retained security concern were checked against the current files. **All 16 were valid and all 16 were fixed.** None was dismissed.
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 | `.gitattributes`: `* text=auto` does not force LF in the working tree | **Fixed.** The wildcard now carries `eol=lf`, which the file's own prose already claimed. Verified the wildcard covers the extensionless dotfiles and `LICENSE`. No stored content changes. |
+| 2 | `04_TECHNICAL_DESIGN.md`: the packaging claim was broader than the evidence | **Fixed.** The claim is now limited to the CrispASR engine; `bundle.icon` does copy repository files, so "nothing is copied" was wrong. |
+| 3 | `04_TECHNICAL_DESIGN.md`: verify a Linux engine artifact before keeping Linux as a launch target | **Fixed, and escalated.** Verified: the repository tracks a Windows engine only. Linux is now marked **BLOCKED** across the pack, with task P1-05 added to obtain, license, track and bundle a Linux engine. |
+| 4 | `05_IMPLEMENTATION_PLAN.md`: Phase 0 rename gate conflicts with the Phase 1 packaging work | **Fixed (major).** The circular dependency is resolved by a documented failing-baseline exception: Phase 0 requires the packaging check to **exist, run and report**, with its red result recorded; Phase 1 makes it a required green check. A red check for any other reason still blocks the rename. |
+| 5 | `05_IMPLEMENTATION_PLAN.md`: Phase 3 uses the pre-rename repository name | **Fixed.** Phase 3 now refers to `soravo_deprecated`. |
+| 6 | `09_GITHUB_CI_POLICY.md`: "has no reviewable diff" is wrong for a detached worktree | **Fixed.** The real defect — no named branch, easier to lose or misidentify — is stated instead. |
+| 7 | `10_SECURITY_BASELINE.md`: "Audit logs and use." is incomplete | **Fixed.** Now reads "Audit logs and use them to assess impact and scope." |
+| 8 | `13_RELEASE_RUNBOOK.md`: `sha256sum <artifact files>` is not valid shell | **Fixed.** Replaced with explicit artifact paths and a valid glob, with a note on why the placeholder is wrong. |
+| 9 | `18_PROGRESS_AND_HANDOFF.md`: handoff template omits the worktree path | **Fixed.** The template now records the worktree path, as the policy requires. |
+| 10 | `23_SOURCE_AUDIT_NOTES.md`: the packaging claim was broader than the evidence | **Fixed.** Limited to the CrispASR engine, matching finding 2. |
+| 11 | `25_REFERENCE_LINKS.md`: R2 setup should be mandatory | **Fixed.** R2 is stated as ineligible for this owner because it requires a subscription and a checkout flow, and eligibility confirmation is a hard gate. |
+| 12 | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: a Redirect from a path to itself is a self-redirect | **Fixed.** Redirect now requires a different replacement path. |
+| 13 | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: the rollback rehearsal must be an executable dry run | **Fixed.** The item now requires a staging-environment rehearsal that exercises DNS and routing restore, redirect disabling, previous-deployment selection and snapshot restoration, with recorded evidence. A tabletop review alone does not satisfy it. |
+| 14 | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: the cutover test payment needs a defined environment | **Fixed.** Test-mode credentials are required; a live payment requires recorded owner approval, reconciliation and refund evidence. |
+| 15 | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: an unqualified snapshot restore can discard post-cutover records | **Fixed (major).** The recovery sequence is now: freeze writes, export post-snapshot records, apply a tested forward-fix or merge, restore only as a last resort, and verify no exported record is missing. |
+| 16 | Summary, security architecture review: a content classification must not remove a route's authorization | **Fixed.** Route sensitivity and required authorization are now recorded separately from the Preserve/Redirect/Retire/Block content disposition, and are carried over unchanged. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)
@@ -119,6 +142,7 @@ Total: 20 files modified, 2 files added. The owner-supplied `SORAVO_DECISION_MEM
 
 ## Session handoff template
 - Date/time and agent:
+- Worktree path:
 - Branch/commit:
 - Working tree status:
 - Task ID:

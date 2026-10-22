@@ -23,7 +23,7 @@ This is a snapshot of the public source inspected for the documentation plan, no
 1. Stale repo name: clone instructions point to `soravo_electron`.
 2. Conflicting historical transcription descriptions: README begins with Whisper/whisper.cpp wording but later states CrispASR; progress history also records both. Owner has resolved the product choice: current CrispASR stays. Update copy after validating actual code.
 3. **CrispASR packaging — corrected finding, re-confirmed against the checkout on 2026-10-22.**
-   - `bundle.resources` is `[]` and `bundle.externalBin` is `[]`, so the Tauri bundler copies **nothing** from the repository into the installed application.
+   - `bundle.resources` is `[]` and `bundle.externalBin` is `[]`, so the Tauri bundler does not copy the CrispASR engine from repository paths into the installed application. (`bundle.icon` does copy repository icon files, so these two empty fields do not mean the bundle contains no repository files — only that no engine is among them.)
    - `third-party/bin/` is listed in `.gitignore` and contains **0 tracked files**. It holds ~40 files on a developer machine only, produced by the developer-only fetch script (`npm run fetch:asr`). A clean clone does not have it.
    - The Windows engine **is** committed, at `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/` — `crispasr.exe` (~18.3 MB), `openblas.dll` (~1.7 MB), `crispasr-quantize.exe` (~0.6 MB), `LICENSE` and `THIRD_PARTY_NOTICES.txt`. The source archive `third-party/crispasr/crispasr.zip` (~8.7 MB) is also committed.
    - The runtime lookup in `src-tauri/src/lib.rs` (`find_crispasr_binary`) searches, in order: `<root>/third-party/bin/<exe>`, then the immediate children of `<root>/third-party/crispasr/extracted/`, across the roots `current_dir`, `project_root` and the Tauri `resource_dir`. On an installed machine none of the first two roots exist, and `resource_dir` contains no engine because `bundle.resources` is empty.
@@ -32,11 +32,12 @@ This is a snapshot of the public source inspected for the documentation plan, no
    - Required before release: a **clean-machine install** (no developer tools, no source tree) must demonstrate that the app locates and launches the bundled engine, with no developer-only fetch step. Required runtime dependencies, model acquisition and licensing, and Windows/Linux packaging checks are part of that gate. Do not bundle files blindly — confirm redistribution rights first (see `22_REVERSE_ENGINEERING_AND_PROVENANCE.md`).
 4. `csp: null` was present. Add restrictive CSP before commercial auth/network integration.
 5. Bundle targets set to `all`; this is not evidence Linux works. Build and test Linux explicitly.
-6. README describes local-only/no accounts/no cloud, which will become outdated once accounts/licensing are added. Rewrite accurately before release; retain the fact that audio/transcription remains local.
-7. Existing app package and Tauri identifiers use `com.soravo.app`; treat as stable unless an ADR says otherwise, because changing identifiers may affect existing local data paths and OS registration.
-8. Existing `package.json` uses npm and declares `npm@11.16.0`; retain npm unless there is a justified ADR. Do not switch to pnpm casually.
-9. Current `tauri.conf.json` lists Windows/macOS/Linux icons and `targets: all`, but actual packaging and runtime must be verified on each launch platform.
-10. Current root app `build` command runs TypeScript typecheck and Vite build. CI should invoke it and Rust checks.
+6. **There is no Linux engine artifact in the repository.** The only tracked engine is `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`. No Linux CrispASR executable and no Linux shared-library set is tracked, and `find_crispasr_binary` resolves `crispasr.exe` on Windows but `crispasr` elsewhere. A Linux build today would install and then fail to transcribe. **Linux support is BLOCKED** until task P1-05 obtains, licenses, tracks and bundles a Linux engine and a clean-machine Linux install proves it launches.
+7. README describes local-only/no accounts/no cloud, which will become outdated once accounts/licensing are added. Rewrite accurately before release; retain the fact that audio/transcription remains local.
+8. Existing app package and Tauri identifiers use `com.soravo.app`; treat as stable unless an ADR says otherwise, because changing identifiers may affect existing local data paths and OS registration.
+9. Existing `package.json` uses npm and declares `npm@11.16.0`; retain npm unless there is a justified ADR. Do not switch to pnpm casually.
+10. Current `tauri.conf.json` lists Windows/macOS/Linux icons and `targets: all`, but actual packaging and runtime must be verified on each launch platform.
+11. Current root app `build` command runs TypeScript typecheck and Vite build. CI should invoke it and Rust checks.
 
 ## Not verified in this audit
 - Current local working-tree state.
