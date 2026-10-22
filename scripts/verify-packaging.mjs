@@ -113,6 +113,9 @@ const linEngineFiles = [
   "crispasr-quantize",
   "libopenblas.so.0",
   "libgomp.so.1",
+  "libgfortran.so.5",
+  "libquadmath.so.0",
+  "libc2pa_c.so",
   "LICENSE",
   "THIRD_PARTY_NOTICES.txt"
 ];
@@ -158,7 +161,8 @@ if (bundleIdx >= 0) {
     } else {
       // Windows MSI layout: engine at <bundle>/crispasr/, VC++ DLLs at bundle root.
       const winCrispasrDir = join(bundlePath, "crispasr");
-      if (existsSync(winCrispasrDir)) {
+      const winCrispasrDirExists = existsSync(winCrispasrDir);
+      if (winCrispasrDirExists) {
         for (const f of winEngineFiles) {
           if (!existsSync(join(winCrispasrDir, f))) fail(`Missing from Windows bundle: crispasr/${f}`);
         }
@@ -187,6 +191,10 @@ if (bundleIdx >= 0) {
             }
           }
         }
+      }
+      // Require at least one engine directory in the bundle.
+      if (!winCrispasrDirExists && !existsSync(linCrispasrDir)) {
+        fail("No CrispASR engine directory found in bundle (expected crispasr/ or crispasr-linux/)");
       }
     }
   }

@@ -1169,7 +1169,7 @@ fn copy_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
 #[cfg(target_os = "linux")]
 fn inject_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
     app.emit("soravo:error", "Text injection is not available on Linux").ok();
-    Ok(())
+    Err("Text injection is not available on Linux".to_string())
 }
 
 /// Re-inject the most recent transcript into the focused window.

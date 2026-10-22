@@ -46,7 +46,9 @@ const MODEL_HINTS = {
 }
 
 const DEFAULT_MODEL = 'tiny.en'
-const PLATFORM = process.argv.includes('--platform linux') ? 'linux' : 'windows'
+const PLATFORM = process.argv.includes('--platform') && process.argv[process.argv.indexOf('--platform') + 1] === 'linux'
+  ? 'linux'
+  : 'windows'
 
 function pickBinaryAsset(assets) {
   if (PLATFORM === 'linux') {
