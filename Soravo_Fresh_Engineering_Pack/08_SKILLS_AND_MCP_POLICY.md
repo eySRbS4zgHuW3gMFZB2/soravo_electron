@@ -4,6 +4,31 @@
 
 Use the installed specialist skills and connected MCP servers to their fullest **when relevant**, not by mechanically invoking every tool on every task. Tool use must add evidence or perform a needed operation. Avoid unnecessary calls, rate-limit exhaustion, and broad access to secrets.
 
+## Skill selection gate — mandatory
+
+The skill selection matrix below is the input to a **gate** that must run before any substantive task is planned or implemented. No substantive task may be planned or implemented until it has run and the mandatory skills are loaded. This mirrors the rule in `07_AI_AGENT_OPERATING_RULES.md`.
+
+1. **Match the task to domains** using the matrix below.
+2. **Load the skill's current instructions** (`SKILL.md` under `.agents/skills/<id>/`) and follow them. A skill you have not read is not a skill you have applied.
+3. **Use the MCP/CLI tool only if it materially helps.** Tool use must add evidence or perform a needed operation.
+4. **Record the selection** in the task's notes: which skills were loaded, which were considered but not loaded, and why. If a skill file is unavailable, say so and use documented best practices without claiming the skill was applied.
+
+Skills are installed one level above this repository, at `../.agents/skills/`. They are outside the repository and are not tracked by Git. Never commit them, never move them into the repo, and never assume they are present on another machine without checking.
+
+**When to use a subagent instead of a skill.** Skills are knowledge; a subagent is a worker. Use a skill when the work needs the knowledge it encodes. Use a subagent when the work is independent, well-scoped and can run in parallel with the main agent's work. The two are not interchangeable. See "Subagent-first orchestration" below.
+
+## Subagent-first orchestration — mandatory
+
+When a task has independent, well-scoped parts, delegate them to subagents rather than doing everything in the main agent. This is the default for multi-part work, not an exception.
+
+- **When to delegate:** independent research, audits or reads that can run in parallel with the main agent's edits; a second opinion on a non-trivial design or diff; verification work that does not block the next editing step; anything where the main agent would otherwise be idle waiting.
+- **When NOT to delegate:** the task is small, sequential, or depends on context only the main agent holds; the work is destructive or irreversible (renames, deletions, production changes, secret handling) — the main agent owns those, always; two agents would need to touch the same files.
+- **Isolation:** each subagent gets its own worktree or at least its own directory scope. A subagent never writes into a worktree it does not own. Subagent output is evidence, not authority — the main agent integrates, resolves conflicts, runs the tests and reviews the diff before accepting anything. A subagent's report that a change works is not a passing test.
+- **Before integration:** the main agent re-reads every file the subagent changed, runs the relevant tests itself, and inspects the diff for accidental changes and secrets. A subagent that edited a file outside its scope is a blocker, not a detail.
+- **CodeRabbit and subagents:** subagent-driven changes are reviewed by CodeRabbit on the integrated diff, not on each subagent's output. A CodeRabbit finding that traces to a subagent's work is triaged by the main agent, and the subagent is re-run if the fix is non-trivial.
+
+These two rules — the skill selection gate and subagent-first orchestration — are the same rules recorded in the root `AGENTS.md` and in `07_AI_AGENT_OPERATING_RULES.md`. All three documents must agree; if they diverge, the pack's `00_README.md` (which states the read order) wins and the others are reconciled.
+
 ## Installed skills reported by owner
 
 - `cloudflare`

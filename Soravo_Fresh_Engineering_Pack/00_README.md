@@ -13,12 +13,12 @@ This pack is newly authored for the current Tauri application. It does not impor
 1. Read `01_AUTHORITY_AND_SOURCE_OF_TRUTH.md`.
 2. Read `02_PRODUCT_REQUIREMENTS.md`, `03_COMMERCIAL_RULES.md`, and `04_TECHNICAL_DESIGN.md`.
 3. Read `28_GIT_WORKTREE_POLICY.md` **before changing any file.** It is binding.
-4. Follow `05_IMPLEMENTATION_PLAN.md` and `06_TASK_BREAKDOWN.md`.
-5. Before touching secrets, read `11_ENVIRONMENT_AND_SECRETS.md`.
-6. Before touching auth, licensing, payments or admin, read `10_SECURITY_BASELINE.md`.
-7. Every task must follow `07_AI_AGENT_OPERATING_RULES.md`, `08_SKILLS_AND_MCP_POLICY.md`, and `09_GITHUB_CI_POLICY.md`.
-8. At the end of every work session, update `18_PROGRESS_AND_HANDOFF.md`, `19_STATE_AUDIT_PROTOCOL.md`, and relevant ADRs.
-
+4. Read `07_AI_AGENT_OPERATING_RULES.md` and **run the Skill Selection Gate** in `08_SKILLS_AND_MCP_POLICY.md` before any substantive task.
+5. Follow `05_IMPLEMENTATION_PLAN.md` and `06_TASK_BREAKDOWN.md`.
+6. Before touching secrets, read `11_ENVIRONMENT_AND_SECRETS.md`.
+7. Before touching auth, licensing, payments or admin, read `10_SECURITY_BASELINE.md`.
+8. Every task must follow `07_AI_AGENT_OPERATING_RULES.md`, `08_SKILLS_AND_MCP_POLICY.md`, and `09_GITHUB_CI_POLICY.md`.
+9. At the end of every work session, update `18_PROGRESS_AND_HANDOFF.md`, `19_STATE_AUDIT_PROTOCOL.md`, and relevant ADRs.
 ## Important source-checked baseline
 
 The public GitHub repo was inspected on 2026-10-22. Observed files include `README.md`, `AGENTS.md`, `DESIGN.md`, `MODELS.md`, `progress.md`, `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.

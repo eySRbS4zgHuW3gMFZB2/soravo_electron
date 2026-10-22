@@ -10,6 +10,89 @@ Read this before you touch anything. Most of what is here is not obvious
 from the code, and getting it wrong breaks the app in ways that look
 like something else entirely.
 
+## Engineering pack (read before commercial-release work)
+
+This repository carries a `Soravo_Fresh_Engineering_Pack/` directory: a
+28-document engineering control plane for the commercial release of this
+app (website, accounts, entitlements, payments, dashboards, release
+pipeline). It is the authority for that work, and it has a **mandatory
+reading gate** — see `Soravo_Fresh_Engineering_Pack/00_README.md`.
+
+**Before any commercial-release work, read the pack's `00_README.md`
+first**, then `01_AUTHORITY_AND_SOURCE_OF_TRUTH.md`,
+`02_PRODUCT_REQUIREMENTS.md`, `03_COMMERCIAL_RULES.md`,
+`04_TECHNICAL_DESIGN.md`, and `28_GIT_WORKTREE_POLICY.md` (binding).
+
+The pack also records the decisions that constrain this repo: the
+CrispASR engine stays in place, the website is rebuilt fresh under
+`website/` in this repo, the rename happens only after CI is green, and
+the production site at `soravo.xyz` stays untouched until cutover.
+
+Do not treat the pack as a suggestion. Its reading gate, skill selection
+gate, subagent-first orchestration rules, and progress/handoff update
+rule are mandatory for anyone touching that work.
+
+## Skill selection gate and subagent-first orchestration
+
+These two rules are mandatory for anyone working on this repository, and
+are the same rules recorded in the engineering pack.
+
+### Skill selection gate
+
+Before any substantive task is planned or implemented, select and load the
+skills that bear on it. This is a gate, not a suggestion: no substantive
+task may be planned or implemented until it has run and the mandatory
+skills are loaded.
+
+1. **Match the task to domains.** Identify the skills relevant to the
+   task's domains (Rust, Tauri, Supabase, Cloudflare, shadcn, Playwright,
+   security review, CodeRabbit, etc.).
+2. **Load the skill's current instructions** and follow them. A skill you
+   have not read is not a skill you have applied.
+3. **Use the MCP/CLI tool only if it materially helps.** Tool use must
+   add evidence or perform a needed operation. Do not invoke every tool
+   on every task.
+4. **Record the selection** in the task's notes: which skills were loaded,
+   which were considered but not loaded, and why. If a skill file is
+   unavailable, say so and use documented best practices without claiming
+   the skill was applied.
+
+Skills are installed one level above this repository, at
+`../.agents/skills/`. They are outside the repository and are not tracked
+by Git. Never commit them, never move them into the repo, and never
+assume they are present on another machine without checking.
+
+### Subagent-first orchestration
+
+When a task has independent, well-scoped parts, delegate them to
+subagents rather than doing everything in the main agent. This is the
+default for multi-part work, not an exception.
+
+- **When to delegate:** independent research, audits or reads that can run
+  in parallel with the main agent's edits; a second opinion on a
+  non-trivial design or diff; verification work that does not block the
+  next editing step; anything where the main agent would otherwise be
+  idle waiting.
+- **When NOT to delegate:** the task is small, sequential, or depends on
+  context only the main agent holds; the work is destructive or
+  irreversible (renames, deletions, production changes, secret handling)
+  — the main agent owns those, always; two agents would need to touch
+  the same files.
+- **Isolation:** each subagent gets its own worktree or at least its own
+  directory scope. A subagent never writes into a worktree it does not
+  own. Subagent output is evidence, not authority — the main agent
+  integrates, resolves conflicts, runs the tests and reviews the diff
+  before accepting anything. A subagent's report that a change works is
+  not a passing test.
+- **Before integration:** the main agent re-reads every file the
+  subagent changed, runs the relevant tests itself, and inspects the diff
+  for accidental changes and secrets. A subagent that edited a file
+  outside its scope is a blocker, not a detail.
+- **CodeRabbit and subagents:** subagent-driven changes are reviewed by
+  CodeRabbit on the integrated diff, not on each subagent's output. A
+  CodeRabbit finding that traces to a subagent's work is triaged by the
+  main agent, and the subagent is re-run if the fix is non-trivial.
+
 ## The one rule
 
 **The transcription engine is a separate program, not a library.** The app

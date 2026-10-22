@@ -304,8 +304,17 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 | BI | The worktree removal step did not check for ignored files, which `git worktree remove` deletes even when the tree reports clean | **Fixed.** The cleanup step now requires listing ignored files first, preserving any that are needed, before removing the worktree. |
 | BJ | The task-ID rule required a planning entry to be committed to `main` before the worktree existed, which would leave the main tree dirty and bypass protected main; then required the entry inside the worktree, which it could not already have | **Fixed.** The sequence is now: assign the ID (no file write), create the worktree and branch from `origin/main`, then record the entry inside the worktree as its first edit. The main tree is never touched. |
 
-## Publication session — 2026-10-22
+## Third follow-up session — 2026-10-22 (pack discoverability + skill/subagent rules)
 
+**Worktree:** `.worktrees/docs-pack-discoverability` · **Branch:** `docs/pack-discoverability` · **Base:** `2cea188` (`origin/main`)
+
+- Made the engineering pack discoverable from the repo root: `AGENTS.md` now has an "Engineering pack" section and `README.md` now links to `Soravo_Fresh_Engineering_Pack/` with the instruction to read `00_README.md` first. Previously a new agent landing in the repo had no way to find the pack — the only reference was a `Key Files` table row.
+- Added the mandatory **Skill Selection Gate** and **Subagent-First Orchestration** rules to `07_AI_AGENT_OPERATING_RULES.md` and `08_SKILLS_AND_MCP_POLICY.md`, and wired them into the pack's `00_README.md` read order.
+- The skill selection gate: match the task to domains, load the skill's current instructions and follow them, use an MCP/CLI tool only if it materially helps, and record the selection. Skills live one level above the repo at `../.agents/skills/` and are never committed.
+- Subagent-first orchestration: delegate independent, well-scoped work by default; the main agent owns destructive/irreversible work; each subagent gets its own worktree or directory scope; subagent output is evidence, not authority; re-read every changed file, run the relevant tests, and inspect the diff before accepting anything; a subagent that edited outside its scope is a blocker.
+- No application source, production configuration, repository name, existing worktree, or unrelated file was touched.
+
+## Publication session — 2026-10-22
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)
 
 - The pack was published under `28_GIT_WORKTREE_POLICY.md`: a dedicated worktree and named branch created from `origin/main`, all edits made inside it, and the main working tree never edited.

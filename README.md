@@ -7,6 +7,15 @@ Local-first voice dictation desktop app. Rebrand of Wispr Flow. All transcriptio
 > that look like something else entirely — the engine's model rules, the two
 > hotkey paths, and the colour rules the design depends on.
 
+> **Commercial release work? Read
+> [`Soravo_Fresh_Engineering_Pack/00_README.md`](Soravo_Fresh_Engineering_Pack/00_README.md)
+> first.** It is the engineering control plane for the commercial release
+> (website, accounts, entitlements, payments, dashboards, release
+> pipeline) and it has a mandatory reading gate. The pack records the
+> decisions that constrain this repo: the CrispASR engine stays in place,
+> the website is rebuilt fresh under `website/`, the rename happens only
+> after CI is green, and the production site at `soravo.xyz` stays
+> untouched until cutover.
 ## Features
 
 - **Push-to-talk dictation** — global hotkey, mic capture, local Whisper transcription, text injection into any app
@@ -81,6 +90,7 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 | `src/renderer/src/hub.css` | The whole hub design layer: shell, page primitives and the hero gradients |
 | `src/renderer/src/soravo.ts` | Tauri API shim (window.soravo compatible) |
 | `AGENTS.md` | Working notes for anyone changing this repository |
+| `Soravo_Fresh_Engineering_Pack/` | Engineering control plane for the commercial release (PRD, TDD, implementation plan, task breakdown, DoD, security baseline, ADRs, release runbook, worktree policy) — read `00_README.md` first |
 | `progress.md` | Full development history |
 
 ## Notes
