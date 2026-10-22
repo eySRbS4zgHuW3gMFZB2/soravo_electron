@@ -421,7 +421,7 @@ Findings and plan reported to owner. Awaiting approval before implementation.
 - Engine starts from extracted MSI: version 0.8.43, MSVC 1951, exit code 0
 - All 37 cargo tests pass, typecheck passes
 - Packaging verification script passes (config + bundle contents)
-- Clean-machine test (P1-06): NOT VERIFIED (no clean VM available)
+- Clean-machine test (P1-06): NOT VERIFIED. The extracted-MSI engine startup test proves the engine launches in the current developer environment. It does NOT prove that a clean Windows install resolves the VC++ dependencies or uses resource_dir/crispasr/. CLEAN_MACHINE_VERIFICATION.md documents the exact manual test needed. P1-06 remains unverified until that test is performed.
 
 ### CodeRabbit findings addressed
 
