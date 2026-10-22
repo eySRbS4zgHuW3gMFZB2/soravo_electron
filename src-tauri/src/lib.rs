@@ -473,17 +473,19 @@ fn default_models_folder(app: tauri::AppHandle) -> String {
 /// `third-party/crispasr/extracted/<build>/`, so a fresh clone has the binary
 /// in one place while the lookup expects the other. Search both, preferring
 /// `bin/` because that is what a completed fetch produces.
+///
+/// On an installed machine, the engine is bundled under
+/// `resource_dir()/crispasr/`. That location is checked first so the
+/// installed engine is always selected before any working-directory copy.
 fn find_crispasr_binary(roots: &[std::path::PathBuf]) -> Option<std::path::PathBuf> {
     let name = if cfg!(target_os = "windows") { "crispasr.exe" } else { "crispasr" };
 
-    // Bundled layout (Tauri bundle.resources map form): the engine ships
-    // under resource_dir()/crispasr/. Check this first because it is the
-    // only location that exists on an installed machine.
-    for root in roots {
-        let bundled = root.join("crispasr").join(name);
-        if bundled.exists() {
-            return Some(bundled);
-        }
+    // The Tauri resource_dir is the install-time location. Check it first so
+    // the bundled engine wins over any development-tree copy.
+    let resource_dir = roots.last().cloned().unwrap_or_default();
+    let bundled = resource_dir.join("crispasr").join(name);
+    if bundled.exists() {
+        return Some(bundled);
     }
 
     // Developer-machine layout: npm run fetch:asr relocates the exe into

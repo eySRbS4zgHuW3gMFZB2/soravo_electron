@@ -361,14 +361,14 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 
 ## P0-01 session — 2026-10-22 (Windows CrispASR packaging audit)
 
-**Worktree:** .worktrees/P0-01-crispasr-packaging · **Branch:** chore/P0-01-crispasr-packaging · **Base:** 6face1 (origin/main)
+**Worktree:** .worktrees/P0-01-crispasr-packaging · **Branch:** chore/P0-01-crispasr-packaging · **Base:**  6face1 (origin/main)
 
 ### Audit findings (all CONFIRMED against the live checkout)
 
-1. **Engine not bundled:** undle.resources: [] and undle.externalBin: [] in 	auri.conf.json. A release build is ~6 MB, far smaller than the ~20 MB engine.
+1. **Engine not bundled:**  undle.resources: [] and  undle.externalBin: [] in 	auri.conf.json. A release build is ~6 MB, far smaller than the ~20 MB engine.
 2. **Tracked engine:** 	hird-party/crispasr/extracted/crispasr-windows-x86_64-cpu/ contains crispasr.exe (19.2 MB), openblas.dll (1.7 MB), crispasr-quantize.exe (0.6 MB), LICENSE (MIT), THIRD_PARTY_NOTICES.txt. Git-ignored 	hird-party/bin/ has 0 tracked files.
-3. **Runtime lookup fails on installed machine:** ind_crispasr_binary() searches current_dir and project_root (don't exist on installed machine) and 
-esource_dir (no engine because undle.resources is empty).
+3. **Runtime lookup fails on installed machine:**  ind_crispasr_binary() searches current_dir and project_root (don't exist on installed machine) and 
+esource_dir (no engine because  undle.resources is empty).
 4. **VC++ Redistributable dependency (NEW):** crispasr.exe depends on MSVCP140.dll, VCRUNTIME140.dll, VCRUNTIME140_1.dll, VCOMP140.DLL — none tracked, none on a clean Windows install. openblas.dll also depends on VCRUNTIME140.dll.
 5. **Licensing:** MIT (Copyright 2023-2026 The ggml authors). Redistribution permitted. LICENSE and THIRD_PARTY_NOTICES.txt must be included in bundle.
 6. **ADR-0010 is PROPOSED:** Bundled layout not yet decided. Must be resolved before packaging work begins.
@@ -384,7 +384,7 @@ MCP/CLI tools used: objdump (PE dependency inspection), Get-FileHash (SHA-256), 
 
 - **Tauri v2 bundle.resources:** Supports array or map form. Map form recommended: {"../third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/": "crispasr"}. Engine lands at 
 esource_dir()/crispasr/crispasr.exe. Works identically in dev and production. externalBin not recommended (single exe only, no companion DLLs).
-- **VC++ Redistributable:** Tauri v2 supports undle.windows.bundleVCRuntime: true which copies VC++ CRT DLLs. Microsoft permits local deployment (copying DLLs alongside exe). No fee, no attribution beyond license terms. Recommended: enable bundleVCRuntime + bundle engine via resources + optionally ship vc_redist.x64.exe as fallback.
+- **VC++ Redistributable:** Tauri v2 supports  undle.windows.bundleVCRuntime: true which copies VC++ CRT DLLs. Microsoft permits local deployment (copying DLLs alongside exe). No fee, no attribution beyond license terms. Recommended: enable bundleVCRuntime + bundle engine via resources + optionally ship vc_redist.x64.exe as fallback.
 
 ### Minimal implementation plan
 
