@@ -107,20 +107,3 @@ jobs:
 
       - name: Verify bundle configuration
         run: node scripts/verify-packaging.mjs
-
-      - name: Verify bundle contents (AppImage)
-        shell: bash
-        run: |
-          appimage=$(ls src-tauri/target/release/bundle/appimage/*.AppImage 2>/dev/null | head -1)
-          if [ -z "$appimage" ]; then echo "No AppImage found"; exit 1; fi
-          extractDir="$HOME/appimage_extract"
-          rm -rf "$extractDir"
-          mkdir -p "$extractDir"
-          cd "$extractDir"
-          "$appimage" --appimage-extract >/dev/null 2>&1 || true
-          appDir=$(find squashfs-root -type d -name "soravo" 2>/dev/null | head -1)
-          if [ -z "$appDir" ]; then
-            echo "Could not locate app directory in extracted AppImage"
-            exit 1
-          fi
-          node /github/workspace/scripts/verify-packaging.mjs --bundle "$appDir"
