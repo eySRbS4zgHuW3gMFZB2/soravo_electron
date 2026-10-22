@@ -118,7 +118,7 @@ jobs:
           mkdir -p "$extractDir"
           cd "$extractDir"
           "$appimage" --appimage-extract >/dev/null 2>&1 || true
-          appDir=$(find squashfs-root -maxdepth 4 -type d -name "soravo" 2>/dev/null | head -1)
+          appDir=$(find squashfs-root -type d -name "soravo" 2>/dev/null | head -1)
           if [ -z "$appDir" ]; then
             echo "Could not locate app directory in extracted AppImage"
             exit 1
