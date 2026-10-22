@@ -1158,6 +1158,20 @@ fn copy_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
     app.clipboard().write_text(text.to_string()).map_err(|e| e.to_string())
 }
 
+/// Copy text to the clipboard without injecting it (Linux stub).
+#[cfg(target_os = "linux")]
+fn copy_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+    app.clipboard().write_text(text.to_string()).map_err(|e| e.to_string())
+}
+
+/// Inject text into the focused window (Linux stub — not implemented).
+#[cfg(target_os = "linux")]
+fn inject_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
+    app.emit("soravo:error", "Text injection is not available on Linux").ok();
+    Ok(())
+}
+
 /// Re-inject the most recent transcript into the focused window.
 fn paste_last(app: &tauri::AppHandle) -> Result<(), String> {
     let conn = open_db(app)?;
