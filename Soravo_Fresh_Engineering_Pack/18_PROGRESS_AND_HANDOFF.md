@@ -294,6 +294,16 @@ A sixteenth review against the final content returned 3 findings. **All 3 were v
 | BF | The change-set verification only applied to the replayed path, so an operator following the forward-fix path could skip identity verification | **Fixed.** Verification now applies to whichever path was taken. |
 | BG | The worktree policy required a task ID to be recorded in the breakdown before the worktree existed, while requiring all task edits inside the worktree | **Fixed.** The pre-creation ID entry is now a planning record and the only exception to rule 4. |
 
+## Seventeenth CodeRabbit review disposition — pull request #13
+
+A seventeenth review against the final content returned 3 findings. **All 3 were valid and all 3 are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| BH | The worktree policy required the merge SHA to be in the pre-integration evidence list, but the merge SHA does not exist until integration is complete | **Fixed.** The merge SHA is recorded **after** integration, in a separate statement. The pre-integration evidence list contains only evidence that can exist before the merge. |
+| BI | The worktree removal step did not check for ignored files, which `git worktree remove` deletes even when the tree reports clean | **Fixed.** The cleanup step now requires listing ignored files first, preserving any that are needed, before removing the worktree. |
+| BJ | The task-ID rule required a planning entry to be committed to `main` before the worktree existed, which would leave the main tree dirty and bypass protected main; then required the entry inside the worktree, which it could not already have | **Fixed.** The sequence is now: assign the ID (no file write), create the worktree and branch from `origin/main`, then record the entry inside the worktree as its first edit. The main tree is never touched. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)

@@ -50,11 +50,11 @@ A dedicated worktree and branch are required for:
 
 **Task ID.** Use the breakdown IDs from `06_TASK_BREAKDOWN.md` (`P0-01`, `P1-03`, `P2-08`, and so on). A worktree without a task ID has no defined scope and cannot be reviewed. **A task that is not yet in the breakdown may be given a new ID.** The sequence is:
 
-1. **Assign the ID** and state it in the task prompt and the progress record. Nothing is written to any file yet.
+1. **Assign the ID** and state it in the task prompt. **Do not write any repository file yet.**
 2. **Create the worktree and branch** from the base, as in the example below.
-3. **Record the entry in `06_TASK_BREAKDOWN.md` as the first edit inside the new worktree**, and commit it on the task branch.
+3. **Inside the new worktree, record the entry in `06_TASK_BREAKDOWN.md` as the first edit**, and commit it on the task branch. Then record the ID, the worktree path and the branch in the progress record.
 
-The ID therefore travels with the task branch, the main working tree is never touched, and no commit is made directly to `main` — which matters because `09_GITHUB_CI_POLICY.md` requires pull requests for a protected `main`, so a local planning commit to `main` would neither reach `origin/main` nor pass the required checks. An unplanned fix is never blocked from starting because its ID had to be invented first.
+The ID therefore travels with the task branch; the main working tree is never touched; no commit is made directly to `main`, which matters because `09_GITHUB_CI_POLICY.md` requires pull requests for a protected `main`, so a local planning commit to `main` would neither reach `origin/main` nor pass the required checks; and an unplanned fix is never blocked from starting because its ID had to be invented first. Every other task edit happens inside the worktree.
 
 **Example.**
 
