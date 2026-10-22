@@ -33,37 +33,42 @@ const bundle = conf?.bundle ?? {};
 if (bundle.active !== true) fail("bundle.active must be true");
 
 const resources = bundle.resources ?? {};
+const EXPECTED_SOURCE_FRAGMENT = "crispasr-windows-x86_64-cpu";
+const EXPECTED_TARGET = "crispasr";
 if (typeof resources !== "object" || Array.isArray(resources) || Object.keys(resources).length === 0) {
   fail("bundle.resources must be a non-empty object (map form)");
 } else {
-  const hasEngine = Object.keys(resources).some((k) => k.includes("crispasr"));
-  if (!hasEngine) fail("bundle.resources must include a CrispASR engine path");
-  const target = Object.values(resources).find((v) => typeof v === "string" && v.includes("crispasr"));
-  if (!target) fail("bundle.resources target must include 'crispasr'");
+  const engineEntry = Object.entries(resources).find(
+    ([k, v]) => k.includes("crispasr") && typeof v === "string" && v.includes("crispasr")
+  );
+  if (!engineEntry) {
+    fail("bundle.resources must contain an entry mapping a CrispASR source to a 'crispasr' target");
+  } else {
+    const [src, tgt] = engineEntry;
+    if (!src.includes(EXPECTED_SOURCE_FRAGMENT)) {
+      fail("bundle.resources source should reference the tracked engine directory (expected path containing 'crispasr-windows-x86_64-cpu')");
+    }
+    if (tgt !== EXPECTED_TARGET) {
+      fail(`bundle.resources target must be exactly '${EXPECTED_TARGET}', got '${tgt}'`);
+    }
+  }
 }
 
 if (bundle?.windows?.bundleVCRuntime !== true) {
   fail("bundle.windows.bundleVCRuntime must be true (VC++ runtime required for crispasr.exe)");
 }
 
-if (!Array.isArray(bundle.externalBin) || bundle.externalBin.length !== 0) {
-  // externalBin should be empty — we use bundle.resources, not sidecar
-  if (Array.isArray(bundle.externalBin) && bundle.externalBin.length > 0) {
-    fail("bundle.externalBin should be empty (engine is bundled via resources, not sidecar)");
-  }
+if (Array.isArray(bundle.externalBin) && bundle.externalBin.length > 0) {
+  fail("bundle.externalBin should be empty (engine is bundled via resources, not sidecar)");
 }
 
 // --- 2. Tracked engine files check ---
 const engineDir = join(root, "third-party", "crispasr", "extracted", "crispasr-windows-x86_64-cpu");
-const requiredEngineFiles = ["crispasr.exe", "openblas.dll", "LICENSE", "THIRD_PARTY_NOTICES.txt"];
+const requiredEngineFiles = ["crispasr.exe", "openblas.dll", "LICENSE", "THIRD_PARTY_NOTICES.txt", "vcruntime140.dll", "vcruntime140_1.dll", "vcomp140.dll", "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "concrt140.dll", "vccorlib140.dll"];
+const vcRuntimeAtRoot = ["vcruntime140.dll", "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "concrt140.dll", "vccorlib140.dll"];
+
 for (const f of requiredEngineFiles) {
   if (!existsSync(join(engineDir, f))) fail(`Missing tracked engine file: ${f}`);
-}
-
-// VC++ runtime DLLs that must be bundled alongside the engine
-const requiredVcDlls = ["vcruntime140_1.dll", "vcomp140.dll"];
-for (const f of requiredVcDlls) {
-  if (!existsSync(join(engineDir, f))) fail(`Missing VC++ runtime DLL in engine dir: ${f}`);
 }
 
 // --- 3. Runtime lookup check ---
@@ -73,31 +78,27 @@ if (!libContent.includes('root.join("crispasr")')) {
   fail("find_crispasr_binary must check resource_dir/crispasr/ (bundled layout)");
 }
 
-// --- 4. Bundle contents check (optional, requires --bundle) ---
+// --- 4. Bundle contents check (optional, requires --bundle <path>) ---
 const bundleIdx = process.argv.indexOf("--bundle");
-if (bundleIdx >= 0 && process.argv[bundleIdx + 1]) {
-  const bundlePath = resolve(process.argv[bundleIdx + 1]);
-  if (!existsSync(bundlePath)) {
-    fail(`Bundle path does not exist: ${bundlePath}`);
+if (bundleIdx >= 0) {
+  if (!process.argv[bundleIdx + 1]) {
+    fail("--bundle requires a path argument (e.g., --bundle <extracted_dir>)");
   } else {
-    // Check for engine files in the extracted bundle
-    const crispasrDir = join(bundlePath, "crispasr");
-    if (!existsSync(crispasrDir)) {
-      fail(`crispasr/ directory missing from bundle at ${bundlePath}`);
+    const bundlePath = resolve(process.argv[bundleIdx + 1]);
+    if (!existsSync(bundlePath)) {
+      fail(`Bundle path does not exist: ${bundlePath}`);
     } else {
-      for (const f of requiredEngineFiles) {
-        if (!existsSync(join(crispasrDir, f))) fail(`Missing from bundle: crispasr/${f}`);
+      const crispasrDir = join(bundlePath, "crispasr");
+      if (!existsSync(crispasrDir)) {
+        fail(`crispasr/ directory missing from bundle at ${bundlePath}`);
+      } else {
+        for (const f of requiredEngineFiles) {
+          if (!existsSync(join(crispasrDir, f))) fail(`Missing from bundle: crispasr/${f}`);
+        }
       }
-      for (const f of requiredVcDlls) {
-        if (!existsSync(join(crispasrDir, f))) fail(`Missing from bundle: crispasr/${f}`);
+      for (const f of vcRuntimeAtRoot) {
+        if (!existsSync(join(bundlePath, f))) fail(`Missing from bundle root: ${f} (bundleVCRuntime)`);
       }
-    }
-    // Check VC++ runtime at bundle root
-    if (!existsSync(join(bundlePath, "vcruntime140.dll"))) {
-      fail("vcruntime140.dll missing from bundle root (bundleVCRuntime)");
-    }
-    if (!existsSync(join(bundlePath, "msvcp140.dll"))) {
-      fail("msvcp140.dll missing from bundle root (bundleVCRuntime)");
     }
   }
 }
@@ -109,7 +110,7 @@ if (errors.length > 0) {
   process.exit(1);
 } else {
   console.log("Packaging verification passed.");
-  if (bundleIdx >= 0) {
+  if (bundleIdx >= 0 && process.argv[bundleIdx + 1]) {
     console.log("  Bundle contents verified.");
   } else {
     console.log("  Config + tracked files + source checks passed.");
