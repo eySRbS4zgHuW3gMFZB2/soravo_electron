@@ -1,7 +1,7 @@
 # Progress and Handoff — Mandatory Living Record
 
-**Last updated:** 2026-10-22 (decision memo applied to the pack; implementation still not started)  
-**Current status:** Planning pack reconciled against the owner-approved decision memo. Documentation-only changes. No repository, account, service or VM mutations performed.
+**Last updated:** 2026-10-22 (pack published to branch `docs/engineering-pack`; pull request open, awaiting owner approval to merge)  
+**Current status:** The pack is committed and pushed on `docs/engineering-pack`, with a pull request open into `main`. `main` is untouched. No repository rename, DNS change, production change, deployment, Supabase data change or secret operation has been performed. Implementation has not started.
 
 ## Owner-approved decisions
 - Launch Windows + Linux.
@@ -88,21 +88,34 @@ Documentation only, all inside `Soravo_Fresh_Engineering_Pack/`:
 
 Total: 20 files modified, 2 files added. The owner-supplied `SORAVO_DECISION_MEMO_2026-10-22.md` was **not modified** — verified byte-identical by SHA-256 against the pre-edit backup. Eight further documents were correctly left untouched because neither the memo nor the worktree policy required changes to them: `03_COMMERCIAL_RULES.md`, `08_SKILLS_AND_MCP_POLICY.md`, `10_SECURITY_BASELINE.md`, `11_ENVIRONMENT_AND_SECRETS.md`, `14_FREE_BINARY_HOSTING_OPTIONS.md`, `20_SERVICE_LIMITS_AND_MONITORING.md`, `22_REVERSE_ENGINEERING_AND_PROVENANCE.md`, `25_REFERENCE_LINKS.md`.
 
+## Publication session — 2026-10-22
+
+**Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)
+
+- The pack was published under `28_GIT_WORKTREE_POLICY.md`: a dedicated worktree and named branch created from `origin/main`, all edits made inside it, and the main working tree never edited.
+- **`git worktree add -b <branch> origin/main` silently set the new branch's upstream to `origin/main`.** A bare `git push` would then have targeted `main`. The upstream was unset before pushing, and the push used an explicit refspec.
+- Two commits on the branch: `d5e9b95` (the 31 pack documents) and `b775802` (`.gitattributes`).
+- **`.gitattributes` changes no stored content.** The repository's existing convention was verified against the index first: all 101 tracked text files are already stored LF and the 22 binary assets are already detected as non-text. Adding the attributes renormalised nothing, so no existing file was touched by that commit. Line endings are pinned for Markdown, JSON, YAML, plain text and the extensionless dotfiles; application source keeps its existing `text=auto` behaviour.
+- **The untracked copy of the pack in the main working tree was a merge blocker.** This was proved in a scratch clone: with the copy present, the merge fails with *"untracked working tree files would be overwritten by merge"*; with it removed, all 31 files stage cleanly. Since it was byte-identical to what is now committed and pushed, it was **moved**, not deleted, to the local backup area.
+- Verified: the remote branch ref matches the local HEAD; `origin/main` is unchanged at `3ac4e3e`; all 13 pre-existing remote branches are unchanged; a fresh clone of the branch matches the source byte-for-byte after line-ending normalisation; the three pre-existing worktrees are preserved at their original commits and clean.
+- The pull request is **open and not merged.** The merge awaits owner approval.
+
 ## Next actions
-1. Owner reviews this reconciliation and the pack edits.
-2. Owner/agent backs up both repos and verifies working tree (P0-01).
-3. Establish baseline CI and the release-packaging check in `soravo_electron` (P0-02).
-4. Prepare and review the rename checklist (P0-03).
-5. Run a deep VM/toolchain/state audit and update `19_STATE_AUDIT_PROTOCOL.md` / `docs/engineering/STATE_AUDIT.md`.
-6. Decide the CrispASR bundled layout and record ADR-0010 (P1-03).
-7. Fix packaging and establish Windows/Linux CI baseline before commercial code.
-8. Choose the backend placement and record ADR-0003 (P2-08); choose the binary host and finalise ADR-0005 (P8-00).
-9. Create website shell and Supabase staging schema.
-10. Configure Resend SMTP; test email delivery.
-11. Implement account and device flows.
-12. Implement entitlements, then Razorpay.
-13. Build admin dashboard and release pipeline.
-14. Prepare, then separately approve, the production cutover.
+1. **Owner reviews and approves the pull request.** The merge is deliberately not performed.
+2. After the merge: remove the `docs-engineering-pack` worktree, `git worktree prune`, delete the merged local branch, and delete the worktree's build output.
+3. Owner/agent backs up both repos and verifies working tree (P0-01).
+4. Establish baseline CI and the release-packaging check in `soravo_electron` (P0-02).
+5. Prepare and review the rename checklist (P0-03).
+6. Run a deep VM/toolchain/state audit and update `19_STATE_AUDIT_PROTOCOL.md` / `docs/engineering/STATE_AUDIT.md`.
+7. Decide the CrispASR bundled layout and record ADR-0010 (P1-03).
+8. Fix packaging and establish Windows/Linux CI baseline before commercial code.
+9. Choose the backend placement and record ADR-0003 (P2-08); choose the binary host and finalise ADR-0005 (P8-00).
+10. Create website shell and Supabase staging schema.
+11. Configure Resend SMTP; test email delivery.
+12. Implement account and device flows.
+13. Implement entitlements, then Razorpay.
+14. Build admin dashboard and release pipeline.
+15. Prepare, then separately approve, the production cutover.
 
 ## Session handoff template
 - Date/time and agent:
