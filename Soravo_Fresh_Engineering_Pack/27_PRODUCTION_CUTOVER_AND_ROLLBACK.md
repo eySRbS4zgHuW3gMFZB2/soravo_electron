@@ -92,18 +92,19 @@ Rollback must be achievable within the incident window without a code change.
 
 **Procedure.**
 1. **Freeze every writer that touches the production datastore** — the replacement's accounts, entitlements and payments paths, and any other service writing to it. This happens **before** traffic is restored: restoring traffic to the previous deployment while the replacement can still write lets the two versions interleave and corrupt the record. Verify the freeze is in effect, then proceed.
-2. Restore DNS and Cloudflare routing to the previous production deployment.
-3. Disable the redirects, returning the old paths to the previous site's content.
-4. **Recover the data safely.** An unqualified snapshot restore can discard real accounts, payments and entitlements created after the snapshot was taken. The recovery sequence is:
+2. **Recover the data before restoring routing.** The previous deployment may depend on the migration's rollback or forward-fix, so the datastore must be made compatible with it **while traffic is still off the previous deployment**. Restoring routing first would send customers to a deployment that cannot read the current schema or data, and the failure would surface in front of them while recovery is still in progress. The recovery sequence is:
    a. **Freeze writes** to the replacement's data paths (accounts, entitlements, payments) so that no new records appear during recovery.
    b. **Export from the enabled change-capture or recovery mechanism a replayable change set for every post-snapshot create, update, and delete**, and record counts by operation, so that snapshot restoration can preserve all post-snapshot changes. Creates alone are not enough: renewals, refunds and entitlement changes are updates to existing rows, and a snapshot restore would reverse them.
    c. **Apply a tested forward-fix or merge procedure** to carry that change set forward. This is the preferred outcome, because it preserves real payments and accounts.
    d. **Restore the snapshot only if** the forward-fix or merge cannot be applied or verified **and** a separately available, tested replay procedure for the exported change set is available and verified. Restoring is a last resort, and it must be followed by replaying that change set through the verified replay procedure. A procedure that is unavailable or unverified is not a fallback.
    e. **Verify the replayed change set** from step (b) by **record identity**, not only by count: every create, update and delete must be applied, and the resulting records must match the change set on stable record IDs and on the relevant fields. Equal counts alone do not prove the replay restored the same records — a missing payment can be hidden by an unrelated or duplicate record with the same count. Check explicitly for duplicates after replay.
    "Reconcile any legitimate records" is not a recovery method on its own, and must not be used as one.
-5. Verify home, pricing, download, sign-in and business email again.
-6. **Unfreeze writers** only once the recovered state is verified, and record which writers were frozen and when they were released.
-7. Record what happened, what was rolled back, and what must be fixed before the next attempt.
+3. **Verify the rollback target is compatible with the recovered datastore** — the previous deployment starts successfully against it, reads existing records, and can write through the same paths. Writers stay frozen and traffic stays off the previous deployment until this check passes.
+4. Restore DNS and Cloudflare routing to the previous production deployment, now that its schema and data are compatible.
+5. Disable the redirects, returning the old paths to the previous site's content.
+6. Verify home, pricing, download, sign-in and business email again.
+7. **Unfreeze writers** only once the recovered state is verified, and record which writers were frozen and when they were released.
+8. Record what happened, what was rolled back, and what must be fixed before the next attempt.
 
 **Precondition.** The previous deployment must remain reachable and identifiable for the whole rollback window. Do not delete or overwrite it as part of cutover. "Do not silently repoint an already published version to different bytes" applies to release artifacts as well as to the site.
 
