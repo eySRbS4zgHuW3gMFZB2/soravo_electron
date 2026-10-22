@@ -59,7 +59,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [],
-    "externalBin": []
+    "resources": {
+      "../third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/": "crispasr"
+    },
+    "externalBin": [],
+    "windows": {
+      "bundleVCRuntime": true
+    }
   }
 }

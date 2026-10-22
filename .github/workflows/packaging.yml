@@ -1,0 +1,67 @@
+# Packaging verification for the CrispASR engine.
+#
+# This workflow builds the Tauri app on Windows and verifies that the
+# CrispASR engine and its runtime dependencies are present in the
+# resulting installer. It is separate from the engineering-pack CI
+# workflow because it requires a Windows runner and a full Rust/Node
+# toolchain.
+#
+# This workflow is deliberately allowed to be red until Phase 1 (P1-03,
+# P1-04) makes the bundle layout green. In Phase 0 it exists, runs, and
+# reports, with its result recorded as the baseline.
+
+name: Packaging
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packaging-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-packaging:
+    name: Verify CrispASR packaging
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1b78e746350b76a97e0 # v4.4.0
+        with:
+          node-version: 20
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.90.0
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri:build
+
+      - name: Verify bundle configuration
+        run: node scripts/verify-packaging.mjs
+
+      - name: Verify bundle contents (MSI)
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem "src-tauri/target/release/bundle/msi/*.msi" | Select-Object -First 1
+          if (-not $msi) { throw "No MSI installer found" }
+          $extractDir = "$env:TEMP\msi_extract"
+          New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+          Start-Process msiexec -ArgumentList "/a `"$($msi.FullName)`" /qn TARGETDIR=`"$extractDir`"" -Wait
+          node scripts/verify-packaging.mjs --bundle "$extractDir\PFiles\Soravo"
