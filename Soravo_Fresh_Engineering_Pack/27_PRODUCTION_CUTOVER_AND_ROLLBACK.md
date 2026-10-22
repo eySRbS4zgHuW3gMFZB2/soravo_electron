@@ -59,6 +59,7 @@ Every item must be checked and evidenced. An unchecked item blocks cutover.
 - [ ] Database migrations have been applied to production through the migration path, with a recorded rollback or forward-fix plan.
 - [ ] **If ADR-0007 has been accepted**, the keepalive workflow is scheduled, has been observed to succeed, and its failure path notifies the owner. **If ADR-0007 is still PROPOSED**, the approved project-health monitoring check is in place and has been observed instead — a keepalive run is not required for an undecided workflow.
 - [ ] Backup and restore expectations for production data are recorded.
+- [ ] **Before the production snapshot and before any production write, a durable change-capture or provider-supported recovery mechanism is enabled for every production account, entitlement and payment create, update and delete.** Its retention, and its ability to recover deleted rows and earlier versions of updated rows, must be tested and recorded. An export taken during a rollback cannot reconstruct a deleted row or the prior state of an updated row from the current tables alone, so the capture must already be running. **Do not assume Supabase point-in-time recovery supplies this** — it is a separate paid add-on and this pack assumes the free tier, where it is not available. If no such mechanism can be enabled and tested, the cutover must not proceed on a free tier.
 
 **Cutover mechanics**
 - [ ] The URL inventory is complete and each path is classified and approved.
@@ -75,7 +76,7 @@ Perform in this order, stopping at the first failure.
 1. Announce the window and confirm the owner is present.
 2. Take a restorable snapshot of production data and record the exact rollback target.
 3. Deploy the replacement build to the production hostname. Keep the previous deployment available and identifiable.
-4. Verify, in a logged-out browser and on a second network: home, pricing, download, legal, privacy, support, sign-up, sign-in, recovery, account dashboard, and admin denial for an ordinary user.
+4. Verify in a logged-out browser and on a second network: home, pricing, download, legal, privacy, support, and **access denial for the admin route**. Then **sign in with a test account** and verify the account dashboard, the entitlement display and the device list. A logged-out visitor cannot check an authenticated dashboard, so the two checks are separate.
 5. Verify a real download and checksum from the download page.
 6. Verify business email delivery.
 7. **After deployment to production**, use a separately approved live payment to confirm the production entitlement and the production admin record, then refund it, recording the owner approval, the reconciliation evidence and the refund evidence.
@@ -95,7 +96,7 @@ Rollback must be achievable within the incident window without a code change.
 3. Disable the redirects, returning the old paths to the previous site's content.
 4. **Recover the data safely.** An unqualified snapshot restore can discard real accounts, payments and entitlements created after the snapshot was taken. The recovery sequence is:
    a. **Freeze writes** to the replacement's data paths (accounts, entitlements, payments) so that no new records appear during recovery.
-   b. **Export a replayable change set for every post-snapshot create, update, and delete**, and record counts by operation, so that snapshot restoration can preserve all post-snapshot changes. Creates alone are not enough: renewals, refunds and entitlement changes are updates to existing rows, and a snapshot restore would reverse them.
+   b. **Export from the enabled change-capture or recovery mechanism a replayable change set for every post-snapshot create, update, and delete**, and record counts by operation, so that snapshot restoration can preserve all post-snapshot changes. Creates alone are not enough: renewals, refunds and entitlement changes are updates to existing rows, and a snapshot restore would reverse them.
    c. **Apply a tested forward-fix or merge procedure** to carry that change set forward. This is the preferred outcome, because it preserves real payments and accounts.
    d. **Restore the snapshot only if** the forward-fix or merge cannot be applied or verified **and** a separately available, tested replay procedure for the exported change set is available and verified. Restoring is a last resort, and it must be followed by replaying that change set through the verified replay procedure. A procedure that is unavailable or unverified is not a fallback.
    e. **Verify the replayed change set** from step (b) by **record identity**, not only by count: every create, update and delete must be applied, and the resulting records must match the change set on stable record IDs and on the relevant fields. Equal counts alone do not prove the replay restored the same records — a missing payment can be hidden by an unrelated or duplicate record with the same count. Check explicitly for duplicates after replay.

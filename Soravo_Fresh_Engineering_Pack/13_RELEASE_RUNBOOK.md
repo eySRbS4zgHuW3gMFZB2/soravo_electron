@@ -29,7 +29,7 @@ The active source repo can become private before commercial launch. Release repo
 3. Update version in the app config/package files consistently.
 4. Update changelog/release notes.
 5. Create annotated tag such as `v0.2.0` only after approval.
-6. Build artifacts in CI for every platform that has a supported engine. Windows always; Linux only once task P1-05 has delivered a Linux engine and the Linux release gate in `05_IMPLEMENTATION_PLAN.md` has passed. Do not build or publish a Linux artifact before then.
+6. Build artifacts in CI for every platform that has a supported engine. Windows always. Linux: a **verification build** is permitted once task P1-05 has delivered a Linux engine, because the Linux release gate cannot be satisfied without one; **publishing** a Linux artifact, and describing Linux as supported, stay prohibited until that gate has passed.
 7. Inspect artifact contents for secrets, test data and missing runtime files.
 8. Generate checksums:
    `sha256sum Soravo_0.2.0_x64-setup.exe Soravo_0.2.0_x64_en-US.msi > SHA256SUMS` (Linux) or an equivalent PowerShell `Get-FileHash -Algorithm SHA256` flow on Windows. Two rules govern the command:
@@ -38,12 +38,14 @@ The active source repo can become private before commercial launch. Release repo
 
    Never use a placeholder such as `<artifact files>`, which the shell reads as input redirection. Every installer that is published must have a checksum entry, or Step 9 cannot verify it.
 9. Verify checksums from downloaded artifacts.
-10. Upload artifacts and checksums to the public release host.
-11. Verify public links from a logged-out browser.
-12. Test installation on a clean machine.
-13. Publish release notes and installation/trust-warning guidance.
-14. Update `latest` manifest only after the release is verified.
-15. Update progress/handoff and record commit/tag/hash.
+10. Upload artifacts and checksums to a **private or draft staging release** on the release host. **Do not publish them to a customer-accessible location yet.** A broken installer that customers can download is worse than a delayed release, and the clean-machine gate below is a release blocker.
+11. Verify the staged links resolve for the release account, without making the assets customer-accessible.
+12. Test installation on a clean machine: the installer launches, locates the bundled engine, and dictates. **This gate must pass before publication**, because it is what proves the release is not broken.
+13. Upload the verified artifacts and checksums to the public release host.
+14. Verify public links from a logged-out browser.
+15. Publish release notes and installation/trust-warning guidance.
+16. Update `latest` manifest only after the release is verified.
+17. Update progress/handoff and record commit/tag/hash.
 
 ## Self-signing and trust
 

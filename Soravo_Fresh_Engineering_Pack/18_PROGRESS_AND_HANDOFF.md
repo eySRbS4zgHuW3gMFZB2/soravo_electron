@@ -163,6 +163,20 @@ A fifth review, run against the final content including the CI workflow, returne
 | W | `00_README.md` allowed the historical repository only as a documentation record, omitting the approved website reference | **Fixed.** Both permitted uses are now stated, with the prohibition on porting implementation retained. |
 | X | The agent rules prohibited branch deletion outright, which conflicts with the policy's mandatory merged-branch cleanup | **Fixed.** Merged task-branch cleanup is expected work; the prohibition still covers unmerged, unrelated and other-task branches. |
 
+## Sixth CodeRabbit review disposition — pull request #13
+
+A sixth review against the final content returned 9 findings covering 7 distinct issues. **All 7 were valid and all 7 are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| Y | The release runbook uploaded artifacts to the **public** host at step 10, before the clean-machine install test at step 12, so a broken installer could be downloaded before the gate caught it | **Fixed.** The order is now: upload to a private or draft staging release → verify staged links → **clean-machine install test** → publish the verified artifacts to the public host → verify public links → publish notes → update `latest`. Updating `latest` does not remove access to already-public assets, so publication is what must wait. |
+| Z | The release runbook still said "do not build" Linux before the gate, contradicting the verification-build allowance | **Fixed.** Verification builds are permitted once P1-05 delivers the engine; publication and support claims stay prohibited until the gate passes. |
+| AA | The rollback exported the change set during the rollback, but an export from current tables cannot reconstruct a deleted row or the prior state of an updated row — so change capture must be running *before* the snapshot | **Fixed.** A durable change-capture or provider-supported recovery mechanism must be enabled and tested before the production snapshot and any production write, with its retention and recovery of deleted rows and prior update states recorded. The pack now states explicitly that Supabase point-in-time recovery is a separate paid add-on and must not be assumed on the free tier, and that the cutover must not proceed without a tested mechanism. |
+| AB | The cutover step 4 asked a logged-out browser to verify the account dashboard, which an unauthenticated visitor cannot reach | **Fixed.** The logged-out session now verifies the public pages and admin access denial; the dashboard, entitlement display and device list are verified after signing in with a test account. |
+| AC | The worktree recovery text still suggested recovering uncommitted files from the reflog, which cannot restore never-committed content | **Fixed.** The reflog recovers recorded commits only; uncommitted files need an external copy. |
+| AD | The rename runbook required confirming that Cloudflare's Git integration would be updated, which cannot be satisfied for the observed direct-upload deployment method | **Fixed.** The actual deployment method is recorded first, and the source-link step applies only if Git integration is configured. |
+| AE | The CI policy's website workflow had a path filter, which would leave a required check pending on unrelated pull requests | **Fixed.** The workflow runs on every pull request and reports success when the change does not affect the website paths, matching the pattern used by the pack's own CI workflow. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)

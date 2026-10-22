@@ -16,7 +16,7 @@
 - Both repos have clean working trees or all changes committed/backed up.
 - Confirm the old repo name `soravo_deprecated` is available.
 - Save current remotes and important branch/PR references.
-- Confirm Cloudflare Pages Git integration and GitHub Actions secrets will be updated.
+- Record the **actual** Cloudflare Pages deployment method for the website project, and confirm GitHub Actions secrets will be updated. **Only if the project uses Cloudflare's Git integration** does the source link need repointing at the renamed repository; the project currently deploys by direct upload, in which case the deployment source is the workflow's token and the repository name does not affect it.
 - Record current default branch and latest commit SHA for each repo.
 
 ## Sequence

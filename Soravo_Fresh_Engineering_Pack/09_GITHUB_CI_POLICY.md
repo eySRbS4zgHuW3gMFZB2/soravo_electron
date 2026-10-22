@@ -20,7 +20,7 @@ While the active repository remains public, standard GitHub-hosted runner usage 
    - upload installers as temporary CI artifacts, not customer releases on every PR.
 
 2. `ci-website.yml`
-   - path filter for `website/**` and shared docs/design tokens it actually consumes;
+   - run on every pull request, and **report success when the change does not affect `website/**` or the shared docs and design tokens it consumes**; otherwise run the website checks. A path filter alone would leave a required check pending on any pull request that does not match the filter, which blocks the pull request forever;
    - install from website lockfile;
    - lint/typecheck/build;
    - Playwright smoke/E2E tests;
