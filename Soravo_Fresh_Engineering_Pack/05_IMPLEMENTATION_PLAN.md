@@ -36,7 +36,6 @@ Gate: repo identity and branch/remote verified; no accidental source deletion; *
 - Verify model download, checksum, licence/provenance and offline transcription. Models are acquired at runtime, not bundled.
 - Build and inspect the Windows installer; confirm the engine and its dependencies are present in the artifact.
 - **Clean-machine install test:** install on a Windows machine with no developer tools and no source tree, and prove the app locates and launches the bundled engine with no `npm run fetch:asr` step and can dictate.
-- Add Linux CI build and real Linux smoke test; determine supported distro/package formats.
 - Add app version display, crash-safe logging and privacy-preserving diagnostics.
 Gate: clean Windows VM install works without dev tools and can dictate using the documented model flow, with the engine coming from the bundle; the release-packaging check is green.
 

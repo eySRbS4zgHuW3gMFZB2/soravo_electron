@@ -4,7 +4,7 @@ Research checked on 2026-10-22. Recheck current pages during implementation beca
 
 ## Soravo source
 - Active repository at audit time: https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron
-- Historical repo (documentation shape only; no implementation copying): https://github.com/eySRbS4zgHuW3gMFZB2/soravo
+- Historical repo (behavioral and content reference for approved website pages, pricing presentation and dashboard behaviors, plus documentation shape; no implementation copying): https://github.com/eySRbS4zgHuW3gMFZB2/soravo
 
 ## Official service documentation
 - GitHub Releases: https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases

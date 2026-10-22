@@ -235,6 +235,17 @@ A twelfth review against the final content returned 4 findings, and the GitHub A
 | AT | `05_IMPLEMENTATION_PLAN.md` and `06_TASK_BREAKDOWN.md` named the checksum manifest `SHA-256SUMS` while the release runbook creates and publishes `SHA256SUMS` | **Fixed.** `SHA256SUMS` is now the single canonical filename across every document. |
 | AU | The rollback procedure's staging-payment gate ran after the production hostname had already been deployed to | **Fixed in an earlier round:** the staging payment is a prerequisite, and step 7 is the production live-payment verification only. |
 
+## Thirteenth CodeRabbit review disposition — pull request #13
+
+A thirteenth review against the final content returned 5 findings covering 4 distinct issues. **All 4 were valid and all 4 are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| AV | Phase 1 still listed "Add Linux CI build and real Linux smoke test" while also declaring Phase 1 Windows-only, which could prevent the phase from closing | **Fixed.** The Linux build and smoke test are removed from Phase 1 and belong solely to the separate Linux gate and tasks P1-07/P1-08. |
+| AW | The reference list described the historical repository as "documentation shape only", omitting the approved website reference | **Fixed.** Both permitted uses are now stated, with the prohibition on implementation copying retained. |
+| AX | The pre-creation task-ID record was left uncommitted in the main working tree, so it was absent from the new worktree and left main dirty | **Fixed.** The sequence is now: assign the ID and add the entry to the breakdown → **commit that planning record to the base ref the worktree is created from** → create the worktree from that base. Every other task edit stays inside the worktree. |
+| AY | The same task-ID rule needed its scope stated against rule 4 | **Fixed.** Rule 4 is scoped to implementation and task-scoped edits, with the pre-creation planning record as the single named exception. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)
