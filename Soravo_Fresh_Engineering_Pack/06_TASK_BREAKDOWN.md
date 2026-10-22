@@ -91,7 +91,7 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - P8-00: **Finalise ADR-0005 (binary host) before publishing.** Blocking: it is PROPOSED, and the no-card check plus an anonymous-download proof must be settled first.
 - P8-01: Create public `soravo-releases` repo or approve another host, per the ADR-0005 that P8-00 settles.
 - P8-02: Configure artifact upload and release notes workflow.
-- P8-03: Generate SHA-256SUMS and verify it.
+- P8-03: Generate SHA256SUMS and verify it.
 - P8-04: Optional minisign signing with private key outside CI/repo.
 - P8-05: Test installation from a fresh download.
 - P8-06: Publish Windows and Linux guides with security-warning disclosure.

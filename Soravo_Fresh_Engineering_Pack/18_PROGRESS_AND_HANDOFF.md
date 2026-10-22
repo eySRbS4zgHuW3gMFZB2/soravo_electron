@@ -222,6 +222,19 @@ An eleventh review against the final content returned 2 findings. **Both were va
 | AN | The release runbook checked that public links resolve but never compared the downloaded bytes with `SHA256SUMS`, and the artifact tested at step 12 is not the copy step 13 publishes | **Fixed.** Step 14 now downloads each published installer and verifies its SHA-256 against `SHA256SUMS`. A resolving link is not the same as a link serving the verified bytes. |
 | AO | The worktree policy permitted only task IDs already in the breakdown, so an unplanned fix could not create a compliant worktree before its ID existed | **Fixed.** A new task ID may be assigned and recorded in the breakdown **before** the worktree is created. An unplanned fix is not blocked from starting. |
 
+## Twelfth CodeRabbit review disposition — pull request #13
+
+A twelfth review against the final content returned 4 findings, and the GitHub App's own review of an earlier head returned 2 further distinct issues. **All 6 distinct findings were valid and all 6 are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| AP | The rollback's compatibility check required the previous deployment to write through the same paths while every writer was frozen, so it could not pass without an exception | **Fixed.** Customer writes stay frozen, and writability is verified with a controlled isolated test using a dedicated test account and a disposable record, or a documented test-only exception naming the write, its authorisation and its reversal. The check no longer unfreezes customer writers. |
+| AQ | The change-set verification step was worded as verifying "the replayed" change set, so an operator who took the preferred forward-fix path could skip identity verification | **Fixed.** The verification now explicitly applies to whichever path was taken — forward-fix or restore-then-replay — and an operator who follows the forward-fix path cannot skip it. |
+| AR | The worktree policy required a new task ID to be recorded in the breakdown **before** the worktree existed, while also requiring all task edits to happen inside the worktree — an ordering the policy could not satisfy | **Fixed.** The pre-creation task-ID entry is now defined as a planning record and the only exception to rule 4, and rule 4 is scoped to implementation and task-scoped edits. |
+| AS | The manifest's platform note still said Linux may not be built before P1-05 completed, contradicting the verification-build allowance in the same sentence | **Fixed.** The prohibition now names publication and support claims only, matching the implementation plan. |
+| AT | `05_IMPLEMENTATION_PLAN.md` and `06_TASK_BREAKDOWN.md` named the checksum manifest `SHA-256SUMS` while the release runbook creates and publishes `SHA256SUMS` | **Fixed.** `SHA256SUMS` is now the single canonical filename across every document. |
+| AU | The rollback procedure's staging-payment gate ran after the production hostname had already been deployed to | **Fixed in an earlier round:** the staging payment is a prerequisite, and step 7 is the production live-payment verification only. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)

@@ -34,7 +34,7 @@ A dedicated worktree and branch are required for:
 1. **One task, one worktree, one branch.** A worktree is used by exactly one task at a time.
 2. **Create the worktree from a known-good base** — normally the current `origin/main`, never a branch with uncommitted work.
 3. **Always create the worktree with an explicit named branch.** A worktree left on a detached HEAD is a defect: if the branch it was made from is deleted, the work becomes reachable only through the reflog and is easily lost. This repository currently holds worktrees on detached HEADs; that is the pattern this rule exists to end.
-4. **All edits for the task happen inside the worktree.** The main working tree is not edited during a worktree task.
+4. **All implementation and task-scoped edits for the task happen inside the worktree.** The main working tree is not edited during a worktree task, except for the single pre-creation task-ID entry described below.
 5. **Never touch another worktree's files, branch, index or stash.** Worktrees share one repository's object store and refs; the isolation is of the working tree, not of the history.
 6. **Never force-push, reset, rebase or delete a branch that another worktree holds.** Git will refuse most of these; where it does not, the agent must not do it.
 7. **Tests must pass in the worktree before integration.** A task that cannot demonstrate passing tests is not ready to merge. The one recorded exception is the release-packaging check during **Phase 0** (task P0-02): the check must exist, run and report while it is red for the documented missing-engine baseline, because the bundle layout is not implemented until P1-03. That exception applies to the packaging check alone and only in Phase 0; from Phase 1 onward the packaging check is mandatory and green. See `05_IMPLEMENTATION_PLAN.md` Phase 0, "The packaging-check baseline exception".
@@ -48,7 +48,7 @@ A dedicated worktree and branch are required for:
 
 **Branch.** `<type>/<task-id>-<slug>`, where `<type>` is one of `feature`, `fix`, `docs`, `chore` — matching the repository's existing branch convention, under which `main` stays linear and each piece of work merges as its own commit.
 
-**Task ID.** Use the breakdown IDs from `06_TASK_BREAKDOWN.md` (`P0-01`, `P1-03`, `P2-08`, and so on). A worktree without a task ID has no defined scope and cannot be reviewed. **A task that is not yet in the breakdown may be given a new ID, recorded in `06_TASK_BREAKDOWN.md` before the worktree is created** — an unplanned fix is not blocked from starting because its ID had to be invented first. The ID is assigned and recorded first, then the worktree is created against it.
+**Task ID.** Use the breakdown IDs from `06_TASK_BREAKDOWN.md` (`P0-01`, `P1-03`, `P2-08`, and so on). A worktree without a task ID has no defined scope and cannot be reviewed. **A task that is not yet in the breakdown may be given a new ID, recorded in `06_TASK_BREAKDOWN.md` before the worktree is created.** That pre-creation entry is a planning record and is the only exception to rule 4; the ID must exist before the worktree does, so it cannot be the worktree's first edit. An unplanned fix is not blocked from starting because its ID had to be invented first. The ID is assigned and recorded first, then the worktree is created against it, and every other task edit happens inside it.
 
 **Example.**
 

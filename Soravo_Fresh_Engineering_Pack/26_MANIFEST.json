@@ -52,7 +52,7 @@
       "Linux": "BLOCKED_NO_ENGINE_ARTIFACT",
       "macOS": "OUT_OF_SCOPE"
     },
-    "platform_status_note": "Linux remains an owner-approved launch target but is BLOCKED: the repository tracks a Windows CrispASR engine only. Task P1-05 must obtain, license, track and bundle a Linux engine before Linux may be built, published or claimed as supported. A Linux VERIFICATION build is permitted once P1-05 delivers the engine, because the Linux release gate cannot be satisfied without one; publishing a Linux artifact and describing Linux as supported stay prohibited until that whole gate passes.",
+    "platform_status_note": "Linux remains an owner-approved launch target but is BLOCKED: the repository tracks a Windows CrispASR engine only. Task P1-05 must obtain, license, track and bundle a Linux engine. A Linux VERIFICATION build is permitted once P1-05 delivers the engine, because the Linux release gate cannot be satisfied without one; PUBLISHING a Linux artifact, and describing Linux as supported, stay prohibited until that whole gate passes.",
     "monthly_usd": 12,
     "monthly_recurring": true,
     "monthly_device_limit": 3,

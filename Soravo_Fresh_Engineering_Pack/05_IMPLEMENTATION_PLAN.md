@@ -106,7 +106,7 @@ Gate: normal users cannot access admin API even by direct request; admin changes
 ## Phase 8 — Distribution, production cutover and launch
 - **Finalise ADR-0005 (binary distribution host) before publishing anything.** It is currently PROPOSED; the host, the no-card check and an anonymous-download proof must be settled first.
 - Publish artifacts to the selected public binary host.
-- SHA-256SUMS and optional minisign signatures. Verify a clean download and checksum from a second machine and network.
+- SHA256SUMS and optional minisign signatures. Verify a clean download and checksum from a second machine and network.
 - Windows installer warning copy and Linux installation guide.
 - Legal/privacy/support pages and refund/cancellation policy approved.
 - Make source repo private only after launch-source policy is settled; binary release host stays public.
