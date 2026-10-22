@@ -34,7 +34,7 @@ Desired steady state:
 - Old repo: `soravo_deprecated`.
 - Local active folder: `soravo`.
 
-**Order is fixed (ADR-0009; owner decision memo, decision 2).** Baseline CI and release-packaging checks must exist and be green in `soravo_electron` **before** any repository is renamed, and the rename checklist must be prepared and owner-reviewed first. The sequence is: backup and audit → baseline CI and release-packaging checks → rename checklist preparation → rename → post-rename verification.
+**Order is fixed (ADR-0009; owner decision memo, decision 2).** Baseline CI must be green in `soravo_electron` **before** any repository is renamed. The release-packaging check is the single documented exception: it must exist, run, and report, with its red result recorded as the known missing-engine baseline. Any other packaging-check failure blocks the rename. The rename checklist must be prepared and owner-reviewed first. The sequence is: backup and audit → baseline CI and release-packaging checks → rename checklist preparation → rename → post-rename verification.
 
 Rename order matters because GitHub repository names must be unique:
 1. Confirm both repositories and local clones are backed up and clean.

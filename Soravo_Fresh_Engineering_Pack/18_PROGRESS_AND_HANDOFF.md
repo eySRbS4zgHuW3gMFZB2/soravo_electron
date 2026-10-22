@@ -111,6 +111,19 @@ All 15 inline findings and the summary's retained security concern were checked 
 | 15 | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: an unqualified snapshot restore can discard post-cutover records | **Fixed (major).** The recovery sequence is now: freeze writes, export post-snapshot records, apply a tested forward-fix or merge, restore only as a last resort, and verify no exported record is missing. |
 | 16 | Summary, security architecture review: a content classification must not remove a route's authorization | **Fixed.** Route sensitivity and required authorization are now recorded separately from the Preserve/Redirect/Retire/Block content disposition, and are carried over unchanged. |
 
+## Second CodeRabbit review disposition — pull request #13
+
+A second review was run on the revised branch. It returned 9 findings covering 6 distinct issues. **All were valid and all were fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| A | `05_IMPLEMENTATION_PLAN.md`: "baseline CI green **or** failures documented" was broader than the single packaging exception | **Fixed.** The gate now requires every non-packaging baseline check to be green, and allows red only for the packaging check's documented missing-engine result. |
+| B | `01_AUTHORITY_AND_SOURCE_OF_TRUTH.md` and `15_ADR_INDEX.md`: still required the packaging check to be green, contradicting the Phase 0 exception | **Fixed.** Both now state that baseline CI must be green and the packaging check must exist, run and report, with any other packaging failure blocking the rename. |
+| C | `28_GIT_WORKTREE_POLICY.md`: `git worktree add` left the new task branch tracking `origin/main` | **Fixed.** The command now uses `--no-track`, and the policy documents setting the upstream to the task branch with an explicit `git push -u origin <branch>`. This was observed for real during this publication. |
+| D | `21_RENAME_AND_MIGRATION_RUNBOOK.md`: the checklist required a production deploy during the rename | **Fixed.** It now requires a preview deployment plus a read-only check that the existing production deployment is unchanged, and states that a production deploy during a rename is forbidden. |
+| E | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: the keepalive gate blocked cutover on an undecided workflow | **Fixed.** A successful keepalive run is required only once ADR-0007 is accepted; otherwise the approved project-health monitoring check is required instead. |
+| F | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: the rollback export covered creates but not updates or deletes | **Fixed.** The change set now covers every post-snapshot create, update and delete with counts by operation, snapshot restore requires a separately available and verified replay procedure, and the replay is verified against the change set. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)

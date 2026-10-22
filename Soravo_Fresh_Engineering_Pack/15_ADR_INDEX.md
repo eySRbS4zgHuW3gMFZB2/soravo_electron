@@ -28,7 +28,7 @@ Preferred candidate: a separate public `soravo-releases` repository containing a
 **Status:** ACCEPTED intention, not yet executed  
 Rename old repo `soravo` → `soravo_deprecated`; rename active repo `soravo_electron` → `soravo`; rename local folder. Must be done sequentially with backup and URL updates.
 
-**Ordering constraint (added 2026-10-22, see ADR-0008):** the rename is **not** the first Phase 0 action. Baseline CI and release-packaging checks must exist and be green in `soravo_electron` before any repository is renamed, so that a renamed repository inherits working, verifiable automation.
+**Ordering constraint (added 2026-10-22, see ADR-0008):** the rename is **not** the first Phase 0 action. Baseline CI must be green in `soravo_electron` before any repository is renamed. The release-packaging check is the single documented exception: it must exist, run, and report, with its red result recorded as the known missing-engine baseline. Any other packaging-check failure blocks the rename, so that a renamed repository inherits working, verifiable automation.
 
 ## ADR-0007 — Keepalive
 **Status:** PROPOSED  

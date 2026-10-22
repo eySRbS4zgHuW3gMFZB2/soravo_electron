@@ -27,7 +27,7 @@ Deliverables, in order:
 
 The rename gate therefore requires *proof that the check works*, not *proof that the engine ships*. Requiring green in Phase 0 would be circular: the bundle layout is not chosen until P1-03, so nothing could satisfy it before the rename. If the packaging check is red in Phase 0 for a reason **other** than the known missing-engine baseline — for example it fails to run at all — that is a genuine failure and the rename must not proceed.
 
-Gate: repo identity and branch/remote verified; no accidental source deletion; baseline CI green **or** failures documented with the packaging check's red result explicitly recorded as the known baseline; rename checklist reviewed by the owner; production site demonstrably unchanged.
+Gate: repo identity and branch/remote verified; no accidental source deletion; **every non-packaging baseline CI check green**; the release-packaging check **exists, runs, and reports**, with its red result explicitly recorded as the known missing-engine baseline — a packaging check that is red for any other reason, or that fails to run at all, blocks the rename; rename checklist reviewed by the owner; production site demonstrably unchanged.
 
 ## Phase 1 — Desktop release readiness (blocker before selling)
 - Record the CrispASR engine's exact binary path, version, SHA-256 and licence, re-confirming the audited finding that the tracked location is `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/` and that `third-party/bin/` is untracked.

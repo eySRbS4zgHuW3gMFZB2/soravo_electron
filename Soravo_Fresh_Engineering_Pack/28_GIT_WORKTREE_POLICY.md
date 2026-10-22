@@ -54,8 +54,16 @@ A dedicated worktree and branch are required for:
 
 ```
 git fetch origin
-git worktree add .worktrees/P1-03-engine-packaging -b feature/P1-03-engine-packaging origin/main
+git worktree add --no-track .worktrees/P1-03-engine-packaging -b feature/P1-03-engine-packaging origin/main
 ```
+
+`--no-track` matters. Without it, git sets the new branch's upstream to `origin/main`, so a later bare `git push` can target `main` instead of the task branch. The upstream is set deliberately, to the task branch, at push time:
+
+```
+git push -u origin feature/P1-03-engine-packaging
+```
+
+Always name the task branch explicitly when pushing.
 
 ## Lifecycle
 

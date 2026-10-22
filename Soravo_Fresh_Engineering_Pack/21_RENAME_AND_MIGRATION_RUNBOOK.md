@@ -2,7 +2,7 @@
 
 **Do not execute automatically.** Repository rename changes URLs and integrations. Owner must approve and both repos must be backed up.
 
-**Order is fixed (owner decision memo, decision 2; ADR-0009):** the rename happens **after** baseline CI and release-packaging checks exist and are green in the current active repository. Renaming first would hand the renamed repository automation and secret scoping that has never been proven to work.
+**Order is fixed (owner decision memo, decision 2; ADR-0009):** the rename happens **after** baseline CI is green and the release-packaging check exists, runs, and reports in the current active repository. The check may be red only for the documented missing-engine baseline; any other packaging-check failure blocks the rename. Renaming first would hand the renamed repository automation and secret scoping that has never been proven to work.
 
 ## Desired names
 - Historical repo: `soravo` → `soravo_deprecated`.
@@ -42,7 +42,7 @@ Each item is verified individually. **Do not assume GitHub's redirect behaviour 
 - [ ] `gh` commands resolve the renamed repository correctly.
 - [ ] GitHub Actions workflows are listed and run; secrets and variables are still scoped to the repository and still resolve.
 - [ ] Required status checks are still attached to `main`; branch protection is intact.
-- [ ] Cloudflare Pages project source link (if git-integrated) points at the renamed repository; a preview and a production deploy both succeed.
+- [ ] Cloudflare Pages project source link (if git-integrated) points at the renamed repository; a **preview** deployment succeeds, and a **read-only** check confirms the existing production deployment at `soravo.xyz` is unchanged and still serving. **Do not deploy to the production hostname during a repository rename** — production cutover is a separate, explicitly approved step (`27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`).
 - [ ] OAuth and deep-link allowlists list the new repository URL where relevant.
 - [ ] Release workflow target repository and release links resolve.
 - [ ] README, `AGENTS.md`, docs, `progress.md` and code contain no stale `soravo_electron` references.

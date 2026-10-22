@@ -57,7 +57,7 @@ Every item must be checked and evidenced. An unchecked item blocks cutover.
 - [ ] Production secrets are set in the production secret store and are absent from the repository, build output and logs.
 - [ ] Preview and production environments are demonstrably separate; preview never reaches production Supabase or live Razorpay.
 - [ ] Database migrations have been applied to production through the migration path, with a recorded rollback or forward-fix plan.
-- [ ] The keepalive workflow is scheduled, has been observed to succeed, and its failure path notifies the owner.
+- [ ] **If ADR-0007 has been accepted**, the keepalive workflow is scheduled, has been observed to succeed, and its failure path notifies the owner. **If ADR-0007 is still PROPOSED**, the approved project-health monitoring check is in place and has been observed instead — a keepalive run is not required for an undecided workflow.
 - [ ] Backup and restore expectations for production data are recorded.
 
 **Cutover mechanics**
@@ -93,10 +93,10 @@ Rollback must be achievable within the incident window without a code change.
 2. Disable the redirects, returning the old paths to the previous site's content.
 3. **Recover the data safely.** An unqualified snapshot restore can discard real accounts, payments and entitlements created after the snapshot was taken. The recovery sequence is:
    a. **Freeze writes** to the replacement's data paths (accounts, entitlements, payments) so that no new records appear during recovery.
-   b. **Export every record created after the snapshot**, and record the count, so that nothing created after the snapshot can be lost silently.
-   c. **Apply a tested forward-fix or merge procedure** to carry those post-snapshot records forward. This is the preferred outcome, because it preserves real payments and accounts.
-   d. **Restore the snapshot only if** the forward-fix or merge cannot be applied or verified. Restoring is a last resort, and it must be followed by replaying the exported post-snapshot records through the same tested procedure.
-   e. Verify record counts against the export from step (b): no exported record may be missing afterwards.
+   b. **Export a replayable change set for every post-snapshot create, update, and delete**, and record counts by operation, so that snapshot restoration can preserve all post-snapshot changes. Creates alone are not enough: renewals, refunds and entitlement changes are updates to existing rows, and a snapshot restore would reverse them.
+   c. **Apply a tested forward-fix or merge procedure** to carry that change set forward. This is the preferred outcome, because it preserves real payments and accounts.
+   d. **Restore the snapshot only if** the forward-fix or merge cannot be applied or verified **and** a separately available, tested replay procedure for the exported change set is available and verified. Restoring is a last resort, and it must be followed by replaying that change set through the verified replay procedure. A procedure that is unavailable or unverified is not a fallback.
+   e. **Verify the replayed change set** from step (b): every create, update, and delete must be applied, and the resulting records and counts must match the change set.
    "Reconcile any legitimate records" is not a recovery method on its own, and must not be used as one.
 4. Verify home, pricing, download, sign-in and business email again.
 5. Record what happened, what was rolled back, and what must be fixed before the next attempt.
