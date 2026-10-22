@@ -265,6 +265,35 @@ A fifteenth review against the final content returned 3 findings covering 2 dist
 | BC | The release task required publishing a Linux installation guide during a Windows-only release, while Linux publication and support claims remain blocked until the Linux gate passes | **Fixed.** The Windows guide is published now; the Linux guide is published only after the Linux release gate passes. |
 | BD | The release runbook uploaded the artifacts to the public host as a normal release, so the bytes customers could fetch were only verified after they were already reachable | **Fixed.** The upload is now a **draft** on the public host: the hosted draft is downloaded and its checksum verified **before** it is published, and the public links and the published asset are re-checked from a logged-out browser afterwards. |
 
+## Fourteenth CodeRabbit review disposition — pull request #13
+
+A fourteenth review against the final content returned 3 findings. **All 3 were valid and all 3 are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| AZ | The rollback's compatibility check required the previous deployment to write through the same paths while every production writer was frozen, so it could not pass without an exception that was never specified | **Fixed.** Customer writes stay frozen, and writability is verified with a controlled isolated test using a dedicated test account and a disposable record, or a documented test-only exception naming the write, its authorisation and its reversal. The check no longer unfreezes customer writers. |
+| BA | The change-set verification step was worded as verifying "the replayed" change set, so an operator who took the preferred forward-fix path could skip identity verification | **Fixed.** The verification now explicitly applies to whichever path was taken — forward-fix or restore-then-replay — and an operator who follows the forward-fix path cannot skip it. |
+| BB | The worktree policy required a new task ID to be recorded in the breakdown before the worktree existed, while also requiring all task edits to happen inside the worktree — an ordering the policy could not satisfy | **Fixed.** The pre-creation task-ID entry is now defined as a planning record and the only exception to rule 4, and rule 4 is scoped to implementation and task-scoped edits. |
+
+## Fifteenth CodeRabbit review disposition — pull request #13
+
+A fifteenth review against the final content returned 3 findings covering 2 distinct issues. **Both were valid and both are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| BC | The release task required publishing a Linux installation guide during a Windows-only release, while Linux publication and support claims stay blocked until the Linux release gate passes | **Fixed.** The Windows guide is published now; the Linux guide is published only after the Linux release gate passes. |
+| BD | The release runbook uploaded the artifacts to the public host as a normal release, so the bytes customers could fetch were only verified after they were already reachable | **Fixed.** The upload is now a draft on the public host: the hosted draft is downloaded and its checksum verified before it is published, and the public links and the published asset are re-checked from a logged-out browser afterwards. |
+
+## Sixteenth CodeRabbit review disposition — pull request #13
+
+A sixteenth review against the final content returned 3 findings. **All 3 were valid and all 3 are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| BE | The rollback's compatibility check required the previous deployment to write while every writer was frozen | **Fixed.** Customer writes stay frozen; writability is verified with a controlled isolated test or a documented test-only exception. |
+| BF | The change-set verification only applied to the replayed path, so an operator following the forward-fix path could skip identity verification | **Fixed.** Verification now applies to whichever path was taken. |
+| BG | The worktree policy required a task ID to be recorded in the breakdown before the worktree existed, while requiring all task edits inside the worktree | **Fixed.** The pre-creation ID entry is now a planning record and the only exception to rule 4. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)

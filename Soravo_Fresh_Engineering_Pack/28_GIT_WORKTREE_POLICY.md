@@ -102,6 +102,7 @@ Always name the task branch explicitly when pushing.
 - Record the merge commit SHA in the progress record.
 
 ### 6. Clean up
+- **Inspect the worktree for ignored files before removing it.** `git worktree remove` deletes the entire directory, including files Git does not track. Ignored files — build output, editor state, local notes, downloaded artifacts — are removed with the directory even though `git status` reports a clean tree. List them first (`git ls-files --others --ignored --exclude-standard`), preserve any that are needed, and then remove the worktree.
 - Remove the worktree: `git worktree remove <path>` (add `--force` only if the tree is genuinely clean of uncommitted work and that is recorded).
 - **`git worktree prune` is repository-wide and can remove another task's registration.** Before every prune, run `git worktree list --porcelain` and inspect it: for each entry marked `prunable`, record its HEAD, and create a rescue branch for any entry on a detached HEAD that still holds work. Only then prune. This applies to routine cleanup, not only to recovery.
 - Delete the local branch once it is merged and pushed.
@@ -158,8 +159,9 @@ A task is ready to integrate only when all of the following are recorded:
 - the base SHA the branch was created from;
 - the exact commands run and their actual output;
 - the review performed and how findings were triaged;
-- confirmation that the change is scoped to the task and contains no secrets;
-- the merge commit SHA, after integration.
+- confirmation that the change is scoped to the task and contains no secrets.
+
+The merge commit SHA is recorded **after** integration, not before. It cannot exist in the pre-integration evidence list, because it is produced by the merge itself. After integration, the progress record is updated with the merge commit SHA and the task is marked complete.
 
 ## Audit
 
