@@ -52,7 +52,27 @@ The engine is bundled into the installed application via Tauri bundle.resources 
 
 This ADR additionally records the release gate: **no release until a clean-machine install, with no developer tools and no source tree, proves the app locates and launches the bundled engine.** Redistribution rights for every bundled binary and DLL must be confirmed before bundling.
 
-**Platform scope within this ADR.** The repository currently tracks a Windows engine only, at `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`. There is no Linux CrispASR executable and no Linux shared-library set, and `find_crispasr_binary` resolves `crispasr.exe` on Windows but `crispasr` elsewhere. **Linux is therefore BLOCKED**, not merely unproven, until a Linux engine artifact is obtained, licensed, tracked and bundled (task P1-05) and a clean-machine Linux install proves it launches. This ADR must also record the Linux engine's location and licence when it exists.
+**Platform scope within this ADR.** The repository tracks a Windows engine at
+`third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/` and a Linux
+engine at `third-party/crispasr/extracted/crispasr-linux-x86_64-cpu/`.
+`find_crispasr_binary` resolves `crispasr.exe` on Windows but `crispasr` on
+Linux, and checks `resource_dir/crispasr/` (Windows) and
+`resource_dir/crispasr-linux/` (Linux) first on installed machines.
+
+**Linux engine (task P1-05).** Obtained from CrispASR v0.8.44:
+`crispasr-linux-x86_64.tar.gz` (~41 MB, AVX2 CPU baseline).
+- SHA-256: `9754A21D00463FABBD61EFA27D91E2103357B95FF52A8DE8208D33C6569285CE`
+- License: MIT (`LICENSE` in bundle, `THIRD_PARTY_NOTICES.txt` documents
+  ggml MIT, llamafile/sgemm MIT, OpenBLAS BSD-3, libgomp GPL-3.0+GCC-exception)
+- Tracked at: `third-party/crispasr/extracted/crispasr-linux-x86_64-cpu/`
+- Bundled files: `crispasr`, `crispasr-quantize`, `libopenblas.so.0`,
+  `libgomp.so.1`, `libgfortran.so.5`, `libquadmath.so.0`, `libc2pa_c.so`,
+  `LICENSE`, `THIRD_PARTY_NOTICES.txt`
+
+**Release gate:** No Linux release until a clean-machine Linux install (no
+developer tools, no source tree) proves the app locates and launches the
+bundled engine and can dictate. This gate is NOT yet verified — task P1-08
+remains open.
 
 ## ADR template
 - Context

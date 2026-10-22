@@ -488,6 +488,14 @@ fn find_crispasr_binary(roots: &[std::path::PathBuf]) -> Option<std::path::PathB
         return Some(bundled);
     }
 
+    // Linux-specific bundled layout: resource_dir/crispasr-linux/crispasr
+    if cfg!(target_os = "linux") {
+        let bundled_linux = resource_dir.join("crispasr-linux").join("crispasr");
+        if bundled_linux.exists() {
+            return Some(bundled_linux);
+        }
+    }
+
     // Developer-machine layout: npm run fetch:asr relocates the exe into
     // third-party/bin/, which is git-ignored.
     for root in roots {
@@ -2647,6 +2655,49 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// On Linux, the bundled engine is `resource_dir/crispasr-linux/crispasr`
+    /// (not `crispasr.exe`). This test verifies the bundled layout is found.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn asr_lookup_finds_linux_bundled_binary() {
+        let dir = std::env::temp_dir().join(format!("soravo-asr-linux-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let linuxDir = dir.join("crispasr-linux");
+        std::fs::create_dir_all(&linuxDir).unwrap();
+        std::fs::write(linuxDir.join("crispasr"), b"linux-stub").unwrap();
+
+        let found = find_crispasr_binary(&[dir.clone()]).unwrap();
+        assert_eq!(
+            std::fs::read(&found).unwrap(),
+            b"linux-stub",
+            "linux bundled engine should be found"
+        );
+        assert!(
+            found.to_string_lossy().contains("crispasr-linux"),
+            "should find crispasr-linux directory"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// On Linux, `find_crispasr_binary` must not return `crispasr.exe` from
+    /// the Windows `crispasr/` directory, since that binary cannot run.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn asr_lookup_rejects_windows_exe_on_linux() {
+        let dir = std::env::temp_dir().join(format!("soravo-asr-winexe-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let winDir = dir.join("crispasr");
+        std::fs::create_dir_all(&winDir).unwrap();
+        std::fs::write(winDir.join("crispasr.exe"), b"windows-stub").unwrap();
+
+        let found = find_crispasr_binary(&[dir.clone()]);
+        assert!(
+            found.is_none(),
+            "Windows crispasr.exe should not be usable on Linux"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
     /// The dictionary, end to end, on real speech.

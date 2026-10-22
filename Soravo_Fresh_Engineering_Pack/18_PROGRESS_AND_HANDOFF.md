@@ -432,3 +432,75 @@ Findings and plan reported to owner. Awaiting approval before implementation.
 5. VC++ DLLs co-located with engine — FIXED
 
 ### Linux: BLOCKED (no Linux engine)
+## P1-05 session — 2026-10-22 (Linux CrispASR packaging — AppImage)
+
+**Worktree:** .worktrees/P1-05-linux-engine · **Branch:** chore/P1-05-linux-engine · **Base:** 4b953f5 (origin/main)
+
+### Implementation completed
+
+- ADR-0010 updated: Linux engine location and licence recorded. Windows engine at
+  third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/; Linux engine at
+  third-party/crispasr/extracted/crispasr-linux-x86_64-cpu/ (CrispASR v0.8.44,
+  crispasr-linux-x86_64.tar.gz, ~41 MB, AVX2 baseline, SHA-256:
+  9754A21D00463FABBD61EFA27D91E2103357B95FF52A8DE8208D33C6569285CE, MIT licensed).
+- tauri.conf.json: bundle.resources now maps both Windows engine
+  (crispasr-windows-x86_64-cpu/ -> crispasr/) and Linux engine
+  (crispasr-linux-x86_64-cpu/ -> crispasr-linux/). Added bundle.linux.targets: ["appimage"].
+- lib.rs: find_crispasr_binary() checks resource_dir/crispasr/ (Windows) first,
+  then resource_dir/crispasr-linux/crispasr/ (Linux, gated to target_os = "linux"),
+  then falls back to dev-mode paths.
+- fetch-asr.mjs: Added --platform linux flag to download the Linux CrispASR
+  .tar.gz into third-party/crispasr/extracted/crispasr-linux-x86_64-cpu/.
+- verify-packaging.mjs: Added Linux engine file checks, crispasr-linux/ bundle
+  directory check, Linux executable permission (+x) check, Windows/VC++ checks unchanged.
+- .github/workflows/packaging.yml: Added verify-linux-packaging job on ubuntu-latest
+  that installs system deps, builds frontend, builds Tauri AppImage, verifies bundle config
+  and bundle contents.
+- lib.rs tests: Added asr_lookup_finds_linux_bundled_binary (Linux-only) and
+  asr_lookup_rejects_windows_exe_on_linux (Linux-only).
+- No application source features changed. No website/auth/payment work. No Windows
+  packaging changes (Windows bundle resources, MSI target, bundleVCRuntime all unchanged).
+- No secrets bundled. Only engine binaries, shared libraries, LICENSE and
+  THIRD_PARTY_NOTICES.txt are bundled.
+
+### Evidence
+
+- Linux engine downloaded from CrispASR v0.8.44 release:
+  https://github.com/CrispStrobe/CrispASR/releases/download/v0.8.44/crispasr-linux-x86_64.tar.gz
+  SHA-256: 9754A21D00463FABBD61EFA27D91E2103357B95FF52A8DE8208D33C6569285CE
+- Linux engine bundled files: crispasr (30.5 MB), crispasr-quantize (27.0 MB),
+  libopenblas.so.0 (38.4 MB), libgomp.so.1 (317 kB), libgfortran.so.5 (3.0 MB),
+  libquadmath.so.0 (293 kB), libc2pa_c.so (22.1 MB), LICENSE, THIRD_PARTY_NOTICES.txt.
+- License: MIT (ggml authors). Third-party notices: MIT, BSD-3, GPL-3.0+GCC-exception
+  (libgomp). Redistribution permitted with copyright notice included.
+- All tracked files present in git.
+
+### Tests run
+
+- cargo test — all tests pass (need to re-run after edits).
+- npm run typecheck — need to run.
+- Packaging verification script — need to run.
+- Clean-machine Linux test (P1-08): NOT VERIFIED. No clean Linux VM available.
+  CI builds on ubuntu-latest but runtime transcription on a real Linux host was not
+  performed. Do not claim runtime verification.
+
+### Remaining risks
+
+- glibc >= 2.35 required for prebuilt binary (built on Ubuntu 22.04).
+- AVX2 CPU baseline — pre-Haswell CPUs need crispasr-linux-x86_64-cpu-legacy.
+- libgomp redistribution carries GPL-3.0+GCC-exception corresponding-source obligation.
+- AppImage portability not verified on real Linux host.
+
+### CodeRabbit findings addressed
+
+1. VC++ DLL co-location — FIXED (all VC++ DLLs in crispasr/ on Windows).
+2. Tauri CLI pinned to lockfile — FIXED (added to devDependencies).
+3. Setup-node SHA pinned — FIXED (previous task).
+4. --bundle requires path — FIXED.
+5. Full bundled-path lookup — FIXED (resource_dir.join("crispasr-linux").join("crispasr")).
+6. CR bytes in progress log — FIXED.
+
+### Next task
+
+Run cargo test, typecheck, packaging verification, then push PR and await CodeRabbit review.
+

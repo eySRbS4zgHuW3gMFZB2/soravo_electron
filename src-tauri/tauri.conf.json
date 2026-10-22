@@ -60,7 +60,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/": "crispasr"
+      "../third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/": "crispasr",
+      "../third-party/crispasr/extracted/crispasr-linux-x86_64-cpu/": "crispasr-linux"
     },
     "externalBin": [],
     "windows": {
