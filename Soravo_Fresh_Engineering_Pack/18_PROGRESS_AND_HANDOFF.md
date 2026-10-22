@@ -124,6 +124,19 @@ A second review was run on the revised branch. It returned 9 findings covering 6
 | E | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: the keepalive gate blocked cutover on an undecided workflow | **Fixed.** A successful keepalive run is required only once ADR-0007 is accepted; otherwise the approved project-health monitoring check is required instead. |
 | F | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: the rollback export covered creates but not updates or deletes | **Fixed.** The change set now covers every post-snapshot create, update and delete with counts by operation, snapshot restore requires a separately available and verified replay procedure, and the replay is verified against the change set. |
 
+## Third CodeRabbit review disposition — pull request #13
+
+The GitHub App posted a further review against the revised branch. It raised 8 comments, of which 2 were re-statements of findings already fixed and **6 were new**. **All 6 new findings were valid and all 6 are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| G | Three documents cited `P1-04` for the Linux engine task after the task list was renumbered, so the Linux engine is actually `P1-05` | **Fixed.** Corrected in `00_README.md`, `02_PRODUCT_REQUIREMENTS.md` and `04_TECHNICAL_DESIGN.md`. This was a real inconsistency introduced when the Linux task was inserted. |
+| H | The Phase 1 gate only required the Windows clean-machine test, so the phase could look complete while Linux was unverified | **Fixed.** Phase 1 is now explicitly **Windows-only**, and a separate Linux release gate is defined that applies only once P1-05 delivers a Linux engine. |
+| I | `13_RELEASE_RUNBOOK.md` step 6 required a Linux build unconditionally, contradicting the Linux block | **Fixed.** The step now builds only platforms with a supported engine. |
+| J | `13_RELEASE_RUNBOOK.md` offered a `dist/*.exe` checksum glob that omitted the MSI | **Fixed.** The glob now covers both extensions, and the requirement states that every published installer must have a checksum entry. |
+| K | The rollback rehearsal did not require exercising the post-migration schema, so a rollback could fail before service verification | **Fixed.** The rehearsal must now prove the previous deployment can run against the resulting schema, or that the migration's rollback and forward-fix path works. |
+| L | The replay verification compared counts, and equal counts can hide a missing record behind an unrelated one | **Fixed.** Verification is now by record identity — stable record IDs and relevant fields — with an explicit duplicate check. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)

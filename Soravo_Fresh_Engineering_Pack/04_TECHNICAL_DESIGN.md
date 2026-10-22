@@ -6,7 +6,7 @@
 - Tauri v2 shell; Rust backend; React 18 + TypeScript + Vite renderer.
 - Local SQLite history and `tauri-plugin-store` settings remain local.
 - Current CrispASR integration is preserved. No engine migration in this project.
-- **Linux has no engine.** The repository tracks a Windows engine only (`third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`), and `find_crispasr_binary` resolves `crispasr.exe` on Windows and `crispasr` elsewhere. A Linux build today would install and then fail to transcribe. Linux stays BLOCKED until a Linux engine artifact is obtained, licensed, tracked and bundled (task P1-04) and proven by a clean-machine Linux install.
+- **Linux has no engine.** The repository tracks a Windows engine only (`third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`), and `find_crispasr_binary` resolves `crispasr.exe` on Windows and `crispasr` elsewhere. A Linux build today would install and then fail to transcribe. Linux stays BLOCKED until a Linux engine artifact is obtained, licensed, tracked and bundled (task P1-05) and proven by a clean-machine Linux install.
 - The renderer is untrusted for authorization. Any license decision that matters must be verified in Rust and/or by the server.
 - Commercial integration must not route audio/transcripts through Supabase, Cloudflare, Razorpay, Resend or analytics.
 

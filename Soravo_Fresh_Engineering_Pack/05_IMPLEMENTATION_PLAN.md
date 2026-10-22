@@ -38,7 +38,21 @@ Gate: repo identity and branch/remote verified; no accidental source deletion; *
 - **Clean-machine install test:** install on a Windows machine with no developer tools and no source tree, and prove the app locates and launches the bundled engine with no `npm run fetch:asr` step and can dictate.
 - Add Linux CI build and real Linux smoke test; determine supported distro/package formats.
 - Add app version display, crash-safe logging and privacy-preserving diagnostics.
-Gate: clean VM install works without dev tools and can dictate using the documented model flow, with the engine coming from the bundle.
+Gate: clean Windows VM install works without dev tools and can dictate using the documented model flow, with the engine coming from the bundle; the release-packaging check is green.
+
+### Linux is a separate gate, not part of Phase 1
+
+**Phase 1 is Windows-only.** It is complete when the Windows gate above is met. Linux is BLOCKED and is **not** implied by a green Phase 1, so a phase cannot appear complete while Linux remains unverified.
+
+Linux has its own gate, which applies only once **P1-05** has delivered a tracked, licensed Linux engine artifact:
+
+- the Linux engine's SHA-256, origin and licence are recorded, and redistribution is confirmed;
+- the Linux bundle contains the engine and its shared libraries;
+- a Linux artifact builds on a clean supported runner, with the supported distribution and package format recorded;
+- a clean-machine Linux install launches the bundled engine and transcribes;
+- the microphone, hotkey hold/release, cancellation, text injection and offline path are verified on Linux.
+
+Until that gate is met, Linux may not be built, published, or described as supported. The Windows release may proceed independently.
 
 ## Phase 2 — Commercial contracts and service setup
 - Confirm domain and product email sender ownership. Record existing DNS, MX, SPF, DKIM and DMARC exactly, so that any later DNS move can reproduce them and business email survives.
