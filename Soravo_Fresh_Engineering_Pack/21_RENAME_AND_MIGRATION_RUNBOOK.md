@@ -1,0 +1,53 @@
+# Repository and Local Folder Rename Runbook
+
+**Do not execute automatically.** Repository rename changes URLs and integrations. Owner must approve and both repos must be backed up.
+
+**Order is fixed (owner decision memo, decision 2; ADR-0009):** the rename happens **after** baseline CI and release-packaging checks exist and are green in the current active repository. Renaming first would hand the renamed repository automation and secret scoping that has never been proven to work.
+
+## Desired names
+- Historical repo: `soravo` → `soravo_deprecated`.
+- Active Tauri repo: `soravo_electron` → `soravo`.
+- Local active folder: rename to `soravo`.
+
+## Preconditions
+- **Baseline CI and the release-packaging check exist and are green in `soravo_electron`** (task P0-02).
+- **The rename checklist is prepared and owner-reviewed** (task P0-03): every integration a URL change could break, listed — GitHub Actions workflows and their secret scoping, `gh` invocations, the Cloudflare Pages source link, OAuth and deep-link allowlists, release links, and hard-coded GitHub URLs in README, docs and code.
+- Confirm exact repository identities in GitHub.
+- Both repos have clean working trees or all changes committed/backed up.
+- Confirm the old repo name `soravo_deprecated` is available.
+- Save current remotes and important branch/PR references.
+- Confirm Cloudflare Pages Git integration and GitHub Actions secrets will be updated.
+- Record current default branch and latest commit SHA for each repo.
+
+## Sequence
+1. Rename old repo `soravo` to `soravo_deprecated` in GitHub repository Settings.
+2. Verify old repo redirects and new name exists.
+3. Rename active `soravo_electron` to `soravo`.
+4. Verify active repository URL and default branch.
+5. On local machine, close IDE and terminals using the folder.
+6. Rename the local folder using file manager or shell; do not move/delete `.git`.
+7. In the renamed folder, run `git remote -v`; set `origin` to the new active URL if needed.
+8. Run `git fetch --all --prune`, `git status --short --branch`, and inspect recent log.
+9. Update README clone commands and internal absolute GitHub URLs.
+10. Update Cloudflare Pages connected repo if necessary; test preview deploy.
+11. Check OAuth callback/allowed URLs, GitHub Actions secrets, release workflow target repo and any webhooks.
+12. Verify all links and CI.
+13. Update progress/handoff with new canonical names.
+
+## Post-rename verification checklist
+Each item is verified individually. **Do not assume GitHub's redirect behaviour carries every third-party integration through a rename.**
+
+- [ ] `git remote -v` shows the new URL and fetch/push work.
+- [ ] All local branches still track their remote counterparts; no branch lost.
+- [ ] `gh` commands resolve the renamed repository correctly.
+- [ ] GitHub Actions workflows are listed and run; secrets and variables are still scoped to the repository and still resolve.
+- [ ] Required status checks are still attached to `main`; branch protection is intact.
+- [ ] Cloudflare Pages project source link (if git-integrated) points at the renamed repository; a preview and a production deploy both succeed.
+- [ ] OAuth and deep-link allowlists list the new repository URL where relevant.
+- [ ] Release workflow target repository and release links resolve.
+- [ ] README, `AGENTS.md`, docs, `progress.md` and code contain no stale `soravo_electron` references.
+- [ ] Business email and DNS records are unchanged and still delivering.
+- [ ] The live production site at `soravo.xyz` is unchanged and still serving.
+
+## Rollback
+GitHub redirects may preserve some old URLs but do not assume every third-party integration follows. If workflows fail, fix remote/config URLs; do not rename back without recording why. Do not delete either repository.
