@@ -13,7 +13,7 @@ like something else entirely.
 ## Engineering pack (read before commercial-release work)
 
 This repository carries a `Soravo_Fresh_Engineering_Pack/` directory: a
-28-document engineering control plane for the commercial release of this
+31-document engineering control plane for the commercial release of this
 app (website, accounts, entitlements, payments, dashboards, release
 pipeline). It is the authority for that work, and it has a **mandatory
 reading gate** — see `Soravo_Fresh_Engineering_Pack/00_README.md`.
