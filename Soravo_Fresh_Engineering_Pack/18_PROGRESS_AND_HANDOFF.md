@@ -137,6 +137,17 @@ The GitHub App posted a further review against the revised branch. It raised 8 c
 | K | The rollback rehearsal did not require exercising the post-migration schema, so a rollback could fail before service verification | **Fixed.** The rehearsal must now prove the previous deployment can run against the resulting schema, or that the migration's rollback and forward-fix path works. |
 | L | The replay verification compared counts, and equal counts can hide a missing record behind an unrelated one | **Fixed.** Verification is now by record identity — stable record IDs and relevant fields — with an explicit duplicate check. |
 
+## Fourth CodeRabbit review disposition — pull request #13
+
+A fourth review, run against the final content including the CI workflow, returned 6 findings covering 4 distinct issues. **All 4 were valid and all 4 are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| M | The CI policy required Linux build/test jobs that Phase 1 prohibits, so Linux would have become a required check blocking the Windows-only release | **Fixed.** Linux jobs are deferred until task P1-05 delivers a Linux engine and the Linux release gate passes, and must not be a required check before then. The release workflow now builds only platforms with a supported engine. |
+| N | The "Clean Linux install" item in the definition of done could not be ticked while Linux is blocked, which would block an approved Windows-only release | **Fixed.** The item now applies only to a Linux release and explicitly does not block the Windows release gate. |
+| O | The cutover step ran a **Razorpay test-mode** payment against the **production** ledger, which could record a paid production entitlement with no live charge | **Fixed.** The test-mode payment now runs against staging before cutover and verifies only staging records. Production is verified with a separately approved live payment, with approval, reconciliation and refund evidence recorded. This was a genuine revenue-integrity defect. |
+| P | The checksum command wrote `dist/`-prefixed paths into `SHA256SUMS`, which breaks `sha256sum -c` from a clean download directory, and listed a fixed two-file set | **Fixed.** Entries use bare published asset names, and the command covers exactly the installer formats that are actually published. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)

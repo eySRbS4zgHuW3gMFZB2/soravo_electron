@@ -16,7 +16,7 @@ While the active repository remains public, standard GitHub-hosted runner usage 
    - formatting/lint/typecheck/build where configured;
    - Rust format check, clippy and tests;
    - Windows build/test on Windows runner;
-   - Linux build/test on Linux runner;
+   - **Linux build/test on a Linux runner — deferred until task P1-05 has delivered a Linux engine and the Linux release gate in `05_IMPLEMENTATION_PLAN.md` has passed.** Linux jobs become required only at that point. Until then a Linux job must not be a required check, because Phase 1 is Windows-only and the Windows release path proceeds independently of Linux;
    - upload installers as temporary CI artifacts, not customer releases on every PR.
 
 2. `ci-website.yml`
@@ -40,7 +40,7 @@ While the active repository remains public, standard GitHub-hosted runner usage 
 
 5. `release.yml`
    - run only on approved version tags or manually dispatched with protected environment approval;
-   - build Windows and Linux from clean runners;
+   - build Windows and Linux from clean runners, **building only the platforms that have a supported engine** — Linux only once task P1-05 has delivered a Linux engine and the Linux release gate has passed;
    - **test installed bundle/resource presence** — the built artifact must actually contain the CrispASR engine and its runtime dependencies, sourced from a git-tracked path (ADR-0010). Inspecting the artifact is required; inferring presence from its size is not;
    - generate SHA-256 checksums after final artifacts;
    - upload artifacts to the chosen public release repository/host;

@@ -32,7 +32,11 @@ The active source repo can become private before commercial launch. Release repo
 6. Build artifacts in CI for every platform that has a supported engine. Windows always; Linux only once task P1-05 has delivered a Linux engine and the Linux release gate in `05_IMPLEMENTATION_PLAN.md` has passed. Do not build or publish a Linux artifact before then.
 7. Inspect artifact contents for secrets, test data and missing runtime files.
 8. Generate checksums:
-   `sha256sum Soravo_0.2.0_x64-setup.exe Soravo_0.2.0_x64_en-US.msi > SHA256SUMS` (Linux) or an equivalent PowerShell `Get-FileHash -Algorithm SHA256` flow on Windows. Use explicit artifact paths, or a glob that covers **every** published installer — `sha256sum dist/*.exe dist/*.msi > SHA256SUMS`, not a glob that covers only one extension. Never use a placeholder such as `<artifact files>`, which the shell reads as input redirection. Every installer that is published must have a checksum entry, or Step 9 cannot verify it.
+   `sha256sum Soravo_0.2.0_x64-setup.exe Soravo_0.2.0_x64_en-US.msi > SHA256SUMS` (Linux) or an equivalent PowerShell `Get-FileHash -Algorithm SHA256` flow on Windows. Two rules govern the command:
+   - **Use the published asset names, without a path prefix.** An entry such as `dist/Soravo_0.2.0_x64-setup.exe` makes `sha256sum -c SHA256SUMS` fail from a clean download directory, because the `dist/` directory does not exist there. Run the command from the directory holding the published assets, so the entries are bare filenames.
+   - **Cover every installer that is actually published.** A release may ship only one format, and only the formats that exist are listed. Do not use a fixed two-file list for a one-file release, and do not omit a format that is published.
+
+   Never use a placeholder such as `<artifact files>`, which the shell reads as input redirection. Every installer that is published must have a checksum entry, or Step 9 cannot verify it.
 9. Verify checksums from downloaded artifacts.
 10. Upload artifacts and checksums to the public release host.
 11. Verify public links from a logged-out browser.

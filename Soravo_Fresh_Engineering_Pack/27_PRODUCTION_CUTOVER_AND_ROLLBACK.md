@@ -77,7 +77,7 @@ Perform in this order, stopping at the first failure.
 4. Verify, in a logged-out browser and on a second network: home, pricing, download, legal, privacy, support, sign-up, sign-in, recovery, account dashboard, and admin denial for an ordinary user.
 5. Verify a real download and checksum from the download page.
 6. Verify business email delivery.
-7. Using **Razorpay test-mode credentials**, send one test payment and confirm the entitlement and the admin record, then refund it. If a live payment is required instead, record explicit owner approval, the reconciliation evidence, and the refund evidence.
+7. **Before cutover**, run one payment against the separate **staging** environment using **Razorpay test-mode credentials**, and confirm the staging entitlement and the staging admin record. A test-mode event must never be run against the production ledger, because it could record a paid production entitlement with no live charge. **After deployment to production**, use a separately approved live payment to confirm the production entitlement and the production admin record, then refund it, recording the owner approval, the reconciliation evidence and the refund evidence.
 8. Enable redirects for classified paths.
 9. Update the live site's own references: sitemap, robots, canonical URLs, Open Graph URLs and any hard-coded absolute URLs.
 10. Record the cutover: date, commit SHA, deployment ID, versions of the site and the desktop app, and the rollback target.
