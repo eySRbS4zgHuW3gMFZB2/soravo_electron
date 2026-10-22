@@ -37,7 +37,7 @@ A dedicated worktree and branch are required for:
 4. **All edits for the task happen inside the worktree.** The main working tree is not edited during a worktree task.
 5. **Never touch another worktree's files, branch, index or stash.** Worktrees share one repository's object store and refs; the isolation is of the working tree, not of the history.
 6. **Never force-push, reset, rebase or delete a branch that another worktree holds.** Git will refuse most of these; where it does not, the agent must not do it.
-7. **Tests must pass in the worktree before integration.** A task that cannot demonstrate passing tests is not ready to merge.
+7. **Tests must pass in the worktree before integration.** A task that cannot demonstrate passing tests is not ready to merge. The one recorded exception is the release-packaging check during **Phase 0** (task P0-02): the check must exist, run and report while it is red for the documented missing-engine baseline, because the bundle layout is not implemented until P1-03. That exception applies to the packaging check alone and only in Phase 0; from Phase 1 onward the packaging check is mandatory and green. See `05_IMPLEMENTATION_PLAN.md` Phase 0, "The packaging-check baseline exception".
 8. **Review must happen on the worktree's diff** before integration, and findings must be triaged rather than blindly applied.
 9. **Integrate, then remove the worktree.** Do not leave worktrees to accumulate.
 10. **Record the worktree path and branch in the progress record** for the task.

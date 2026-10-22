@@ -48,7 +48,7 @@ jobs:
           set -euo pipefail
           cat > /tmp/validate-pack.mjs <<'PACK_VALIDATOR_EOF'
           import { readdirSync, readFileSync, existsSync } from "node:fs";
-          import { join } from "node:path";
+          import { join, dirname, resolve } from "node:path";
 
           const PACK = process.env.PACK_DIR;
           const errors = [];
@@ -146,11 +146,26 @@ jobs:
           }
 
           // Markdown links and document references must resolve.
+          //
+          // A link target is resolved relative to the file that contains it,
+          // so a link may point outside the pack (for example ../README.md).
+          // The optional fragment is stripped before the path is resolved, and
+          // a target that is only a fragment is an in-page anchor and is
+          // skipped.
+          const LINKABLE = /\.(md|json|ya?ml|txt|svg|png|ico|css|html)$/i;
           for (const name of entries.filter((n) => n.endsWith(".md"))) {
             const text = readFileSync(join(PACK, name), "utf8");
-            for (const match of text.matchAll(/\]\(([^)#:\s]+\.md)\)/g)) {
-              if (!present.has(match[1])) {
-                fail(`${PACK}/${name}: broken markdown link -> ${match[1]}`);
+            for (const match of text.matchAll(/\]\(([^)\s]+)\)/g)) {
+              const target = match[1];
+              if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue; // absolute URL or scheme
+              if (target.startsWith("#")) continue; // in-page anchor
+              if (target.startsWith("//")) continue; // protocol-relative URL
+              const pathPart = target.split("#")[0];
+              if (!pathPart) continue;
+              if (!LINKABLE.test(pathPart)) continue;
+              const resolved = resolve(dirname(join(PACK, name)), pathPart);
+              if (!existsSync(resolved)) {
+                fail(`${PACK}/${name}: broken link -> ${target}`);
               }
             }
             for (const match of text.matchAll(/`(\d{2}_[A-Z_]+\.md|INDEX\.md|SORAVO_DECISION_MEMO_2026-10-22\.md)`/g)) {

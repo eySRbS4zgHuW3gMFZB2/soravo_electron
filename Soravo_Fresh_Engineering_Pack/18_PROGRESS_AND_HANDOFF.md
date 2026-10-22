@@ -177,6 +177,16 @@ A sixth review against the final content returned 9 findings covering 7 distinct
 | AD | The rename runbook required confirming that Cloudflare's Git integration would be updated, which cannot be satisfied for the observed direct-upload deployment method | **Fixed.** The actual deployment method is recorded first, and the source-link step applies only if Git integration is configured. |
 | AE | The CI policy's website workflow had a path filter, which would leave a required check pending on unrelated pull requests | **Fixed.** The workflow runs on every pull request and reports success when the change does not affect the website paths, matching the pattern used by the pack's own CI workflow. |
 
+## Seventh CodeRabbit review disposition — pull request #13
+
+A seventh review against the final content returned 3 findings. **All 3 were valid and all 3 are fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| AF | The worktree policy required all tests to pass before integration, which made the P0-02 packaging check look ineligible while it is red for the documented missing-engine baseline | **Fixed.** The narrow Phase 0 exception is stated, applies to the packaging check alone, and ends when Phase 1 makes that check mandatory and green. |
+| AG | The CI workflow resolved Markdown links only against bare filenames inside the pack, so a valid link such as `../README.md` failed, and a broken link carrying a fragment was not checked at all | **Fixed.** The validator now resolves a link target relative to the file that contains it, strips an optional fragment, skips absolute URLs, protocol-relative URLs and in-page anchors, and checks the resolved path. Verified with four new cases: a valid outside link passes, a broken link with a fragment is caught, a broken link outside the pack is caught, and external URLs and anchors are not flagged. The seven earlier failure modes were re-tested and still caught. |
+| AH | The rename runbook moved the local folder without repairing the nested worktrees, whose recorded paths move with it | **Fixed.** Every registered worktree path is recorded before the move, `git worktree repair` is run afterwards, each registration is verified, and pruning is forbidden until they are verified. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)

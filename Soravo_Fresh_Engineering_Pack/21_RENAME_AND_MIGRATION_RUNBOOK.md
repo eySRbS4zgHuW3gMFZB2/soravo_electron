@@ -25,14 +25,16 @@
 3. Rename active `soravo_electron` to `soravo`.
 4. Verify active repository URL and default branch.
 5. On local machine, close IDE and terminals using the folder.
-6. Rename the local folder using file manager or shell; do not move/delete `.git`.
-7. In the renamed folder, run `git remote -v`; set `origin` to the new active URL if needed.
-8. Run `git fetch --all --prune`, `git status --short --branch`, and inspect recent log.
-9. Update README clone commands and internal absolute GitHub URLs.
-10. Update Cloudflare Pages connected repo if necessary; test preview deploy.
-11. Check OAuth callback/allowed URLs, GitHub Actions secrets, release workflow target repo and any webhooks.
-12. Verify all links and CI.
-13. Update progress/handoff with new canonical names.
+6. **Record every registered worktree path before moving anything** — `git worktree list` — because this repository keeps its worktrees in a nested `.worktrees/` directory **inside** the main working tree, so moving the main folder moves them too.
+7. Rename the local folder using file manager or shell; do not move/delete `.git`.
+8. **Repair the moved worktrees.** After the move, run `git worktree repair` from the renamed folder, then verify each registration with `git worktree list`. A moved worktree keeps its branch and commits but its recorded path is stale, and `git worktree prune` would otherwise discard the registration and any uncommitted work with it. Do not prune until every registration has been verified.
+9. In the renamed folder, run `git remote -v`; set `origin` to the new active URL if needed.
+10. Run `git fetch --all --prune`, `git status --short --branch`, and inspect recent log.
+11. Update README clone commands and internal absolute GitHub URLs.
+12. Update the Cloudflare Pages source link **only if the project uses Git integration** (see the preconditions); test a preview deploy.
+13. Check OAuth callback/allowed URLs, GitHub Actions secrets, release workflow target repo and any webhooks.
+14. Verify all links and CI.
+15. Update progress/handoff with new canonical names.
 
 ## Post-rename verification checklist
 Each item is verified individually. **Do not assume GitHub's redirect behaviour carries every third-party integration through a rename.**
