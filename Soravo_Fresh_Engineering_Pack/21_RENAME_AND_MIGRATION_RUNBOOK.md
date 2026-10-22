@@ -47,7 +47,7 @@ Each item is verified individually. **Do not assume GitHub's redirect behaviour 
 - [ ] Cloudflare Pages project source link (if git-integrated) points at the renamed repository; a **preview** deployment succeeds, and a **read-only** check confirms the existing production deployment at `soravo.xyz` is unchanged and still serving. **Do not deploy to the production hostname during a repository rename** — production cutover is a separate, explicitly approved step (`27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`).
 - [ ] OAuth and deep-link allowlists list the new repository URL where relevant.
 - [ ] Release workflow target repository and release links resolve.
-- [ ] README, `AGENTS.md`, docs, `progress.md` and code contain no stale `soravo_electron` references.
+- [ ] **Active** references to the old name are updated: clone commands, live URLs, CI and release configuration, OAuth and deep-link allowlists, and any hard-coded GitHub URLs in README, `AGENTS.md`, docs and code. **Dated historical records are preserved as they are** — the source audit notes, the owner decision memo, the ADR and decision records, and any sentence that names the repository as it was at a past date legitimately keep `soravo_electron`. A blanket "no occurrences" check is not the right test and must not be used as one.
 - [ ] Business email and DNS records are unchanged and still delivering.
 - [ ] The live production site at `soravo.xyz` is unchanged and still serving.
 

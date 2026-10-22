@@ -205,6 +205,14 @@ A ninth review against the final content returned 2 findings. **Both were valid 
 | AK | The rollback procedure restored routing to the previous deployment **before** recovering the datastore, so a rollback target that needed the migration's rollback or forward-fix would receive customers while it could not read the current schema or data | **Fixed.** The order is now: freeze writers → recover the data → verify the rollback target is compatible with the recovered datastore → restore routing → disable redirects → verify → unfreeze writers. Traffic stays off the previous deployment until the compatibility check passes. |
 | AL | The manifest's platform note did not carry the verification-build allowance, so an agent reading only the manifest would conclude that no Linux build was permitted after P1-05 | **Fixed.** The note now states the same distinction as the implementation plan: verification builds are permitted once the engine exists; publication and support claims are not. |
 
+## Tenth CodeRabbit review disposition — pull request #13
+
+A tenth review against the final content returned 1 finding. **It was valid and it is fixed.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| AM | The post-rename checklist required "no stale `soravo_electron` references" anywhere, which can never pass: the source audit notes and the owner decision memo must keep the old name because it is the repository identity at the time of those records | **Fixed.** The check is now scoped to active references — clone commands, live URLs, CI and release configuration, allowlists — while dated historical records are explicitly preserved. The pack's own note that a blanket check is the wrong test was kept. |
+
 ## Publication session — 2026-10-22
 
 **Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)
