@@ -74,7 +74,7 @@ for (const f of requiredEngineFiles) {
 // --- 3. Runtime lookup check ---
 const libPath = join(root, "src-tauri", "src", "lib.rs");
 const libContent = readFileSync(libPath, "utf8");
-if (!libContent.includes('resource_dir.join("crispasr")') && !libContent.includes('roots.last()')) {
+if (!libContent.includes('resource_dir.join("crispasr").join(name)')) {
   fail("find_crispasr_binary must check resource_dir/crispasr/ (bundled layout)");
 }
 
