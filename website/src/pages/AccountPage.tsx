@@ -73,7 +73,8 @@ export function AccountPage() {
         <section className="mt-8">
           <h2 className="text-xl font-semibold text-ink">Devices</h2>
           <p className="mt-2 text-sm text-muted">
-            Device management will be available in a future update.
+            Devices are registered automatically when you sign in from the Soravo desktop app.
+            Monthly plans allow up to 3 active devices. Lifetime plans have no limit.
           </p>
         </section>
 
