@@ -87,7 +87,7 @@ This is the first server-side API endpoint and establishes the pattern for all s
 - Device ID is bound to authenticated user
 - Monthly device limit (3) is enforced atomically
 - Lifetime users have unlimited device registrations
-- Refreshing an already-active device is always allowed, even at the limit (it only updates `last_seen_at`)
+- Refreshing an already-active device is always allowed, even at the limit (it updates `last_seen_at` and any provided non-null `label`/`platform`/`app_version` without consuming a new device slot)
 - Reactivating a revoked device counts as a new active device and must pass the limit check
 - All side effects are idempotent (re-registering same active device is safe)
 - Tests pass with mocked Supabase client
