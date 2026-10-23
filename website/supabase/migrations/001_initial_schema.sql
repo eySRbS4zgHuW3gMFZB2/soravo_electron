@@ -41,21 +41,22 @@ CREATE POLICY "Users can read own devices"
   ON public.devices FOR SELECT
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert own devices"
-  ON public.devices FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+-- No INSERT policy or grant for clients: device registration must go through
+-- the server-side register_device_atomic function (service-role), which enforces
+-- the entitlement check and the device limit.
 
 -- Users may update only the revocation state of their own devices.
 -- Column-level privileges (below) restrict the updateable columns to revoked_at.
+-- WITH CHECK requires revoked_at to be set (non-null), so clients cannot
+-- reactivate a device by clearing revoked_at.
 CREATE POLICY "Users can update own devices"
   ON public.devices FOR UPDATE
   USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (auth.uid() = user_id AND revoked_at IS NOT NULL);
 
 -- Clients may modify only revoked_at; device_id and ownership are immutable client-side.
 REVOKE ALL ON public.devices FROM anon, authenticated;
 GRANT SELECT (id, user_id, device_id, label, platform, app_version, first_seen_at, last_seen_at, revoked_at) ON public.devices TO authenticated;
-GRANT INSERT (user_id, device_id, label, platform, app_version) ON public.devices TO authenticated;
 GRANT UPDATE (revoked_at) ON public.devices TO authenticated;
 
 -- Service-role only: device registration, revocation, heartbeat updates
@@ -178,10 +179,13 @@ CREATE INDEX IF NOT EXISTS idx_webhook_events_provider_event ON public.webhook_e
 -- Correctness notes:
 -- 1. A per-user advisory transaction lock serializes concurrent registrations for
 --    the same user, making the count-then-write sequence race-free.
--- 2. The monthly limit applies only to NEW devices. Re-registering a device that
---    is already known to the user (active or revoked) is always allowed and only
---    refreshes last_seen_at (and clears revoked_at on reactivation), so a user at
---    the 3-device limit can still refresh their existing devices.
+-- 2. The monthly limit applies to NEW devices. An ALREADY-ACTIVE device may be
+--    refreshed at the limit, but a REVOKED device must pass the limit check again
+--    before it can be reactivated (otherwise users could exceed 3 active devices
+--    by cycling revoked devices in and out).
+-- 3. This function is SECURITY DEFINER and must only be callable by the
+--    service-role (see REVOKE/GRANT below). It does not trust p_user_id from
+--    clients; the Edge Function derives p_user_id from the validated JWT.
 CREATE OR REPLACE FUNCTION public.register_device_atomic(
   p_user_id UUID,
   p_device_id TEXT,
@@ -190,22 +194,23 @@ CREATE OR REPLACE FUNCTION public.register_device_atomic(
   p_app_version TEXT DEFAULT NULL,
   p_is_lifetime BOOLEAN DEFAULT FALSE
 )
-RETURNS JSONB AS
+RETURNS JSONB AS $$
 DECLARE
   v_device_count INTEGER;
-  v_is_existing BOOLEAN;
+  v_is_active BOOLEAN;
 BEGIN
   -- Serialize per user to avoid race conditions on the limit check.
   PERFORM pg_advisory_xact_lock(hashtext(p_user_id::text));
 
-  -- Is this a device the user already knows about (active or revoked)?
+  -- Is this device currently ACTIVE for the user? Revoked devices must pass
+  -- the limit check like new devices.
   SELECT EXISTS (
     SELECT 1 FROM public.devices
-    WHERE user_id = p_user_id AND device_id = p_device_id
-  ) INTO v_is_existing;
+    WHERE user_id = p_user_id AND device_id = p_device_id AND revoked_at IS NULL
+  ) INTO v_is_active;
 
-  -- Apply the monthly limit (max 3 active devices) only to NEW devices.
-  IF NOT p_is_lifetime AND NOT v_is_existing THEN
+  -- Apply the monthly limit (max 3 active devices) only to NEW or revoked devices.
+  IF NOT p_is_lifetime AND NOT v_is_active THEN
     SELECT COUNT(*) INTO v_device_count
     FROM public.devices
     WHERE user_id = p_user_id AND revoked_at IS NULL;
@@ -220,7 +225,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- Upsert device (idempotent: re-registering same device is safe).
+  -- Upsert device (idempotent: re-registering same active device is safe).
   -- Reactivation clears revoked_at so the device rejoins the active set.
   INSERT INTO public.devices (user_id, device_id, label, platform, app_version, last_seen_at)
   VALUES (p_user_id, p_device_id, p_label, p_platform, p_app_version, now())
@@ -242,7 +247,11 @@ BEGIN
     'limit_reached', false
   );
 END;
- LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
--- Grant execute to service role only
-GRANT EXECUTE ON FUNCTION public.register_device_atomic TO service_role;
+-- Only the service-role may invoke register_device_atomic. PostgreSQL grants
+-- default EXECUTE to PUBLIC on new functions, so revoke it first; otherwise any
+-- anon/authenticated client could call the SECURITY DEFINER function with an
+-- arbitrary user id and bypass the entitlement and device-limit checks.
+REVOKE EXECUTE ON FUNCTION public.register_device_atomic(UUID, TEXT, TEXT, TEXT, TEXT, BOOLEAN) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.register_device_atomic(UUID, TEXT, TEXT, TEXT, TEXT, BOOLEAN) TO service_role;

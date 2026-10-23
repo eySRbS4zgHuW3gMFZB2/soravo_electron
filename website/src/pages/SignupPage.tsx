@@ -26,6 +26,8 @@ export function SignupPage() {
       } else {
         setSuccess(true);
       }
+    } catch {
+      setError("Unable to create the account. Please try again.");
     } finally {
       // Always reset loading, whether signUp resolved or rejected.
       setLoading(false);

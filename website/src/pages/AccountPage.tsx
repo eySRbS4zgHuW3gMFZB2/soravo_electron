@@ -9,12 +9,14 @@ export function AccountPage() {
     { plan_code: string; status: string; lifetime: boolean }[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     // When the user identity changes, clear any previous entitlements and
     // show loading again. If no user is signed in, stop loading immediately.
     if (!user) {
       setEntitlements([]);
+      setLoadError(null);
       setLoading(false);
       return;
     }
@@ -22,15 +24,20 @@ export function AccountPage() {
     let stale = false;
     setLoading(true);
     setEntitlements([]);
+    setLoadError(null);
 
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("entitlements")
         .select("plan_code, status, lifetime")
         .eq("user_id", user.id);
       // Ignore results for a user identity that is no longer current.
       if (!stale) {
-        setEntitlements(data ?? []);
+        if (error) {
+          setLoadError("Could not load entitlements. Please try again.");
+        } else {
+          setEntitlements(data ?? []);
+        }
         setLoading(false);
       }
     })();
@@ -75,6 +82,8 @@ export function AccountPage() {
           <h2 className="text-xl font-semibold text-ink">Entitlements</h2>
           {loading ? (
             <p className="mt-4 text-muted">Loading...</p>
+          ) : loadError ? (
+            <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{loadError}</p>
           ) : entitlements.length === 0 ? (
             <p className="mt-4 text-muted">No active entitlements. Choose a plan to get started.</p>
           ) : (
