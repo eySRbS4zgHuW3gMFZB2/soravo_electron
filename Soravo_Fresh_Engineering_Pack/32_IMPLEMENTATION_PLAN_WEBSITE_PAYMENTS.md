@@ -87,6 +87,13 @@ This is the first server-side API endpoint and establishes the pattern for all s
 - Device ID is bound to authenticated user
 - Monthly device limit (3) is enforced atomically
 - Lifetime users have unlimited device registrations
-- Device replacement flow works when limit reached
-- All side effects are idempotent (re-registering same device is safe)
+- Refreshing an already-active device is always allowed, even at the limit (it only updates `last_seen_at`)
+- Reactivating a revoked device counts as a new active device and must pass the limit check
+- All side effects are idempotent (re-registering same active device is safe)
 - Tests pass with mocked Supabase client
+
+> **Device replacement flow is NOT implemented in Phase A1.** The user-facing
+> device-replacement UI (remove a device to free a slot, or replace at the
+> 3-device limit) belongs to Phase B (website account system — device
+> management). Phase A1 only enforces the limit, and explicitly disallows
+> exceeding it.
