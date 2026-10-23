@@ -504,3 +504,37 @@ Findings and plan reported to owner. Awaiting approval before implementation.
 
 Run cargo test, typecheck, packaging verification, then push PR and await CodeRabbit review.
 
+
+## ADR-0003 Backend Placement (2026-10-23)
+
+### What was decided
+- Supabase Edge Functions chosen as the privileged API backend
+- Cloudflare Pages hosts the static website only
+- ADR-0003 updated from 'ACCEPTED in part; PROPOSED' to 'ACCEPTED'
+- 04_TECHNICAL_DESIGN.md updated to reflect the decision
+
+### Rationale
+1. Data proximity - Edge Functions run in the same Supabase project as Auth and Postgres
+2. Auth integration - native access to Supabase Auth context for JWT verification
+3. Secret management - service-role keys stay within Supabase trust boundary
+4. RLS enforcement - clean separation between client (RLS) and server (service-role) access
+5. Single provider for privileged logic - no duplication across providers
+
+### Trade-offs accepted
+- Deno runtime (not Node.js) - some npm packages may not be compatible
+- Supabase free tier invocation limits - monitor and upgrade if needed
+- Cloudflare Pages still hosts static website; Edge Functions invoked via Supabase URL
+
+### What this unblocks
+- Razorpay webhook endpoint implementation
+- Entitlement provisioning
+- Device registration/limit checking
+- Admin operations
+- All server-side business logic
+
+### What is NOT implemented yet
+- No Edge Functions written yet
+- No payment processing
+- No webhook handling
+- No entitlement provisioning
+- Design documents only

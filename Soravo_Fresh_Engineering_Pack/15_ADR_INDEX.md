@@ -11,10 +11,49 @@ Preserve the current Tauri v2 application and CrispASR integration. Commercial i
 Create `website/` with its own package manifest/lockfile. Keep desktop build configuration and `frontendDist` isolated.
 
 ## ADR-0003 — Commercial services
-**Status:** ACCEPTED in part; backend function placement REMAINS PROPOSED  
-Accepted: Cloudflare Pages for website hosting, Supabase Auth/Postgres for identity and data, Resend for custom SMTP, Razorpay for payments, Cloudflare Web Analytics for site traffic.
+**Status:** ACCEPTED (backend placement decided 2026-10-23, task P2-08)
 
-**Still PROPOSED and not to be implemented as decided:** which provider hosts the privileged server-side API (Cloudflare Pages Functions/Workers versus Supabase Edge Functions). `04_TECHNICAL_DESIGN.md` previously carried a "recommended first choice"; that wording has been softened to a candidate so this ADR remains the decision point. One primary backend must be chosen and recorded here — with rationale — before implementation depends on it (task P2-08). Do not duplicate privileged business logic across two providers.
+**Accepted services:**
+- Cloudflare Pages for website hosting (static assets + SPA routing)
+- Supabase Auth/Postgres for identity and data
+- Resend for custom SMTP (Auth email)
+- Razorpay for payments
+- Cloudflare Web Analytics for site traffic
+
+**Backend function placement — DECIDED: Supabase Edge Functions**
+
+Rationale:
+1. **Data proximity:** Edge Functions run in the same Supabase project as Auth and Postgres. Razorpay webhook processing, entitlement provisioning, and device registration all need direct database access. Co-locating the API with the data eliminates cross-provider network hops and reduces latency for auth-gated operations.
+2. **Auth integration:** Supabase Edge Functions have native access to the Supabase Auth context. Verifying JWTs, checking user identity, and enforcing authorization happen without additional HTTP calls to an external identity provider.
+3. **Secret management:** Supabase Edge Functions use project-level secrets (set via Supabase dashboard or CLI). Service-role keys, Razorpay secrets, and webhook secrets stay within the Supabase trust boundary. No cross-provider secret sharing is needed.
+4. **RLS enforcement:** Since Edge Functions use the service-role key server-side, they can bypass RLS for privileged operations while the website uses the anon key with RLS enforced. This creates a clean separation between client (RLS-protected) and server (service-role) access.
+5. **Single provider for privileged logic:** All server-side business logic (webhook processing, entitlement provisioning, device limits, admin operations) lives in one provider. No duplication across Cloudflare and Supabase.
+
+**Trade-offs accepted:**
+- Supabase Edge Functions run on Deno runtime, not Node.js. Some npm packages may not be compatible. Mitigation: use Deno-compatible imports and test thoroughly.
+- Supabase free tier has function invocation limits. Mitigation: monitor usage; upgrade tier if needed.
+- Cloudflare Pages still hosts the static website and handles SPA routing. Edge Functions are invoked via Supabase's own URL (`https://<project>.supabase.co/functions/v1/`), not via Cloudflare.
+
+**Cloudflare Pages role:** Hosts the static website (React SPA) only. No server-side logic runs on Cloudflare. Pages Functions are NOT used for privileged operations.
+
+**Secrets handling:**
+- Service-role key: Supabase Edge Function secret only. Never in website bundle or desktop binary.
+- Razorpay key secret + webhook secret: Edge Function secrets only.
+- Resend SMTP credentials: Supabase Auth configuration (managed by Supabase).
+- Cloudflare API tokens: CI/deployment only, never in client code.
+- Public anon/publishable keys: safe to embed in website bundle (RLS enforced).
+
+**Webhook security:**
+- Razorpay webhooks are received by a Supabase Edge Function
+- Signature verified via HMAC-SHA256 using the webhook secret (server-side only)
+- Idempotency checked against `webhook_events` table before processing
+- Duplicate events return 200 OK without reprocessing
+
+**Authorization boundaries:**
+- Website (client): uses anon key + RLS. Users can only read/write their own data.
+- Edge Functions (server): use service-role key. Can perform privileged operations (webhook processing, entitlement provisioning, device limit checks, admin actions).
+- Desktop app: uses anon key + RLS for read operations. Device registration and license verification go through Edge Functions.
+- Admin operations: Edge Functions verify admin role (via `profiles` or a dedicated `admin_roles` table) before executing. Hiding admin UI is not authorization.
 
 ## ADR-0004 — Entitlement policy
 **Status:** ACCEPTED  

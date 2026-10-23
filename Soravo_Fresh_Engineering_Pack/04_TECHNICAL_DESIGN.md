@@ -39,9 +39,19 @@ Design requirements:
 - Do not assume the old repo's Supabase project, schema or migrations are appropriate. Start with a new schema design and migration history for this product.
 
 ### Server-side API
-Use a small server-side API boundary for entitlement operations and Razorpay webhook processing. The implementation plan must choose one primary backend and record the decision in the ADR index before implementation depends on it. Avoid duplicating privileged business logic across two providers.
+**DECIDED (ADR-0003, 2026-10-23): Supabase Edge Functions** are the primary privileged API backend. Cloudflare Pages hosts the static website only.
 
-**Backend placement is currently PROPOSED, not decided** (ADR-0003). The candidates are Cloudflare Pages Functions/Workers and Supabase Edge Functions. Supabase Edge Functions are the candidate favoured by the current read of the requirements, because they sit adjacent to the auth and data they serve, but that is a preference to be confirmed, not a settled architecture. Task P2-08 exists to choose one and write the rationale into ADR-0003. Do not begin implementation that depends on this choice before that ADR is ACCEPTED. Do not put Supabase service-role keys in the website bundle or desktop binary under either candidate.
+Rationale: Edge Functions run adjacent to Supabase Auth and Postgres, eliminating cross-provider network hops for auth-gated operations. Native access to the Supabase Auth context means JWT verification and user identity checks happen without additional HTTP calls. Service-role keys, Razorpay secrets, and webhook secrets stay within the Supabase trust boundary.
+
+**Cloudflare Pages role:** Static website hosting only. No server-side logic runs on Cloudflare.
+
+**Do not put Supabase service-role keys in the website bundle or desktop binary.** Service-role access is server-side only (Edge Functions).
+
+**Implementation dependencies now unblocked:**
+- Razorpay webhook endpoint: Supabase Edge Function
+- Entitlement provisioning: Supabase Edge Function
+- Device registration/limit checking: Supabase Edge Function
+- Admin operations: Supabase Edge Function with admin role verification
 
 ### Website rebuild strategy
 The replacement website is built **fresh** in this repository, following this pack. The historical `soravo` repository is a **behavioral and content reference only** for approved website pages, pricing presentation and dashboard behaviors. Its implementation, Supabase schema, migrations, Edge Functions, workflows and Handy-derived desktop code are **not** ported (ADR-0008).
