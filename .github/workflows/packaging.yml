@@ -342,8 +342,8 @@ jobs:
       - name: Verify AppImage contents
         shell: bash
         run: |
-          appimage="src-tauri/target/release/bundle/appimage/Soravo_0.1.0_amd64.AppImage"
-          if [ ! -f "$appimage" ]; then echo "No AppImage found"; exit 1; fi
+          appimage="$GITHUB_WORKSPACE/src-tauri/target/release/bundle/appimage/Soravo_0.1.0_amd64.AppImage"
+          if [ ! -f "$appimage" ]; then echo "ERROR: No AppImage found"; exit 1; fi
           extractDir="$HOME/appimage_extract"
           rm -rf "$extractDir"
           mkdir -p "$extractDir"
@@ -356,16 +356,14 @@ jobs:
               echo "Found bundle root: $bundleRoot"
               node "$GITHUB_WORKSPACE/scripts/verify-packaging.mjs" --bundle "$bundleRoot"
             else
-              echo "WARNING: Could not find crispasr-linux/ in extracted AppImage"
+              echo "ERROR: Could not find crispasr-linux/ in extracted AppImage"
               echo "Searching for crispasr binary anywhere in extraction..."
               find squashfs-root -name "*crispasr*" 2>/dev/null | head -10
-              # Fall back to source-tree verification
-              echo "Falling back to source-tree verification"
-              node "$GITHUB_WORKSPACE/scripts/verify-packaging.mjs"
+              exit 1
             fi
           else
-            echo "WARNING: AppImage extraction failed, falling back to source-tree verification"
-            node "$GITHUB_WORKSPACE/scripts/verify-packaging.mjs"
+            echo "ERROR: AppImage extraction failed"
+            exit 1
           fi
 
       - name: Verify bundle configuration
