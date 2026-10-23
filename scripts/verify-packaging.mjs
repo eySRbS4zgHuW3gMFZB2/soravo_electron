@@ -192,9 +192,15 @@ if (bundleIdx >= 0) {
           }
         }
       }
-      // Require at least one engine directory in the bundle.
-      if (!winCrispasrDirExists && !existsSync(linCrispasrDir)) {
-        fail("No CrispASR engine directory found in bundle (expected crispasr/ or crispasr-linux/)");
+      // Require the platform-specific engine directory in the bundle.
+      if (process.platform === "linux") {
+        if (!existsSync(linCrispasrDir)) {
+          fail("Linux bundle missing crispasr-linux/ directory");
+        }
+      } else {
+        if (!winCrispasrDirExists && !existsSync(linCrispasrDir)) {
+          fail("No CrispASR engine directory found in bundle (expected crispasr/ or crispasr-linux/)");
+        }
       }
     }
   }
