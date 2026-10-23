@@ -1,4 +1,4 @@
-﻿# Web-Desktop Authentication Contract
+# Web-Desktop Authentication Contract
 
 ## Overview
 

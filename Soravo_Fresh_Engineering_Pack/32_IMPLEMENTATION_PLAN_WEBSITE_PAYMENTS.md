@@ -1,4 +1,4 @@
-﻿# Implementation Plan: Website, Account System, and Payment Backend
+# Implementation Plan: Website, Account System, and Payment Backend
 
 ## Status: Phase 1 — First Scoped Task
 

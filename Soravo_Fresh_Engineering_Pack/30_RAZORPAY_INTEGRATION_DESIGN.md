@@ -1,4 +1,4 @@
-﻿# Razorpay Integration Design
+# Razorpay Integration Design
 
 ## Status: DESIGN ONLY — Not yet implemented
 
