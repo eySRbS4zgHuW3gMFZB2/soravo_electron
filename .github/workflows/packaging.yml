@@ -126,8 +126,13 @@ jobs:
               fail(`manifest decision_memo not found on disk: ${manifest.decision_memo}`);
             }
             if (!manifest.decision_memo) fail("26_MANIFEST.json does not record a decision_memo");
+            const mw = manifest.mandatory_policies?.git_worktrees ?? {};
             if (!manifest.mandatory_policies) {
               fail("26_MANIFEST.json does not record mandatory_policies");
+            } else if (!mw.document || mw.document !== "28_GIT_WORKTREE_POLICY.md") {
+              fail('26_MANIFEST.json mandatory_policies.git_worktrees.document must name "28_GIT_WORKTREE_POLICY.md"');
+            } else if (mw.status !== "MANDATORY") {
+              fail('26_MANIFEST.json mandatory_policies.git_worktrees.status must equal "MANDATORY"');
             }
           }
 
