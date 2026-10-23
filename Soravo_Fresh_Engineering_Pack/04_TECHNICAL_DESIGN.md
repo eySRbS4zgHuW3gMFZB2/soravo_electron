@@ -110,7 +110,11 @@ Names are conceptual and can be revised in an ADR before migration implementatio
 - `devices`: id, user_id, random device_id, label, platform, app_version, first_seen_at, last_seen_at, revoked_at.
 - `entitlements`: id, user_id, plan_code, status, issued_at, last_verified_at, subscription_period_end, lifetime flag, metadata version.
 - `payments`: id, user_id, provider, provider_payment_id, provider_order_id/subscription_id, amount_minor, currency, status, created_at, verified_at, refund/chargeback state.
-- `webhook_events`: provider, provider_event_id/idempotency key, received_at, signature_valid, processing_status, safe error code, processed_at.
+- `webhook_events`: provider, provider_event_id/idempotency key, received_at, signature_valid, processing_status, claimed_at, lease_expires_at, safe error code, processed_at, retry_count.
+- **Webhook processing states:** `received` (initial insert), `processing` (claim acquired), `processed` (success), `failed` (retryable), `duplicate` (no-op), `support_review` (manual intervention required after max retries).
+- **Atomic claim:** Unique constraint on `(provider, provider_event_id)`. Retry uses atomic `UPDATE ... WHERE processing_status = 'failed' AND ...` or `UPDATE ... WHERE processing_status = 'processing' AND lease_expires_at < now()`. Only one worker's update affects a row.
+- **Lease/timeout:** `processing` rows carry `claimed_at` and `lease_expires_at` (default 5 min). Expired leases can be reclaimed by a single worker.
+- **HTTP 200 OK is status-dependent:** Returned only for `processed` or `duplicate`. Failed/processing events return non-2xx to trigger provider retry. `support_review` returns 200 to stop provider retries.
 - `admin_audit_events`: actor user ID, action, target type/ID, timestamp, reason, minimal safe metadata.
 - Optional `support_cases`: only if a real support workflow needs it; avoid collecting transcripts/audio.
 
