@@ -326,6 +326,9 @@ jobs:
           mkdir -p "$extractDir"
           cd "$extractDir"
           "$appimage" --appimage-extract >/dev/null 2>&1 || true
+          echo "=== Extracted AppImage contents ==="
+          find squashfs-root -type f 2>/dev/null | head -50
+          echo "=== Looking for crispasr ==="
           appDir=$(find squashfs-root -type f -name "crispasr" 2>/dev/null | head -1 | xargs dirname)
           if [ -z "$appDir" ]; then
             echo "Could not locate crispasr executable in extracted AppImage"
