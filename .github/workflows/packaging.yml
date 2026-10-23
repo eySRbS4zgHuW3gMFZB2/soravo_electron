@@ -326,9 +326,9 @@ jobs:
           mkdir -p "$extractDir"
           cd "$extractDir"
           "$appimage" --appimage-extract >/dev/null 2>&1 || true
-          appDir=$(find squashfs-root -type d -name "crispasr-linux" 2>/dev/null | head -1 | xargs dirname)
+          appDir=$(find squashfs-root -type f -name "crispasr" 2>/dev/null | head -1 | xargs dirname)
           if [ -z "$appDir" ]; then
-            echo "Could not locate app directory in extracted AppImage"
+            echo "Could not locate crispasr executable in extracted AppImage"
             exit 1
           fi
           node /github/workspace/scripts/verify-packaging.mjs --bundle "$appDir"
