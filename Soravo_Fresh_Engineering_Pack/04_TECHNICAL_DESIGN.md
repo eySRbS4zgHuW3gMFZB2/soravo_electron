@@ -3,6 +3,7 @@
 ## 1. Architecture
 
 ### Desktop
+
 - Tauri v2 shell; Rust backend; React 18 + TypeScript + Vite renderer.
 - Local SQLite history and `tauri-plugin-store` settings remain local.
 - Current CrispASR integration is preserved. No engine migration in this project.
@@ -11,6 +12,7 @@
 - Commercial integration must not route audio/transcripts through Supabase, Cloudflare, Razorpay, Resend or analytics.
 
 ### Engine packaging (blocking)
+
 The installed application must be able to find and launch the transcription engine **without any developer-only fetch step and without a source tree present**. As audited on 2026-10-22, this does not currently hold:
 
 - `bundle.resources` and `bundle.externalBin` are both empty, so the CrispASR engine and its companion files are **not** supplied to the installed application through those two Tauri inputs. (`bundle.icon` does copy repository icon files into the bundle, so the empty fields do not mean that the bundle contains no repository files at all — only that no engine is among them.)
@@ -26,12 +28,14 @@ Design requirements:
 - **Release gate:** no release until a clean-machine install, with no developer tools and no source tree, proves the app locates and launches the bundled engine and can dictate.
 
 ### Web
+
 - `website/` under the same Git repository.
 - Separate `package.json` and lockfile. Do not convert the existing desktop root to a workspace without an ADR.
 - Cloudflare Pages deployment; path-scoped CI. Preview deployments must use non-production credentials and data.
 - Shared brand tokens may be copied or shared only through a deliberate, minimal dependency; do not couple web build output to Tauri `frontendDist`.
 
 ### Identity/data
+
 - Supabase Auth for identity.
 - Supabase Postgres for profiles, devices, entitlements/subscriptions, payment ledger, audit events and minimal analytics metadata only where needed.
 - Resend SMTP for Auth email. Verify DNS/domain, sender and deliverability.
@@ -39,6 +43,7 @@ Design requirements:
 - Do not assume the old repo's Supabase project, schema or migrations are appropriate. Start with a new schema design and migration history for this product.
 
 ### Server-side API
+
 **DECIDED (ADR-0003, 2026-10-23): Supabase Edge Functions** are the primary privileged API backend. Cloudflare Pages hosts the static website only.
 
 Rationale: Edge Functions run adjacent to Supabase Auth and Postgres, eliminating cross-provider network hops for auth-gated operations. Native access to the Supabase Auth context means JWT verification and user identity checks happen without additional HTTP calls. Service-role keys, Razorpay secrets, and webhook secrets stay within the Supabase trust boundary.
@@ -46,6 +51,13 @@ Rationale: Edge Functions run adjacent to Supabase Auth and Postgres, eliminatin
 **Cloudflare Pages role:** Static website hosting only. No server-side logic runs on Cloudflare.
 
 **Do not put Supabase service-role keys in the website bundle or desktop binary.** Service-role access is server-side only (Edge Functions).
+
+**Authorization boundaries:**
+- Website (client): uses anon key + RLS. Users can only read/write their own data.
+- Edge Functions (server): use service-role key. Can perform privileged operations (webhook processing, entitlement provisioning, device limit checks, admin actions).
+- Desktop app: uses anon key + RLS for read operations. Device registration and license verification go through Edge Functions.
+- User-invoked Edge Functions validate the caller's JWT and derive or verify every `user_id` and `device_id` against the authenticated caller before using service-role access.
+- Admin operations: Edge Functions verify admin role (via `profiles` or a dedicated `admin_roles` table) before executing. Hiding admin UI is not authorization.
 
 ### New project isolation (established 2026-10-23)
 
@@ -63,6 +75,7 @@ The existing Supabase project named `soravo` and the existing website at `soravo
 - Admin operations: Supabase Edge Function with admin role verification
 
 ### Website rebuild strategy
+
 The replacement website is built **fresh** in this repository, following this pack. The historical `soravo` repository is a **behavioral and content reference only** for approved website pages, pricing presentation and dashboard behaviors. Its implementation, Supabase schema, migrations, Edge Functions, workflows and Handy-derived desktop code are **not** ported (ADR-0008).
 
 Consequences to design against:
@@ -71,6 +84,7 @@ Consequences to design against:
 - The existing production site at `soravo.xyz` stays live and untouched until the replacement passes its launch checklist. Cutover is a separate, approved, reversible step; see `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`.
 
 ### Payments
+
 - Razorpay Checkout or hosted subscription flow.
 - Verify webhook signature according to current Razorpay documentation and the exact webhook signing scheme.
 - Idempotency ledger keyed by provider event ID or stable event identity.
@@ -79,6 +93,7 @@ Consequences to design against:
 - Never trust client-supplied amount, plan, user ID or “payment success”.
 
 ### Downloads/releases
+
 - Public release assets must be reachable without authentication.
 - Preferred free option: separate public GitHub repository containing only signed/hashed release artifacts, versioned release notes and checksums; source repo can be private.
 - Generate SHA-256 checksums in CI after final artifacts are produced. Verify them from a clean download.

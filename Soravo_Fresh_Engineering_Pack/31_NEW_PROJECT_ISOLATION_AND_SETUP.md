@@ -3,6 +3,7 @@
 ## Status: Documentation only — no infrastructure created
 
 ## Purpose
+
 Establish that the new Soravo app uses completely new, isolated infrastructure.
 The existing live website at `soravo.xyz` and the existing Supabase project named `soravo`
 belong to the past project (historical `soravo` repository) and must remain untouched.
@@ -10,6 +11,7 @@ belong to the past project (historical `soravo` repository) and must remain unto
 ## Isolation Requirements
 
 ### 1. Supabase — New Project
+
 - **Do NOT** reuse the existing Supabase project named `soravo`
 - **Do NOT** copy, migrate, or modify its data, schema, RLS policies, or auth settings
 - **Do NOT** reuse its anon key, service-role key, or JWT secret
@@ -18,6 +20,7 @@ belong to the past project (historical `soravo` repository) and must remain unto
 - The old project remains paused/inactive and is not a dependency
 
 ### 2. Cloudflare Pages — New Project
+
 - **Do NOT** modify the existing `soravo.xyz` site, its DNS, or email configuration
 - **Do NOT** reuse the existing Cloudflare Pages project or its deployment settings
 - Create a **new Cloudflare Pages project** linked to this repository's `website/` directory
@@ -25,6 +28,7 @@ belong to the past project (historical `soravo` repository) and must remain unto
 - The production domain `soravo.xyz` stays untouched until an explicitly approved cutover (see `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`)
 
 ### 3. Environment Separation
+
 | Environment | Supabase | Cloudflare Pages | Credentials |
 |---|---|---|---|
 | Development | Local (Supabase CLI) or dedicated dev project | `localhost:3000` | `.env` with placeholders |
@@ -65,6 +69,7 @@ belong to the past project (historical `soravo` repository) and must remain unto
 - Verify no connection to old Supabase project
 
 ### 5. What Must NOT Be Done
+
 - Do NOT modify the existing `soravo` Supabase project in any way
 - Do NOT modify DNS records for `soravo.xyz`
 - Do NOT modify the existing Cloudflare Pages configuration for `soravo.xyz`
@@ -73,6 +78,7 @@ belong to the past project (historical `soravo` repository) and must remain unto
 - Do NOT point the new website at the old Supabase project, even temporarily
 
 ### 6. Verification Checklist (before any production use)
+
 - [ ] New Supabase project created and accessible
 - [ ] New Cloudflare Pages project created and deploying
 - [ ] Environment variables configured with NEW project credentials
