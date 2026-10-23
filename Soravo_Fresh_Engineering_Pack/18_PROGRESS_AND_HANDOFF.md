@@ -342,7 +342,7 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 6. Run a deep VM/toolchain/state audit and update `19_STATE_AUDIT_PROTOCOL.md` / `docs/engineering/STATE_AUDIT.md`.
 7. Decide the CrispASR bundled layout and record ADR-0010 (P1-03).
 8. Fix packaging and establish the Windows CI baseline before commercial code. Linux CI stays behind task P1-05 and the Linux release gate; it is not part of the pre-commercial baseline.
-9. Choose the backend placement and record ADR-0003 (P2-08); choose the binary host and finalise ADR-0005 (P8-00).
+9. Choose the binary host and finalise ADR-0005 (P8-00). Backend placement is decided: Supabase Edge Functions (ADR-0003, accepted 2026-10-23).
 10. Create website shell and Supabase staging schema.
 11. Configure Resend SMTP; test email delivery.
 12. Implement account and device flows.

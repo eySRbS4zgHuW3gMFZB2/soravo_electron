@@ -16,7 +16,8 @@ belong to the past project (historical `soravo` repository) and must remain unto
 - **Do NOT** copy, migrate, or modify its data, schema, RLS policies, or auth settings
 - **Do NOT** reuse its anon key, service-role key, or JWT secret
 - Create a **new Supabase project** (recommended name: `soravo-fresh` or `soravo-app`)
-- The new project starts with an empty database and the migration in `website/supabase/migrations/001_initial_schema.sql`
+- The new project starts with an empty database
+- **Prerequisite:** The `website/` directory (from `feature/website-foundation` branch) must be merged before applying the migration at `website/supabase/migrations/001_initial_schema.sql`
 - The old project remains paused/inactive and is not a dependency
 
 ### 2. Cloudflare Pages — New Project
@@ -55,7 +56,8 @@ belong to the past project (historical `soravo` repository) and must remain unto
 - In Supabase: configure Auth redirect URLs for the new Cloudflare Pages domain
 - In Supabase: configure Resend SMTP (new credentials, not reused from old project)
 
-**Step 4: Apply initial schema**
+**Step 4: Apply initial schema (prerequisite: website/ directory from feature/website-foundation branch)**
+- Ensure the `website/` directory exists in the repository (merged from `feature/website-foundation` branch)
 - Run `website/supabase/migrations/001_initial_schema.sql` against the new Supabase project
 - Verify RLS policies are active
 

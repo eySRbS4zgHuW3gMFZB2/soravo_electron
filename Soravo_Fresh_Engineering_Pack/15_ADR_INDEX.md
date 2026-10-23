@@ -97,6 +97,15 @@ Rationale:
 - Duplicate events return 200 OK without reprocessing
 - Concurrent duplicate deliveries cannot both proceed: the unique constraint ensures only one claim succeeds
 
+**Webhook processing states and retry behavior:**
+- `processing_status` values: `received` (initial insert), `processing` (claim acquired, work in progress), `processed` (success, side effects applied), `failed` (processing error, retryable), `duplicate` (no-op claim, already processed)
+- **Claim lifecycle:** `received` → `processing` → `processed` (success) or `failed` (error)
+- **Failed claims are retryable:** A webhook delivery that fails during processing leaves the row in `failed` state. A subsequent retry (same `provider_event_id`) finds the existing row, checks that `processing_status = 'failed'`, and re-attempts processing. The unique constraint prevents duplicate rows.
+- **Completed events are not reprocessed:** A retry for an event with `processing_status = 'processed'` returns 200 OK immediately without reapplying side effects.
+- **Reconciliation:** A scheduled reconciliation job (or manual admin action) can retry all `failed` webhook events by re-invoking the processing logic. Failed events are retried with exponential backoff up to a maximum number of attempts.
+- **Maximum retry attempts:** After N failed attempts (configurable, default 5), the event transitions to `support_review` status and requires manual intervention.
+- **Side-effect idempotency:** Payment and entitlement creation use `provider_payment_id` / `provider_event_id` as idempotency keys, so even if processing is retried, duplicate side effects are prevented at the database level.
+
 **Project isolation (new vs. past):**
 - The existing Supabase project named `soravo` and the live site at `soravo.xyz` belong to the **past project** and must remain untouched.
 - A **completely new Supabase project** must be created for the new Soravo app. No data, credentials, schema, or settings are reused or migrated.
