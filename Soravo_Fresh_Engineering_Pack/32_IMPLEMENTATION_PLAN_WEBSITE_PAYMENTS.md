@@ -1,4 +1,4 @@
-# Implementation Plan: Website, Account System, and Payment Backend
+﻿# Implementation Plan: Website, Account System, and Payment Backend
 
 ## Status: Phase 1 — First Scoped Task
 
@@ -80,6 +80,28 @@ This is the first server-side API endpoint and establishes the pattern for all s
 - Supabase Edge Functions runtime (Deno)
 - Supabase client library for Deno
 - JWT validation via Supabase Auth
+
+### Database-backed contract tests (pgTAP)
+
+- website/supabase/tests/register_device_atomic.test.sql contains **pgTAP tests** that exercise the
+  real public.register_device_atomic SQL function (not the JS mirror) for all 7 decision cases:
+  - New device, under limit → allowed
+  - New device, at limit (3 active) → denied (limit_reached)
+  - Active device refresh at limit → allowed (refresh is not a new slot)
+  - Revoked device reactivation at limit → denied (reactivation counts as new)
+  - Revoked device reactivation under limit → allowed
+  - Lifetime user, any active count → allowed
+  - Cleanup of fixture rows
+
+**Execution requirement:** These tests require a running PostgreSQL/Supabase test database with the
+migration applied (website/supabase/migrations/001_initial_schema.sql) and pgtap extension installed.
+Run with: pg_prove -d <test_db_url> website/supabase/tests/register_device_atomic.test.sql
+
+**Limitation:** No PostgreSQL/Supabase test database is available in this development environment or
+in the GitHub Actions CI runner (no DB harness provisioned). The tests are therefore documented but
+not executed. The JS contract-mirror tests in website/src/lib/deviceLimit.test.ts provide partial
+coverage of the decision logic. Database-backed coverage should be added when a test database setup
+becomes available.
 
 ### Acceptance Criteria
 
