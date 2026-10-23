@@ -504,3 +504,31 @@ Findings and plan reported to owner. Awaiting approval before implementation.
 
 Run cargo test, typecheck, packaging verification, then push PR and await CodeRabbit review.
 
+
+## Website Foundation (2026-10-23)
+
+### What was implemented
+- website/ directory with Vite + React 18 + TypeScript + Tailwind v4
+- shadcn/ui-compatible component structure (radix-nova style)
+- Pages: LandingPage, PricingPage, LoginPage, SignupPage, AccountPage
+- Supabase client integration with auth context
+- Database schema migration (profiles, devices, entitlements, payments, webhook_events, admin_audit_events)
+- RLS policies for all tables
+- Web-desktop auth contract document (29_WEB_DESKTOP_AUTH_CONTRACT.md)
+- Razorpay integration design document (30_RAZORPAY_INTEGRATION_DESIGN.md)
+- .env.example with placeholders
+- Basic test for Supabase client
+
+### What genuinely works
+- Website dev server starts and renders all pages
+- Supabase auth client is configured (requires env vars)
+- Database schema is defined with RLS policies
+- Pricing page shows \/month and \ lifetime plans
+
+### Remaining blockers
+- Supabase project not yet created/configured
+- Razorpay integration not implemented (design only)
+- Web-desktop auth flow not implemented (contract only)
+- No payment processing
+- Clean-machine Linux test still outstanding (P1-08)
+- PR #17 (packaging CI) not yet merged
