@@ -18,7 +18,7 @@ vi.mock("./supabase", () => ({
 import { registerDevice, listDevices, revokeDevice } from "./api";
 
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+globalThis.fetch = mockFetch as typeof fetch;
 
 // Helper to build a chainable "select → is → order" mock that resolves to a
 // stub result, matching how listDevices() chains calls.
