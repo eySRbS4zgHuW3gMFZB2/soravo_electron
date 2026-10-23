@@ -41,6 +41,7 @@
                   "28_GIT_WORKTREE_POLICY.md",
                   "INDEX.md",
                   "SORAVO_DECISION_MEMO_2026-10-22.md",
+                  "31_NEW_PROJECT_ISOLATION_AND_SETUP.md",
                   "29_WEB_DESKTOP_AUTH_CONTRACT.md",
                   "30_RAZORPAY_INTEGRATION_DESIGN.md"
               ],
@@ -71,7 +72,8 @@
                             "payments":  "Razorpay",
                             "visitor_analytics":  "Cloudflare Web Analytics",
                             "admin_auth":  "Supabase Auth plus server-verified role",
-                            "transcription_engine":  "preserve current CrispASR"
+                            "transcription_engine":  "preserve current CrispASR",
+                            "backend_function_placement":  "DECIDED - Supabase Edge Functions (ADR-0003, 2026-10-23). Cloudflare Pages hosts static website only."
                         },
     "memo_decisions_2026_10_22":  {
                                       "website_strategy":  "rebuild fresh; historical repository is behavioral/content reference only; implementation, schema, migrations and Edge Functions are not ported",
@@ -84,7 +86,6 @@
                                       "crispasr_packaging_authorization":  "ADR-0010 (PROPOSED - bundled layout not yet decided)"
                                   },
     "open_decisions":  {
-                           "backend_function_placement":  "PROPOSED - Cloudflare Pages Functions/Workers vs Supabase Edge Functions; task P2-08; ADR-0003",
                            "binary_distribution_host":  "PROPOSED - separate public soravo-releases repository is the preferred candidate but not settled; task P8-00; ADR-0005",
                            "crispasr_bundled_layout":  "PROPOSED - bundle.resources mapping vs externalBin sidecar vs renamed tracked staging directory; task P1-03; ADR-0010"
                        },

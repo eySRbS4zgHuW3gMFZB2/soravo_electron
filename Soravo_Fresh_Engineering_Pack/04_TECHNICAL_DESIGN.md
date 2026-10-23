@@ -3,6 +3,7 @@
 ## 1. Architecture
 
 ### Desktop
+
 - Tauri v2 shell; Rust backend; React 18 + TypeScript + Vite renderer.
 - Local SQLite history and `tauri-plugin-store` settings remain local.
 - Current CrispASR integration is preserved. No engine migration in this project.
@@ -11,6 +12,7 @@
 - Commercial integration must not route audio/transcripts through Supabase, Cloudflare, Razorpay, Resend or analytics.
 
 ### Engine packaging (blocking)
+
 The installed application must be able to find and launch the transcription engine **without any developer-only fetch step and without a source tree present**. As audited on 2026-10-22, this does not currently hold:
 
 - `bundle.resources` and `bundle.externalBin` are both empty, so the CrispASR engine and its companion files are **not** supplied to the installed application through those two Tauri inputs. (`bundle.icon` does copy repository icon files into the bundle, so the empty fields do not mean that the bundle contains no repository files at all — only that no engine is among them.)
@@ -26,12 +28,14 @@ Design requirements:
 - **Release gate:** no release until a clean-machine install, with no developer tools and no source tree, proves the app locates and launches the bundled engine and can dictate.
 
 ### Web
+
 - `website/` under the same Git repository.
 - Separate `package.json` and lockfile. Do not convert the existing desktop root to a workspace without an ADR.
 - Cloudflare Pages deployment; path-scoped CI. Preview deployments must use non-production credentials and data.
 - Shared brand tokens may be copied or shared only through a deliberate, minimal dependency; do not couple web build output to Tauri `frontendDist`.
 
 ### Identity/data
+
 - Supabase Auth for identity.
 - Supabase Postgres for profiles, devices, entitlements/subscriptions, payment ledger, audit events and minimal analytics metadata only where needed.
 - Resend SMTP for Auth email. Verify DNS/domain, sender and deliverability.
@@ -39,11 +43,39 @@ Design requirements:
 - Do not assume the old repo's Supabase project, schema or migrations are appropriate. Start with a new schema design and migration history for this product.
 
 ### Server-side API
-Use a small server-side API boundary for entitlement operations and Razorpay webhook processing. The implementation plan must choose one primary backend and record the decision in the ADR index before implementation depends on it. Avoid duplicating privileged business logic across two providers.
 
-**Backend placement is currently PROPOSED, not decided** (ADR-0003). The candidates are Cloudflare Pages Functions/Workers and Supabase Edge Functions. Supabase Edge Functions are the candidate favoured by the current read of the requirements, because they sit adjacent to the auth and data they serve, but that is a preference to be confirmed, not a settled architecture. Task P2-08 exists to choose one and write the rationale into ADR-0003. Do not begin implementation that depends on this choice before that ADR is ACCEPTED. Do not put Supabase service-role keys in the website bundle or desktop binary under either candidate.
+**DECIDED (ADR-0003, 2026-10-23): Supabase Edge Functions** are the primary privileged API backend. Cloudflare Pages hosts the static website only.
+
+Rationale: Edge Functions run adjacent to Supabase Auth and Postgres, eliminating cross-provider network hops for auth-gated operations. Native access to the Supabase Auth context means JWT verification and user identity checks happen without additional HTTP calls. Service-role keys, Razorpay secrets, and webhook secrets stay within the Supabase trust boundary.
+
+**Cloudflare Pages role:** Static website hosting only. No server-side logic runs on Cloudflare.
+
+**Do not put Supabase service-role keys in the website bundle or desktop binary.** Service-role access is server-side only (Edge Functions).
+
+**Authorization boundaries:**
+- Website (client): uses anon key + RLS. Users can only read/write their own data.
+- Edge Functions (server): use service-role key. Can perform privileged operations (webhook processing, entitlement provisioning, device limit checks, admin actions).
+- Desktop app: uses anon key + RLS for read operations. Device registration and license verification go through Edge Functions.
+- User-invoked Edge Functions validate the caller's JWT and derive or verify every `user_id` and `device_id` against the authenticated caller before using service-role access.
+- Admin operations: Edge Functions verify admin role (via `profiles` or a dedicated `admin_roles` table) before executing. Hiding admin UI is not authorization.
+
+### New project isolation (established 2026-10-23)
+
+The existing Supabase project named `soravo` and the existing website at `soravo.xyz` belong to the **past project** (historical `soravo` repository). They must **not** be reused, migrated, or modified. The new Soravo app requires:
+
+1. **A completely new Supabase project** — separate project reference, API URL, anon key, service-role key, and database. No data, credentials, or settings are copied from the old project.
+2. **A separate Cloudflare Pages project** for the new website — the existing `soravo.xyz` site and its DNS/email configuration remain untouched until an explicitly approved cutover.
+3. **Environment separation** — development uses local `.env` files with placeholder values; staging/preview uses non-production credentials; production is configured only at cutover time.
+4. **No infrastructure creation** in this task — only documentation and safe setup steps are provided. Actual project creation requires explicit owner approval.
+
+**Implementation dependencies now unblocked:**
+- Razorpay webhook endpoint: Supabase Edge Function
+- Entitlement provisioning: Supabase Edge Function
+- Device registration/limit checking: Supabase Edge Function
+- Admin operations: Supabase Edge Function with admin role verification
 
 ### Website rebuild strategy
+
 The replacement website is built **fresh** in this repository, following this pack. The historical `soravo` repository is a **behavioral and content reference only** for approved website pages, pricing presentation and dashboard behaviors. Its implementation, Supabase schema, migrations, Edge Functions, workflows and Handy-derived desktop code are **not** ported (ADR-0008).
 
 Consequences to design against:
@@ -52,6 +84,7 @@ Consequences to design against:
 - The existing production site at `soravo.xyz` stays live and untouched until the replacement passes its launch checklist. Cutover is a separate, approved, reversible step; see `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`.
 
 ### Payments
+
 - Razorpay Checkout or hosted subscription flow.
 - Verify webhook signature according to current Razorpay documentation and the exact webhook signing scheme.
 - Idempotency ledger keyed by provider event ID or stable event identity.
@@ -60,6 +93,7 @@ Consequences to design against:
 - Never trust client-supplied amount, plan, user ID or “payment success”.
 
 ### Downloads/releases
+
 - Public release assets must be reachable without authentication.
 - Preferred free option: separate public GitHub repository containing only signed/hashed release artifacts, versioned release notes and checksums; source repo can be private.
 - Generate SHA-256 checksums in CI after final artifacts are produced. Verify them from a clean download.
@@ -76,7 +110,11 @@ Names are conceptual and can be revised in an ADR before migration implementatio
 - `devices`: id, user_id, random device_id, label, platform, app_version, first_seen_at, last_seen_at, revoked_at.
 - `entitlements`: id, user_id, plan_code, status, issued_at, last_verified_at, subscription_period_end, lifetime flag, metadata version.
 - `payments`: id, user_id, provider, provider_payment_id, provider_order_id/subscription_id, amount_minor, currency, status, created_at, verified_at, refund/chargeback state.
-- `webhook_events`: provider, provider_event_id/idempotency key, received_at, signature_valid, processing_status, safe error code, processed_at.
+- `webhook_events`: provider, provider_event_id/idempotency key, received_at, signature_valid, processing_status, claimed_at, lease_expires_at, claim_token, safe error code, processed_at, retry_count.
+- **Webhook processing states:** `received` (initial insert), `processing` (claim acquired), `processed` (success), `failed` (retryable), `duplicate` (no-op), `support_review` (manual intervention required after max retries).
+- **Atomic claim:** Unique constraint on `(provider, provider_event_id)`. Retry uses atomic `UPDATE ... WHERE provider = $1 AND provider_event_id = $2 AND processing_status = 'failed'` (or `received`). Only one worker's update affects a row. The `claim_token` changes on each reclamation and must be included in all subsequent side-effect and status updates (claim fencing).
+- **Lease/timeout:** `processing` rows carry `claimed_at`, `lease_expires_at` (default 5 min), and `claim_token`. Expired leases can be reclaimed by a single worker via atomic `UPDATE ... WHERE provider = $1 AND provider_event_id = $2 AND processing_status = 'processing' AND lease_expires_at < now()`. Claim fencing prevents stale workers from acting after lease expiry.
+- **HTTP 200 OK is status-dependent:** Returned only for `processed`, `duplicate`, or `support_review`. Failed/processing events return non-2xx to trigger provider retry. `support_review` returns 200 to stop provider retries.
 - `admin_audit_events`: actor user ID, action, target type/ID, timestamp, reason, minimal safe metadata.
 - Optional `support_cases`: only if a real support workflow needs it; avoid collecting transcripts/audio.
 
