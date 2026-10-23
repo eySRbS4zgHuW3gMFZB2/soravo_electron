@@ -1,4 +1,19 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+// Mock the Supabase client to avoid WebSocket dependency in tests
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: () => ({
+    auth: {
+      signInWithPassword: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      getSession: vi.fn(),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+    },
+    from: vi.fn(),
+  }),
+}));
+
 import { supabase } from "./supabase";
 
 describe("Supabase client", () => {
