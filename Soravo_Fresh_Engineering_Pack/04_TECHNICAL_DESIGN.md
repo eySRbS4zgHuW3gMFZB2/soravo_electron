@@ -47,6 +47,15 @@ Rationale: Edge Functions run adjacent to Supabase Auth and Postgres, eliminatin
 
 **Do not put Supabase service-role keys in the website bundle or desktop binary.** Service-role access is server-side only (Edge Functions).
 
+### New project isolation (established 2026-10-23)
+
+The existing Supabase project named `soravo` and the existing website at `soravo.xyz` belong to the **past project** (historical `soravo` repository). They must **not** be reused, migrated, or modified. The new Soravo app requires:
+
+1. **A completely new Supabase project** — separate project reference, API URL, anon key, service-role key, and database. No data, credentials, or settings are copied from the old project.
+2. **A separate Cloudflare Pages project** for the new website — the existing `soravo.xyz` site and its DNS/email configuration remain untouched until an explicitly approved cutover.
+3. **Environment separation** — development uses local `.env` files with placeholder values; staging/preview uses non-production credentials; production is configured only at cutover time.
+4. **No infrastructure creation** in this task — only documentation and safe setup steps are provided. Actual project creation requires explicit owner approval.
+
 **Implementation dependencies now unblocked:**
 - Razorpay webhook endpoint: Supabase Edge Function
 - Entitlement provisioning: Supabase Edge Function

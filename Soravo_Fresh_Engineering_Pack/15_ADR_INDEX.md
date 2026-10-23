@@ -14,11 +14,54 @@ Create `website/` with its own package manifest/lockfile. Keep desktop build con
 **Status:** ACCEPTED (backend placement decided 2026-10-23, task P2-08)
 
 **Accepted services:**
-- Cloudflare Pages for website hosting (static assets + SPA routing)
-- Supabase Auth/Postgres for identity and data
+- Cloudflare Pages for website hosting (static assets + SPA routing) — NEW project, not the existing soravo.xyz site
+- Supabase Auth/Postgres for identity and data — NEW project, not the existing 'soravo' Supabase project
 - Resend for custom SMTP (Auth email)
 - Razorpay for payments
 - Cloudflare Web Analytics for site traffic
+
+**Project isolation (new vs. past):**
+
+The existing live website at `soravo.xyz` and the existing Supabase project named `soravo` belong to the **past project** (the historical `soravo` repository). They are **not** to be reused, migrated, or modified. The new Soravo app requires:
+
+1. **New Supabase project** — created in a separate Supabase organization or under a new project name (e.g., `soravo-fresh` or `soravo-app`). This project gets its own:
+   - Project reference ID and API URL
+   - Anon/publishable key and service-role key
+   - Database schema and migration history (starting from `website/supabase/migrations/`)
+   - Auth configuration (redirect URLs, SMTP via Resend)
+   - Edge Functions deployment
+   - No data, credentials, or settings are copied from the old `soravo` project
+
+2. **New Cloudflare Pages project** — created for the new website under `website/`. This project:
+   - Uses a separate Cloudflare Pages project name (e.g., `soravo-web` or `soravo-app`)
+   - Deploys from the `website/` directory in this repository
+   - Uses non-production credentials for preview deployments
+   - Does NOT modify the existing `soravo.xyz` DNS, email, or Pages configuration
+   - The production domain `soravo.xyz` stays untouched until an explicit, separately approved cutover (see `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`)
+
+3. **Environment separation:**
+   - **Development:** Local `.env` files with placeholder values; Supabase local dev (via Supabase CLI) or a dedicated dev project
+   - **Staging/Preview:** Cloudflare Pages preview deployments with non-production Supabase credentials
+   - **Production:** Separate production Supabase project and Cloudflare Pages project, configured only at cutover time
+   - No environment shares credentials with the past project
+
+4. **Safe setup steps (documentation only — do NOT execute without approval):**
+   a. Create a new Supabase project (organization: new or existing, project name: `soravo-fresh`)
+   b. Record the new project's reference ID, API URL, and keys in a secure secret store (not in git)
+   c. Create a new Cloudflare Pages project linked to this repository's `website/` directory
+   d. Configure environment variables in Cloudflare Pages (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) using the NEW project's values
+   e. Apply the initial migration (`website/supabase/migrations/001_initial_schema.sql`) to the new Supabase project
+   f. Configure Supabase Auth redirect URLs for the new Cloudflare Pages domain
+   g. Configure Resend SMTP in the new Supabase project
+   h. Deploy Edge Functions to the new Supabase project
+   i. Verify all functionality on the preview deployment before any production cutover
+
+5. **Isolation guarantees:**
+   - No data migration from the old `soravo` Supabase project
+   - No credential reuse (new anon key, new service-role key, new JWT secret)
+   - No DNS changes to `soravo.xyz` or its email configuration
+   - No modification to the old Supabase project's schema, RLS, or auth settings
+   - The old Supabase project remains paused/inactive and is not a dependency
 
 **Backend function placement — DECIDED: Supabase Edge Functions**
 
@@ -48,6 +91,13 @@ Rationale:
 - Signature verified via HMAC-SHA256 using the webhook secret (server-side only)
 - Idempotency checked against `webhook_events` table before processing
 - Duplicate events return 200 OK without reprocessing
+
+**Project isolation (new vs. past):**
+- The existing Supabase project named `soravo` and the live site at `soravo.xyz` belong to the **past project** and must remain untouched.
+- A **completely new Supabase project** must be created for the new Soravo app. No data, credentials, schema, or settings are reused or migrated.
+- A **new Cloudflare Pages project** must be created for the new website. The existing `soravo.xyz` DNS, email, and Pages configuration remain unchanged.
+- Full isolation requirements and safe setup steps are documented in `31_NEW_PROJECT_ISOLATION_AND_SETUP.md`.
+- No infrastructure is created or production settings changed by this documentation task.
 
 **Authorization boundaries:**
 - Website (client): uses anon key + RLS. Users can only read/write their own data.

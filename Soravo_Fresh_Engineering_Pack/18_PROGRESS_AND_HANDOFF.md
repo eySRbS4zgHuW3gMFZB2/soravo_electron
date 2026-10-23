@@ -538,3 +538,24 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - No webhook handling
 - No entitlement provisioning
 - Design documents only
+
+## New Project Isolation (2026-10-23)
+
+### What was documented
+- Updated ADR-0003 with new Supabase project isolation requirements
+- Updated 04_TECHNICAL_DESIGN.md with new project isolation section
+- Created 31_NEW_PROJECT_ISOLATION_AND_SETUP.md with safe setup steps
+- Updated manifest (version 1.4.0)
+
+### Key decisions
+- Existing Supabase project 'soravo' and live site soravo.xyz belong to the past project
+- New Supabase project required (separate credentials, schema, data)
+- New Cloudflare Pages project required (separate from soravo.xyz)
+- No infrastructure created, no production settings changed
+- No data migration or credential reuse from old project
+
+### What is NOT done
+- No Supabase project created (requires owner approval)
+- No Cloudflare Pages project created (requires owner approval)
+- No DNS changes
+- No environment variables configured in production
