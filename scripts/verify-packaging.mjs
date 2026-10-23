@@ -11,7 +11,7 @@
  * Exit code 0 = all checks pass, 1 = one or more checks failed.
  */
 
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, existsSync, statSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,24 +32,35 @@ try {
 const bundle = conf?.bundle ?? {};
 if (bundle.active !== true) fail("bundle.active must be true");
 
+// bundle.resources must be a non-empty object (map form) mapping source
+// directories to bundle-internal target names.
 const resources = bundle.resources ?? {};
-const EXPECTED_SOURCE_FRAGMENT = "crispasr-windows-x86_64-cpu";
-const EXPECTED_TARGET = "crispasr";
 if (typeof resources !== "object" || Array.isArray(resources) || Object.keys(resources).length === 0) {
   fail("bundle.resources must be a non-empty object (map form)");
 } else {
-  const engineEntry = Object.entries(resources).find(
-    ([k, v]) => k.includes("crispasr") && typeof v === "string" && v.includes("crispasr")
+  // Windows engine entry: source dir contains "windows-x86_64-cpu", target "crispasr"
+  const winEntry = Object.entries(resources).find(
+    ([k, v]) => k.includes("windows-x86_64-cpu") && typeof v === "string" && v === "crispasr"
   );
-  if (!engineEntry) {
-    fail("bundle.resources must contain an entry mapping a CrispASR source to a 'crispasr' target");
+  if (!winEntry) {
+    fail("bundle.resources must map the Windows engine directory to target 'crispasr'");
   } else {
-    const [src, tgt] = engineEntry;
-    if (!src.includes(EXPECTED_SOURCE_FRAGMENT)) {
-      fail("bundle.resources source should reference the tracked engine directory (expected path containing 'crispasr-windows-x86_64-cpu')");
+    const [winSrc] = winEntry;
+    if (!winSrc.includes("crispasr-windows-x86_64-cpu")) {
+      fail("Windows engine source should reference 'crispasr-windows-x86_64-cpu'");
     }
-    if (tgt !== EXPECTED_TARGET) {
-      fail(`bundle.resources target must be exactly '${EXPECTED_TARGET}', got '${tgt}'`);
+  }
+
+  // Linux engine entry: source dir contains "linux-x86_64-cpu", target "crispasr-linux"
+  const linEntry = Object.entries(resources).find(
+    ([k, v]) => k.includes("linux-x86_64-cpu") && typeof v === "string" && v === "crispasr-linux"
+  );
+  if (!linEntry) {
+    fail("bundle.resources must map the Linux engine directory to target 'crispasr-linux'");
+  } else {
+    const [linSrc] = linEntry;
+    if (!linSrc.includes("crispasr-linux-x86_64-cpu")) {
+      fail("Linux engine source should reference 'crispasr-linux-x86_64-cpu'");
     }
   }
 }
@@ -63,19 +74,79 @@ if (Array.isArray(bundle.externalBin) && bundle.externalBin.length > 0) {
 }
 
 // --- 2. Tracked engine files check ---
-const engineDir = join(root, "third-party", "crispasr", "extracted", "crispasr-windows-x86_64-cpu");
-const requiredEngineFiles = ["crispasr.exe", "openblas.dll", "LICENSE", "THIRD_PARTY_NOTICES.txt", "vcruntime140.dll", "vcruntime140_1.dll", "vcomp140.dll", "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "concrt140.dll", "vccorlib140.dll"];
-const vcRuntimeAtRoot = ["vcruntime140.dll", "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "concrt140.dll", "vccorlib140.dll"];
+// Windows engine files (tracked in git).
+const winEngineDir = join(
+  root,
+  "third-party",
+  "crispasr",
+  "extracted",
+  "crispasr-windows-x86_64-cpu"
+);
+const winEngineFiles = [
+  "crispasr.exe",
+  "openblas.dll",
+  "LICENSE",
+  "THIRD_PARTY_NOTICES.txt",
+  "vcruntime140.dll",
+  "vcruntime140_1.dll",
+  "vcomp140.dll",
+  "msvcp140.dll",
+  "msvcp140_1.dll",
+  "msvcp140_2.dll",
+  "concrt140.dll",
+  "vccorlib140.dll"
+];
+for (const f of winEngineFiles) {
+  if (!existsSync(join(winEngineDir, f))) fail(`Missing tracked Windows engine file: ${f}`);
+}
 
-for (const f of requiredEngineFiles) {
-  if (!existsSync(join(engineDir, f))) fail(`Missing tracked engine file: ${f}`);
+// Linux engine files (tracked in git).
+const linEngineDir = join(
+  root,
+  "third-party",
+  "crispasr",
+  "extracted",
+  "crispasr-linux-x86_64-cpu"
+);
+const linEngineFiles = [
+  "crispasr",
+  "crispasr-quantize",
+  "libopenblas.so.0",
+  "libgomp.so.1",
+  "libgfortran.so.5",
+  "libquadmath.so.0",
+  "libc2pa_c.so",
+  "LICENSE",
+  "THIRD_PARTY_NOTICES.txt"
+];
+for (const f of linEngineFiles) {
+  if (!existsSync(join(linEngineDir, f))) fail(`Missing tracked Linux engine file: ${f}`);
+}
+
+// Verify Linux engine executable has execute permission (only meaningful on Linux).
+if (process.platform === "linux") {
+  const linuxExe = join(linEngineDir, "crispasr");
+  if (existsSync(linuxExe)) {
+    try {
+      const st = statSync(linuxExe);
+      const mode = st.mode & 0o777;
+      if ((mode & 0o111) === 0) {
+        fail("crispasr Linux executable is not executable (missing +x permission)");
+      }
+    } catch (e) {
+      fail(`Cannot stat crispasr Linux executable: ${e.message}`);
+    }
+  }
 }
 
 // --- 3. Runtime lookup check ---
 const libPath = join(root, "src-tauri", "src", "lib.rs");
 const libContent = readFileSync(libPath, "utf8");
 if (!libContent.includes('resource_dir.join("crispasr").join(name)')) {
-  fail("find_crispasr_binary must check resource_dir/crispasr/ (bundled layout)");
+  fail("find_crispasr_binary must check resource_dir/crispasr/ (bundled Windows layout)");
+}
+if (!libContent.includes('resource_dir.join("crispasr-linux").join("crispasr")')) {
+  fail("find_crispasr_binary must check resource_dir/crispasr-linux/crispasr (bundled Linux layout)");
 }
 
 // --- 4. Bundle contents check (optional, requires --bundle <path>) ---
@@ -88,16 +159,48 @@ if (bundleIdx >= 0) {
     if (!existsSync(bundlePath)) {
       fail(`Bundle path does not exist: ${bundlePath}`);
     } else {
-      const crispasrDir = join(bundlePath, "crispasr");
-      if (!existsSync(crispasrDir)) {
-        fail(`crispasr/ directory missing from bundle at ${bundlePath}`);
-      } else {
-        for (const f of requiredEngineFiles) {
-          if (!existsSync(join(crispasrDir, f))) fail(`Missing from bundle: crispasr/${f}`);
+      // Windows MSI layout: engine at <bundle>/crispasr/, VC++ DLLs at bundle root.
+      const winCrispasrDir = join(bundlePath, "crispasr");
+      const winCrispasrDirExists = existsSync(winCrispasrDir);
+      if (winCrispasrDirExists) {
+        for (const f of winEngineFiles) {
+          if (!existsSync(join(winCrispasrDir, f))) fail(`Missing from Windows bundle: crispasr/${f}`);
+        }
+        const vcRuntimeAtRoot = ["vcruntime140.dll", "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "concrt140.dll", "vccorlib140.dll"];
+        for (const f of vcRuntimeAtRoot) {
+          if (!existsSync(join(bundlePath, f))) fail(`Missing from Windows bundle root: ${f} (bundleVCRuntime)`);
         }
       }
-      for (const f of vcRuntimeAtRoot) {
-        if (!existsSync(join(bundlePath, f))) fail(`Missing from bundle root: ${f} (bundleVCRuntime)`);
+      // Linux AppImage layout: engine at <bundle>/crispasr-linux/, shared libs beside it.
+      const linCrispasrDir = join(bundlePath, "crispasr-linux");
+      if (existsSync(linCrispasrDir)) {
+        for (const f of linEngineFiles) {
+          if (!existsSync(join(linCrispasrDir, f))) fail(`Missing from Linux bundle: crispasr-linux/${f}`);
+        }
+        // Verify Linux engine executable permission inside bundle (only on Linux).
+        if (process.platform === "linux") {
+          const linBundleExe = join(linCrispasrDir, "crispasr");
+          if (existsSync(linBundleExe)) {
+            try {
+              const st = statSync(linBundleExe);
+              if ((st.mode & 0o111) === 0) {
+                fail("Linux crispasr executable inside bundle is not executable (missing +x)");
+              }
+            } catch (e) {
+              fail(`Cannot stat bundled Linux crispasr: ${e.message}`);
+            }
+          }
+        }
+      }
+      // Require the platform-specific engine directory in the bundle.
+      if (process.platform === "linux") {
+        if (!existsSync(linCrispasrDir)) {
+          fail("Linux bundle missing crispasr-linux/ directory");
+        }
+      } else {
+        if (!winCrispasrDirExists && !existsSync(linCrispasrDir)) {
+          fail("No CrispASR engine directory found in bundle (expected crispasr/ or crispasr-linux/)");
+        }
       }
     }
   }

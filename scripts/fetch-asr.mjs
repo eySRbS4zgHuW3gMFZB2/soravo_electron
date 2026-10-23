@@ -1,13 +1,14 @@
 /**
  * One-time fetcher for Soravo's local transcription runtime.
  *
- * Downloads the CrispASR Windows x64 CPU build and one Whisper GGUF model into
+ * Downloads the CrispASR CPU build and one Whisper GGUF model into
  * third-party/ (git-ignored). Re-run to repair either artifact.
  *
  * Usage:
- *   npm run fetch:asr                # default: tiny.en (~75 MB, fastest)
- *   npm run fetch:asr -- base.en     # ~142 MB, better accuracy than tiny
- *   npm run fetch:asr -- small.en    # ~466 MB
+ *   npm run fetch:asr                          # Windows: downloads .zip to third-party/bin/
+ *   npm run fetch:asr --platform linux         # Linux: downloads .tar.gz to third-party/crispasr/extracted/crispasr-linux-x86_64-cpu/
+ *   npm run fetch:asr -- base.en               # default: tiny.en (~75 MB, fastest)
+ *   npm run fetch:asr -- base.en --platform linux
  *
  * Model ids map to ggml-<id>.bin in third-party/models/. The active model is
  * chosen in Settings; it must match one of the files present here.
@@ -21,6 +22,13 @@ import { fileURLToPath } from 'url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const binDir = join(root, 'third-party', 'bin')
 const modelsDir = join(root, 'third-party', 'models')
+const linuxEngineDir = join(
+  root,
+  'third-party',
+  'crispasr',
+  'extracted',
+  'crispasr-linux-x86_64-cpu'
+)
 
 const CRISPASR_REPO = 'CrispStrobe/CrispASR'
 const GGML_BASE = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main'
@@ -38,10 +46,25 @@ const MODEL_HINTS = {
 }
 
 const DEFAULT_MODEL = 'tiny.en'
+const PLATFORM = process.argv.includes('--platform') && process.argv[process.argv.indexOf('--platform') + 1] === 'linux'
+  ? 'linux'
+  : 'windows'
 
 function pickBinaryAsset(assets) {
+  if (PLATFORM === 'linux') {
+    // Plain CPU Linux x64 build: no GPU or driver dependency, works everywhere.
+    const plain = assets.find((a) => a.name === 'crispasr-linux-x86_64.tar.gz')
+    if (plain) return plain
+    return (
+      assets.find(
+        (a) =>
+          /linux.*x86_64/i.test(a.name) &&
+          !/cuda|vulkan|cpu-legacy|non-cuda|arm64|hip|source|src/i.test(a.name)
+      ) ?? null
+    )
+  }
+  // Windows: plain CPU x64 build.
   const zips = assets.filter((a) => a.name.endsWith('.zip'))
-  // Plain CPU Windows x64 build: no GPU or driver dependency, works everywhere.
   const plain = zips.find((a) => a.name === 'crispasr-windows-x86_64-cpu.zip')
   if (plain) return plain
   return (
@@ -100,7 +123,7 @@ async function download(url, dest, label) {
   return received
 }
 
-/** The archive nests everything one level deep; hoist the exe and its DLLs. */
+/** The Windows archive nests everything one level deep; hoist the exe and its DLLs. */
 function relocateBinary(binDir) {
   const all = listFilesRecursive(binDir)
   const exe = all.find((f) => baseName(f) === 'crispasr.exe')
@@ -130,7 +153,8 @@ async function findLatestRelease() {
     if (asset) return { rel, asset }
   }
   const tags = releases.map((r) => r.tag_name).join(', ')
-  throw new Error(`No Windows x64 CPU binary found in recent releases (${tags}).`)
+  const platformLabel = PLATFORM === 'linux' ? 'Linux x64 CPU' : 'Windows x64 CPU'
+  throw new Error(`No ${platformLabel} binary found in recent releases (${tags}).`)
 }
 
 function parseModelArg() {
@@ -151,24 +175,46 @@ async function main() {
   const modelFile = `ggml-${model}.bin`
   const modelDest = join(modelsDir, modelFile)
 
-  mkdirSync(binDir, { recursive: true })
   mkdirSync(modelsDir, { recursive: true })
 
   // Binary first: a missing exe is the more confusing failure.
-  if (existsSync(join(binDir, 'crispasr.exe'))) {
-    console.log(`CrispASR binary already present: ${join(binDir, 'crispasr.exe')}`)
+  if (PLATFORM === 'linux') {
+    mkdirSync(linuxEngineDir, { recursive: true })
+    const linuxExe = join(linuxEngineDir, 'crispasr')
+    if (existsSync(linuxExe)) {
+      console.log(`CrispASR binary already present: ${linuxExe}`)
+    } else {
+      console.log('Resolving newest CrispASR release…')
+      const { rel, asset } = await findLatestRelease()
+      console.log(`Using ${rel.tag_name}: ${asset.name} (${(asset.size / 1048576).toFixed(1)} MB)…`)
+      const tarPath = join(tmpdir(), 'soravo-crispasr-linux.tar.gz')
+      await download(asset.browser_download_url, tarPath, 'binary')
+      console.log('Extracting…')
+      rmSync(linuxEngineDir, { recursive: true, force: true })
+      mkdirSync(linuxEngineDir, { recursive: true })
+      execFileSync('tar', ['-xzf', tarPath, '-C', linuxEngineDir], {
+        stdio: 'inherit'
+      })
+      rmSync(tarPath, { force: true })
+      console.log(`CrispASR binary ready: ${linuxExe}`)
+    }
   } else {
-    console.log('Resolving newest CrispASR release…')
-    const { rel, asset } = await findLatestRelease()
-    console.log(`Using ${rel.tag_name}: ${asset.name} (${(asset.size / 1048576).toFixed(1)} MB)…`)
-    const zipPath = join(tmpdir(), 'soravo-crispasr-bin.zip')
-    await download(asset.browser_download_url, zipPath, 'binary')
-    console.log('Extracting…')
-    rmSync(binDir, { recursive: true, force: true })
     mkdirSync(binDir, { recursive: true })
-    execFileSync('tar.exe', ['-xf', zipPath, '-C', binDir], { stdio: 'inherit' })
-    rmSync(zipPath, { force: true })
-    relocateBinary(binDir)
+    if (existsSync(join(binDir, 'crispasr.exe'))) {
+      console.log(`CrispASR binary already present: ${join(binDir, 'crispasr.exe')}`)
+    } else {
+      console.log('Resolving newest CrispASR release…')
+      const { rel, asset } = await findLatestRelease()
+      console.log(`Using ${rel.tag_name}: ${asset.name} (${(asset.size / 1048576).toFixed(1)} MB)…`)
+      const zipPath = join(tmpdir(), 'soravo-crispasr-bin.zip')
+      await download(asset.browser_download_url, zipPath, 'binary')
+      console.log('Extracting…')
+      rmSync(binDir, { recursive: true, force: true })
+      mkdirSync(binDir, { recursive: true })
+      execFileSync('tar.exe', ['-xf', zipPath, '-C', binDir], { stdio: 'inherit' })
+      rmSync(zipPath, { force: true })
+      relocateBinary(binDir)
+    }
   }
 
   if (existsSync(modelDest)) {
