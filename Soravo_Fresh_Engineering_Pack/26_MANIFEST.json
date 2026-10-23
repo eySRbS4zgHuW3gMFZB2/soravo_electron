@@ -43,7 +43,8 @@
                   "SORAVO_DECISION_MEMO_2026-10-22.md",
                   "31_NEW_PROJECT_ISOLATION_AND_SETUP.md",
                   "29_WEB_DESKTOP_AUTH_CONTRACT.md",
-                  "30_RAZORPAY_INTEGRATION_DESIGN.md"
+                  "30_RAZORPAY_INTEGRATION_DESIGN.md",
+                  "32_IMPLEMENTATION_PLAN_WEBSITE_PAYMENTS.md"
               ],
     "owner_decisions":  {
                             "platforms":  [
