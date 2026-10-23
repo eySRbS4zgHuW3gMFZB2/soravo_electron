@@ -331,4 +331,4 @@ jobs:
             echo "Could not locate crispasr executable in extracted AppImage"
             exit 1
           fi
-          node /github/workspace/scripts/verify-packaging.mjs --bundle "$appDir"
+          node "${{ github.workspace }}/scripts/verify-packaging.mjs" --bundle "$appDir"
