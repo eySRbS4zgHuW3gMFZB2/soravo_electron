@@ -4,6 +4,7 @@
 **Current status:** The pack is committed and pushed on `docs/engineering-pack`, with a pull request open into `main`. `main` is untouched. No repository rename, DNS change, production change, deployment, Supabase data change or secret operation has been performed. Implementation has not started.
 
 ## Owner-approved decisions
+
 - Launch Windows + Linux. **Linux is BLOCKED** pending a Linux engine artifact (task P1-05); Windows is the only platform with an engine today.
 - Preserve current Tauri app and CrispASR.
 - Website under `website/`, independent package/lockfile.
@@ -21,6 +22,7 @@
 - Do not copy code/schema/spec implementation from old repo.
 
 ## Decisions approved in the 2026-10-22 memo (highest authority in this pack)
+
 - **Website: rebuild fresh; preserve the current site until cutover.** The historical repository is a behavioral/content reference only for approved website content and behavior; its implementation, schema, migrations, Edge Functions and Handy-derived desktop code are not ported. `soravo.xyz` and its DNS/email configuration stay untouched until the replacement passes its launch checklist. Recorded as ADR-0008 and `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`.
 - **Repository rename: CI first.** Order is backup/audit → baseline CI and release-packaging checks → rename checklist → rename → post-rename verification. Recorded as ADR-0009, and in `05_IMPLEMENTATION_PLAN.md` Phase 0, `06_TASK_BREAKDOWN.md` P0 and `21_RENAME_AND_MIGRATION_RUNBOOK.md`.
 - **Production domain: preserved through the migration.** Cutover is a separate, explicitly approved, reversible step with a URL inventory, tested redirects and a rehearsed rollback. Recorded in `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`, Phase 8 and tasks P3-09/P8-09/P8-10.
@@ -29,6 +31,7 @@
 - **Git worktree policy is mandatory** (owner instruction, 2026-10-22): every new feature and every independent task runs in its own dedicated worktree and named branch; one task, one worktree, one branch; tasks never touch another worktree's files, branch, index or stash; tests and review happen in the worktree before integration; after merging, the worktree, its registration and its build output are removed. Recorded as `28_GIT_WORKTREE_POLICY.md`.
 
 ## Verified in the 2026-10-22 worktree-policy session
+
 - Installed git is **2.56.0**; `.worktrees/` is already git-ignored in the active repository, so a worktree directory cannot be committed by accident.
 - The active repository currently holds **three registered worktrees**: `settings-system` and `snippets-scratchpad` are on **detached HEAD**, and `wispr-redesign` is on `feature/wispr-redesign`. Detached-HEAD worktrees are exactly the pattern the new policy ends.
 - The git safety guarantees the policy relies on were **verified empirically** against a throwaway repository, not assumed:
@@ -41,6 +44,7 @@
 - **Each worktree gets its own `src-tauri/target`** unless `CARGO_TARGET_DIR` is set, and it is not set anywhere in the repository. The main tree's target is ~7.2 GB; three worktrees previously held roughly 29 GB of build output between them. The policy therefore requires a disk check before creating a Rust worktree and requires the build output to be deleted with the worktree.
 
 ## Source-checked facts
+
 - Active remote observed: `eySRbS4zgHuW3gMFZB2/soravo_electron`, public at audit time.
 - `package.json` name is already `soravo`.
 - App is Tauri v2 + Rust + React + TypeScript + Vite.
@@ -52,6 +56,7 @@
 - Website/auth/payment/dashboard are new work in this active repo.
 
 ## Verified in the 2026-10-22 reconciliation session
+
 - Audit of the active repository: `main` at `3ac4e3e`, clean working tree except the untracked pack folder, remote `soravo_electron`, eight local branches all with remote counterparts, three registered worktrees.
 - **CrispASR engine locations confirmed against the checkout:** `third-party/bin/` is git-ignored with **0 tracked files** (40 files exist only on a developer machine, from `npm run fetch:asr`); the engine is **committed** at `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/` (`crispasr.exe` 18.3 MB, `openblas.dll` 1.7 MB, `crispasr-quantize.exe` 0.6 MB, LICENSE, THIRD_PARTY_NOTICES.txt); `third-party/crispasr/crispasr.zip` (8.7 MB) is also committed.
 - `find_crispasr_binary` in `src-tauri/src/lib.rs` searches `<root>/third-party/bin/<exe>` then the children of `<root>/third-party/crispasr/extracted/`, over roots `current_dir`, `project_root` and the Tauri `resource_dir`. None of the first two exist on an installed machine, and `resource_dir` holds no engine.
@@ -61,6 +66,7 @@
 - `soravo_deprecated` is confirmed available as a repository name.
 
 ## Changes made this session
+
 Documentation only, all inside `Soravo_Fresh_Engineering_Pack/`:
 
 - `00_README.md` — memo decisions added; new "Decisions still open" section; corrected engine-packaging baseline; production-site context; worktree policy added to the read order and to a new "Mandatory policies" section.
@@ -327,6 +333,7 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 - The pull request is **open and not merged.** The merge awaits owner approval.
 
 ## Next actions
+
 1. **Owner reviews and approves the pull request.** The merge is deliberately not performed.
 2. After the merge: remove the `docs-engineering-pack` worktree, `git worktree prune`, delete the merged local branch, and delete the worktree's build output.
 3. Owner/agent backs up both repos and verifies working tree (P0-01).
@@ -335,7 +342,7 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 6. Run a deep VM/toolchain/state audit and update `19_STATE_AUDIT_PROTOCOL.md` / `docs/engineering/STATE_AUDIT.md`.
 7. Decide the CrispASR bundled layout and record ADR-0010 (P1-03).
 8. Fix packaging and establish the Windows CI baseline before commercial code. Linux CI stays behind task P1-05 and the Linux release gate; it is not part of the pre-commercial baseline.
-9. Choose the backend placement and record ADR-0003 (P2-08); choose the binary host and finalise ADR-0005 (P8-00).
+9. Choose the binary host and finalise ADR-0005 (P8-00). Backend placement is decided: Supabase Edge Functions (ADR-0003, accepted 2026-10-23).
 10. Create website shell and Supabase staging schema.
 11. Configure Resend SMTP; test email delivery.
 12. Implement account and device flows.
@@ -344,6 +351,7 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 15. Prepare, then separately approve, the production cutover.
 
 ## Session handoff template
+
 - Date/time and agent:
 - Worktree path:
 - Branch/commit:
@@ -397,9 +405,11 @@ Phase F: Clean-machine verification procedure.
 Phase G: Linux BLOCKED (no changes).
 
 ### What will NOT be changed
+
 No desktop features, website/auth/payment work, repository rename, production changes, Linux packaging, CSP changes, or model bundling.
 
 ### Status
+
 Findings and plan reported to owner. Awaiting approval before implementation.
 
 ### Implementation completed
@@ -432,6 +442,7 @@ Findings and plan reported to owner. Awaiting approval before implementation.
 5. VC++ DLLs co-located with engine — FIXED
 
 ### Linux: BLOCKED (no Linux engine)
+
 ## P1-05 session — 2026-10-22 (Linux CrispASR packaging — AppImage)
 
 **Worktree:** .worktrees/P1-05-linux-engine · **Branch:** chore/P1-05-linux-engine · **Base:** 4b953f5 (origin/main)
@@ -505,6 +516,69 @@ Findings and plan reported to owner. Awaiting approval before implementation.
 Run cargo test, typecheck, packaging verification, then push PR and await CodeRabbit review.
 
 
+## ADR-0003 Backend Placement (2026-10-23)
+
+### What was decided
+
+- Supabase Edge Functions chosen as the privileged API backend
+- Cloudflare Pages hosts the static website only
+- ADR-0003 updated from 'ACCEPTED in part; PROPOSED' to 'ACCEPTED'
+- 04_TECHNICAL_DESIGN.md updated to reflect the decision
+
+### Rationale
+
+1. Data proximity - Edge Functions run in the same Supabase project as Auth and Postgres
+2. Auth integration - native access to Supabase Auth context for JWT verification
+3. Secret management - service-role keys stay within Supabase trust boundary
+4. RLS enforcement - clean separation between client (RLS) and server (service-role) access
+5. Single provider for privileged logic - no duplication across providers
+
+### Trade-offs accepted
+
+- Deno runtime (not Node.js) - some npm packages may not be compatible
+- Supabase free tier invocation limits - monitor and upgrade if needed
+- Cloudflare Pages still hosts static website; Edge Functions invoked via Supabase URL
+
+### What this unblocks
+
+- Razorpay webhook endpoint implementation
+- Entitlement provisioning
+- Device registration/limit checking
+- Admin operations
+- All server-side business logic
+
+### What is NOT implemented yet
+
+- No Edge Functions written yet
+- No payment processing
+- No webhook handling
+- No entitlement provisioning
+- Design documents only
+
+## New Project Isolation (2026-10-23)
+
+### What was documented
+
+- Updated ADR-0003 with new Supabase project isolation requirements
+- Updated 04_TECHNICAL_DESIGN.md with new project isolation section
+- Created 31_NEW_PROJECT_ISOLATION_AND_SETUP.md with safe setup steps
+- Updated manifest (version 1.4.0)
+
+### Key decisions
+
+- Existing Supabase project 'soravo' and live site soravo.xyz belong to the past project
+- New Supabase project required (separate credentials, schema, data)
+- New Cloudflare Pages project required (separate from soravo.xyz)
+- No infrastructure created, no production settings changed
+- No data migration or credential reuse from old project
+
+### What is NOT done
+
+- No Supabase project created (requires owner approval)
+- No Cloudflare Pages project created (requires owner approval)
+- No DNS changes
+- No environment variables configured in production
+
 ## Website Foundation (2026-10-23)
 
 ### What was implemented
@@ -523,7 +597,7 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Website dev server starts and renders all pages
 - Supabase auth client is configured (requires env vars)
 - Database schema is defined with RLS policies
-- Pricing page shows \/month and \ lifetime plans
+- Pricing page shows /month and  lifetime plans
 
 ### Remaining blockers
 - Supabase project not yet created/configured
@@ -532,3 +606,66 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - No payment processing
 - Clean-machine Linux test still outstanding (P1-08)
 - PR #17 (packaging CI) not yet merged
+=======
+## ADR-0003 Backend Placement (2026-10-23)
+
+### What was decided
+
+- Supabase Edge Functions chosen as the privileged API backend
+- Cloudflare Pages hosts the static website only
+- ADR-0003 updated from 'ACCEPTED in part; PROPOSED' to 'ACCEPTED'
+- 04_TECHNICAL_DESIGN.md updated to reflect the decision
+
+### Rationale
+
+1. Data proximity - Edge Functions run in the same Supabase project as Auth and Postgres
+2. Auth integration - native access to Supabase Auth context for JWT verification
+3. Secret management - service-role keys stay within Supabase trust boundary
+4. RLS enforcement - clean separation between client (RLS) and server (service-role) access
+5. Single provider for privileged logic - no duplication across providers
+
+### Trade-offs accepted
+
+- Deno runtime (not Node.js) - some npm packages may not be compatible
+- Supabase free tier invocation limits - monitor and upgrade if needed
+- Cloudflare Pages still hosts static website; Edge Functions invoked via Supabase URL
+
+### What this unblocks
+
+- Razorpay webhook endpoint implementation
+- Entitlement provisioning
+- Device registration/limit checking
+- Admin operations
+- All server-side business logic
+
+### What is NOT implemented yet
+
+- No Edge Functions written yet
+- No payment processing
+- No webhook handling
+- No entitlement provisioning
+- Design documents only
+
+## New Project Isolation (2026-10-23)
+
+### What was documented
+
+- Updated ADR-0003 with new Supabase project isolation requirements
+- Updated 04_TECHNICAL_DESIGN.md with new project isolation section
+- Created 31_NEW_PROJECT_ISOLATION_AND_SETUP.md with safe setup steps
+- Updated manifest (version 1.4.0)
+
+### Key decisions
+
+- Existing Supabase project 'soravo' and live site soravo.xyz belong to the past project
+- New Supabase project required (separate credentials, schema, data)
+- New Cloudflare Pages project required (separate from soravo.xyz)
+- No infrastructure created, no production settings changed
+- No data migration or credential reuse from old project
+
+### What is NOT done
+
+- No Supabase project created (requires owner approval)
+- No Cloudflare Pages project created (requires owner approval)
+- No DNS changes
+- No environment variables configured in production
