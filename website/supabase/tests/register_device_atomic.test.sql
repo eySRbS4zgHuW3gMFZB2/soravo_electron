@@ -2,34 +2,63 @@
 --
 -- Prerequisites (run where a Postgres/Supabase test database is available):
 --   1. Apply website/supabase/migrations/001_initial_schema.sql
---   2. CREATE EXTENSION IF NOT EXISTS pgtap;
---   3. Run: pg_prove -d <db> website/supabase/tests/register_device_atomic.test.sql
+--   2. Ensure a test user exists in auth.users with the UUID:
+--      00000000-0000-0000-0000-000000000001
+--      (On Supabase: create via dashboard or auth.admin.createUser(). On raw
+--       Postgres: INSERT INTO auth.users (id, email, encrypted_password,
+--       email_confirmed_at, created_at, updated_at, confirmation_token,
+--       email_change, email_change_token_new, recovery_token)
+--       VALUES (...). pgcrypto extension is required for encrypted_password.)
+--   3. CREATE EXTENSION IF NOT EXISTS pgtap;
+--   4. Run: pg_prove -d <db_url> website/supabase/tests/register_device_atomic.test.sql
 --
 -- These tests exercise the REAL SQL function (not a JS mirror) for the
 -- decision table:
 --   new device       + activeCount < 3 -> allowed
---   new device       + activeCount = 3 -> denied (limit_reached)
---   active device    + activeCount = 3 -> allowed (refresh, no new slot)
---   revoked device   + activeCount = 3 -> denied (reactivation == new)
+--   new device       + activeCount >= 3 -> denied (limit_reached)
+--   active device    + any activeCount -> allowed (refresh, no new slot)
+--   revoked device   + activeCount >= 3 -> denied (reactivation == new)
 --   revoked device   + activeCount < 3 -> allowed (reactivation)
---   lifetime user    + any -> allowed
+--   lifetime param   + any -> allowed
 --
--- NOTE: This suite is not wired into GitHub Actions CI yet because the
--- repository does not provision a Postgres/Supabase test database on the
--- runner. It is the canonical database-backed coverage for the function.
+-- NOTE: This suite is not wired into GitHub Actions CI because the repository
+-- does not provision a Postgres/Supabase test database on the runner. The
+-- pgTAP extension, Auth schema (auth.users), and migration must all be present
+-- before running. Run locally where a test DB exists.
+--
+-- LIMITATION: No PostgreSQL/Supabase test database was available during
+-- development. These tests are provided as the canonical database-backed
+-- coverage but have NOT been executed. They are type-checked against the
+-- function signature only.
 
 BEGIN;
 
-SELECT plan(7);
+SELECT plan(9);
 
 -- Fixture user (bypasses auth for direct function calls)
+-- Satisfies devices.user_id -> auth.users(id) foreign key.
+INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
+VALUES (
+  '00000000-0000-0000-0000-000000000001',
+  'pgtap-test@example.com',
+  'x',
+  now(),
+  now(),
+  now(),
+  '',
+  '',
+  '',
+  ''
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- 1. New device under limit -> allowed (activeCount = 0 before this call)
 SELECT lives_ok(
   $$ INSERT INTO public.devices (user_id, device_id, platform)
      VALUES ('00000000-0000-0000-0000-000000000001', 'dev-new', 'windows') $$,
   'seed new device'
 );
 
--- 1. New device under limit -> allowed
 SELECT is(
   (public.register_device_atomic(
      '00000000-0000-0000-0000-000000000001', 'dev-new', NULL, 'windows', '1.0.0', false
@@ -38,17 +67,17 @@ SELECT is(
   'new device allowed when activeCount < 3'
 );
 
--- 2. Fill to 3 active devices
+-- 2. Fill to 4 active devices (dev-new + dev-a + dev-b + dev-c)
 SELECT lives_ok(
   $$ INSERT INTO public.devices (user_id, device_id, platform)
      VALUES
        ('00000000-0000-0000-0000-000000000001', 'dev-a', 'windows'),
        ('00000000-0000-0000-0000-000000000001', 'dev-b', 'windows'),
        ('00000000-0000-0000-0000-000000000001', 'dev-c', 'windows') $$,
-  'seed three active devices'
+  'seed three more active devices'
 );
 
--- 3. New device at limit -> denied
+-- 3. New device at limit (4 active >= 3) -> denied
 SELECT is(
   (public.register_device_atomic(
      '00000000-0000-0000-0000-000000000001', 'dev-d', NULL, 'windows', '1.0.0', false
