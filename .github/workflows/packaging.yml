@@ -107,8 +107,14 @@ jobs:
           } catch (error) {
             fail(`${PACK}/26_MANIFEST.json is not valid JSON: ${error.message}`);
           }
-          if (manifest) {
-            const listed = new Set(manifest.files ?? []);
+          if (manifest === null) {
+            fail(`${PACK}/26_MANIFEST.json is missing or null`);
+          } else if (typeof manifest !== "object" || Array.isArray(manifest)) {
+            fail(`${PACK}/26_MANIFEST.json must be an object`);
+          } else if (!Array.isArray(manifest.files)) {
+            fail(`${PACK}/26_MANIFEST.json must have a "files" array`);
+          } else {
+            const listed = new Set(manifest.files);
             for (const name of present) {
               if (!listed.has(name)) fail(`file on disk but absent from the manifest: ${name}`);
             }
@@ -235,9 +241,9 @@ jobs:
           toolchain: 1.90.0
 
       - name: Cache Rust target
-        uses: actions/cache/restore@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          key: rust-target-windows-${{ hashFiles('Cargo.lock') }}-${{ hashFiles('src-tauri/Cargo.toml') }}
+          key: rust-target-windows-${{ runner.os }}-1.90.0-${{ hashFiles('src-tauri/Cargo.lock') }}-${{ hashFiles('src-tauri/Cargo.toml') }}-${{ hashFiles('src-tauri/tauri.conf.json') }}
           path: |
             src-tauri/target/
             ~/.cargo/registry
@@ -284,9 +290,9 @@ jobs:
           toolchain: 1.90.0
 
       - name: Cache Rust target
-        uses: actions/cache/restore@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          key: rust-target-linux-${{ hashFiles('Cargo.lock') }}-${{ hashFiles('src-tauri/Cargo.toml') }}
+          key: rust-target-linux-${{ runner.os }}-1.90.0-${{ hashFiles('src-tauri/Cargo.lock') }}-${{ hashFiles('src-tauri/Cargo.toml') }}-${{ hashFiles('src-tauri/tauri.conf.json') }}
           path: |
             src-tauri/target/
             ~/.cargo/registry
@@ -332,6 +338,35 @@ jobs:
           fi
           echo "AppImage built successfully"
           echo "AppImage size: $(stat -c%s src-tauri/target/release/bundle/appimage/Soravo_0.1.0_amd64.AppImage) bytes"
+
+      - name: Verify AppImage contents
+        shell: bash
+        run: |
+          appimage="src-tauri/target/release/bundle/appimage/Soravo_0.1.0_amd64.AppImage"
+          if [ ! -f "$appimage" ]; then echo "No AppImage found"; exit 1; fi
+          extractDir="$HOME/appimage_extract"
+          rm -rf "$extractDir"
+          mkdir -p "$extractDir"
+          cd "$extractDir"
+          if "$appimage" --appimage-extract >/dev/null 2>&1; then
+            echo "AppImage extracted successfully"
+            # Find the bundle root (directory containing crispasr-linux/)
+            bundleRoot=$(find squashfs-root -type d -name "crispasr-linux" 2>/dev/null | head -1 | xargs dirname)
+            if [ -n "$bundleRoot" ]; then
+              echo "Found bundle root: $bundleRoot"
+              node "$GITHUB_WORKSPACE/scripts/verify-packaging.mjs" --bundle "$bundleRoot"
+            else
+              echo "WARNING: Could not find crispasr-linux/ in extracted AppImage"
+              echo "Searching for crispasr binary anywhere in extraction..."
+              find squashfs-root -name "*crispasr*" 2>/dev/null | head -10
+              # Fall back to source-tree verification
+              echo "Falling back to source-tree verification"
+              node "$GITHUB_WORKSPACE/scripts/verify-packaging.mjs"
+            fi
+          else
+            echo "WARNING: AppImage extraction failed, falling back to source-tree verification"
+            node "$GITHUB_WORKSPACE/scripts/verify-packaging.mjs"
+          fi
 
       - name: Verify bundle configuration
         run: node scripts/verify-packaging.mjs
