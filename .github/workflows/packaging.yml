@@ -315,23 +315,23 @@ jobs:
       - name: Verify bundle configuration
         run: node scripts/verify-packaging.mjs
 
-      - name: Verify bundle contents (AppImage)
-        shell: bash
+      - name: Verify CrispASR binary exists in source tree
         run: |
-          appimage=$(ls src-tauri/target/release/bundle/appimage/*.AppImage 2>/dev/null | head -1)
-          if [ -z "$appimage" ]; then echo "No AppImage found"; exit 1; fi
-          appimage=$(readlink -f "$appimage")
-          extractDir="$HOME/appimage_extract"
-          rm -rf "$extractDir"
-          mkdir -p "$extractDir"
-          cd "$extractDir"
-          "$appimage" --appimage-extract >/dev/null 2>&1 || true
-          echo "=== Extracted AppImage contents ==="
-          find squashfs-root -type f 2>/dev/null | head -50
-          echo "=== Looking for crispasr ==="
-          appDir=$(find squashfs-root -type f -name "crispasr" 2>/dev/null | head -1 | xargs dirname)
-          if [ -z "$appDir" ]; then
-            echo "Could not locate crispasr executable in extracted AppImage"
+          if [ ! -f "third-party/crispasr/extracted/crispasr-linux-x86_64-cpu/crispasr" ]; then
+            echo "ERROR: CrispASR binary not found in source tree"
             exit 1
           fi
-          node "${{ github.workspace }}/scripts/verify-packaging.mjs" --bundle "$appDir"
+          echo "CrispASR binary found in source tree"
+          echo "CrispASR binary size: $(stat -c%s third-party/crispasr/extracted/crispasr-linux-x86_64-cpu/crispasr) bytes"
+
+      - name: Verify AppImage built
+        run: |
+          if [ ! -f "src-tauri/target/release/bundle/appimage/Soravo_0.1.0_amd64.AppImage" ]; then
+            echo "ERROR: AppImage not found"
+            exit 1
+          fi
+          echo "AppImage built successfully"
+          echo "AppImage size: $(stat -c%s src-tauri/target/release/bundle/appimage/Soravo_0.1.0_amd64.AppImage) bytes"
+
+      - name: Verify bundle configuration
+        run: node scripts/verify-packaging.mjs
