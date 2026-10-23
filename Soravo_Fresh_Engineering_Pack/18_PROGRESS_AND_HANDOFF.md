@@ -549,7 +549,7 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 
 ### What is NOT implemented yet
 
-- No Edge Functions written yet
+- Device registration Edge Function implemented (register-device); payment and entitlement Edge Functions remain unimplemented
 - No payment processing
 - No webhook handling
 - No entitlement provisioning
@@ -582,6 +582,7 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 ## Website Foundation (2026-10-23)
 
 ### What was implemented
+
 - website/ directory with Vite + React 18 + TypeScript + Tailwind v4
 - shadcn/ui-compatible component structure (radix-nova style)
 - Pages: LandingPage, PricingPage, LoginPage, SignupPage, AccountPage
@@ -594,78 +595,18 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Basic test for Supabase client
 
 ### What genuinely works
+
 - Website dev server starts and renders all pages
 - Supabase auth client is configured (requires env vars)
 - Database schema is defined with RLS policies
-- Pricing page shows /month and  lifetime plans
+- Pricing page shows the approved prices: USD 12/month (recurring, max 3 devices, 14-day offline grace) and USD 50 lifetime (unlimited devices, indefinite offline)
+- Device registration Edge Function implemented (register-device) with atomic limit enforcement and JWT validation
 
 ### Remaining blockers
-- Supabase project not yet created/configured
+
+- Supabase project not yet created/configured (requires owner approval)
 - Razorpay integration not implemented (design only)
 - Web-desktop auth flow not implemented (contract only)
 - No payment processing
 - Clean-machine Linux test still outstanding (P1-08)
-- PR #17 (packaging CI) not yet merged
-=======
-## ADR-0003 Backend Placement (2026-10-23)
-
-### What was decided
-
-- Supabase Edge Functions chosen as the privileged API backend
-- Cloudflare Pages hosts the static website only
-- ADR-0003 updated from 'ACCEPTED in part; PROPOSED' to 'ACCEPTED'
-- 04_TECHNICAL_DESIGN.md updated to reflect the decision
-
-### Rationale
-
-1. Data proximity - Edge Functions run in the same Supabase project as Auth and Postgres
-2. Auth integration - native access to Supabase Auth context for JWT verification
-3. Secret management - service-role keys stay within Supabase trust boundary
-4. RLS enforcement - clean separation between client (RLS) and server (service-role) access
-5. Single provider for privileged logic - no duplication across providers
-
-### Trade-offs accepted
-
-- Deno runtime (not Node.js) - some npm packages may not be compatible
-- Supabase free tier invocation limits - monitor and upgrade if needed
-- Cloudflare Pages still hosts static website; Edge Functions invoked via Supabase URL
-
-### What this unblocks
-
-- Razorpay webhook endpoint implementation
-- Entitlement provisioning
-- Device registration/limit checking
-- Admin operations
-- All server-side business logic
-
-### What is NOT implemented yet
-
-- No Edge Functions written yet
-- No payment processing
-- No webhook handling
-- No entitlement provisioning
-- Design documents only
-
-## New Project Isolation (2026-10-23)
-
-### What was documented
-
-- Updated ADR-0003 with new Supabase project isolation requirements
-- Updated 04_TECHNICAL_DESIGN.md with new project isolation section
-- Created 31_NEW_PROJECT_ISOLATION_AND_SETUP.md with safe setup steps
-- Updated manifest (version 1.4.0)
-
-### Key decisions
-
-- Existing Supabase project 'soravo' and live site soravo.xyz belong to the past project
-- New Supabase project required (separate credentials, schema, data)
-- New Cloudflare Pages project required (separate from soravo.xyz)
-- No infrastructure created, no production settings changed
-- No data migration or credential reuse from old project
-
-### What is NOT done
-
-- No Supabase project created (requires owner approval)
-- No Cloudflare Pages project created (requires owner approval)
-- No DNS changes
-- No environment variables configured in production
+- PR #17 and PR #18 not yet merged

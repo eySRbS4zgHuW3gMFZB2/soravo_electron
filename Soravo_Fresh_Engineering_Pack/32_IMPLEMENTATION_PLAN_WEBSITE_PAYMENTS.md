@@ -1,4 +1,4 @@
-# Implementation Plan: Website, Account System, and Payment Backend
+﻿# Implementation Plan: Website, Account System, and Payment Backend
 
 ## Status: Phase 1 — First Scoped Task
 
@@ -20,6 +20,7 @@ Functions as the privileged API backend).
 ## Phase Breakdown
 
 ### Phase A: Server-Side API Foundation (Edge Functions)
+
 - A1: Device registration Edge Function
 - A2: Entitlement check Edge Function
 - A3: Device listing/revocation Edge Functions
@@ -27,6 +28,7 @@ Functions as the privileged API backend).
 - A5: Tests for all Edge Functions
 
 ### Phase B: Website Account System
+
 - B1: Device management UI (list, revoke, replace)
 - B2: Entitlement display and status
 - B3: Download link with device activation
@@ -34,6 +36,7 @@ Functions as the privileged API backend).
 - B5: Tests for account flows
 
 ### Phase C: Razorpay Payment Integration
+
 - C1: Server-side order/subscription creation (Edge Function)
 - C2: Webhook verification and processing (Edge Function)
 - C3: Entitlement provisioning after verified payment
@@ -42,6 +45,7 @@ Functions as the privileged API backend).
 - C6: Tests for payment flows
 
 ### Phase D: Desktop Integration
+
 - D1: Deep link registration (soravo://)
 - D2: System browser auth flow
 - D3: One-time code generation and exchange
@@ -52,10 +56,12 @@ Functions as the privileged API backend).
 ## First Scoped Task: Phase A1 — Device Registration Edge Function
 
 ### Objective
+
 Implement a Supabase Edge Function that handles device registration from the desktop app.
 This is the first server-side API endpoint and establishes the pattern for all subsequent Edge Functions.
 
 ### Scope
+
 1. Create `supabase/functions/register-device/index.ts` (Deno/TypeScript)
 2. Implement JWT validation and user_id binding
 3. Implement device limit checking (monthly: 3, lifetime: unlimited)
@@ -64,16 +70,19 @@ This is the first server-side API endpoint and establishes the pattern for all s
 6. Document the Edge Function contract
 
 ### What this does NOT include
+
 - Actual deployment to Supabase (requires project setup)
 - Desktop app integration (Phase D)
 - Payment processing (Phase C)
 
 ### Dependencies
+
 - Supabase Edge Functions runtime (Deno)
 - Supabase client library for Deno
 - JWT validation via Supabase Auth
 
 ### Acceptance Criteria
+
 - Edge Function validates JWT from Authorization header
 - Device ID is bound to authenticated user
 - Monthly device limit (3) is enforced atomically

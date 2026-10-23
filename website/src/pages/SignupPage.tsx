@@ -19,12 +19,15 @@ export function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await signUp(email, password, displayName);
-    if (error) {
-      setError(error);
-      setLoading(false);
-    } else {
-      setSuccess(true);
+    try {
+      const { error } = await signUp(email, password, displayName);
+      if (error) {
+        setError(error);
+      } else {
+        setSuccess(true);
+      }
+    } finally {
+      // Always reset loading, whether signUp resolved or rejected.
       setLoading(false);
     }
   };

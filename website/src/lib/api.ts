@@ -39,6 +39,10 @@ export async function registerDevice(
 }
 
 export async function listDevices(): Promise<{ id: string; device_id: string; label: string | null; platform: string | null; last_seen_at: string }[]> {
+  // Ensure the caller is authenticated before listing devices.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
   const { data, error } = await supabase
     .from("devices")
     .select("id, device_id, label, platform, last_seen_at")
@@ -50,10 +54,15 @@ export async function listDevices(): Promise<{ id: string; device_id: string; la
 }
 
 export async function revokeDevice(deviceId: string): Promise<void> {
+  // Get current user to ensure ownership
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
   const { error } = await supabase
     .from("devices")
     .update({ revoked_at: new Date().toISOString() })
-    .eq("device_id", deviceId);
+    .eq("device_id", deviceId)
+    .eq("user_id", user.id);
 
   if (error) throw error;
 }

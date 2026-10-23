@@ -11,15 +11,35 @@ export function AccountPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    // When the user identity changes, clear any previous entitlements and
+    // show loading again. If no user is signed in, stop loading immediately.
+    if (!user) {
+      setEntitlements([]);
+      setLoading(false);
+      return;
+    }
+
+    let stale = false;
+    setLoading(true);
+    setEntitlements([]);
+
     (async () => {
       const { data } = await supabase
         .from("entitlements")
         .select("plan_code, status, lifetime")
         .eq("user_id", user.id);
-      setEntitlements(data ?? []);
-      setLoading(false);
+      // Ignore results for a user identity that is no longer current.
+      if (!stale) {
+        setEntitlements(data ?? []);
+        setLoading(false);
+      }
     })();
+
+    // Mark the request stale on cleanup so it can never update state after
+    // the user changes or the component unmounts.
+    return () => {
+      stale = true;
+    };
   }, [user]);
 
   if (!user) {

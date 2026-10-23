@@ -46,10 +46,19 @@ serve(async (req: Request) => {
   }
 
   try {
-    // 1. Validate JWT and get authenticated user
+    // 1. Validate Bearer JWT and extract the token explicitly.
+    //    We never rely on the client session; the token is derived from the
+    //    validated Authorization header and passed directly to getUser().
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ success: false, error: "Missing or invalid authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const token = authHeader.slice("Bearer ".length).trim();
+    if (!token) {
+      return new Response(JSON.stringify({ success: false, error: "Empty bearer token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -59,12 +68,10 @@ serve(async (req: Request) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Client with anon key for JWT validation
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Client with anon key for JWT validation. The token is passed explicitly.
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
     if (authError || !user) {
       return new Response(JSON.stringify({ success: false, error: "Invalid or expired token" }), {
         status: 401,
@@ -108,69 +115,48 @@ serve(async (req: Request) => {
       });
     }
 
-    // 5. Check device limit (monthly: 3, lifetime: unlimited)
-    if (!hasLifetime) {
-      const { count, error: countError } = await supabaseAdmin
-        .from("devices")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .is("revoked_at", null);
-
-      if (countError) {
-        return new Response(JSON.stringify({ success: false, error: "Failed to count devices" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    // 5. Register device atomically via a database function.
+    //    The function takes a per-user advisory lock so concurrent requests for
+    //    the same user serialize; the limit check and upsert happen in one
+    //    transaction. The function permits re-registration of an already-known
+    //    device (active or revoked) without consuming a new device slot, and
+    //    clears revoked_at on reactivation.
+    const { data: result, error: rpcError } = await supabaseAdmin.rpc(
+      "register_device_atomic",
+      {
+        p_user_id: user.id,
+        p_device_id: body.device_id,
+        p_label: body.label || null,
+        p_platform: body.platform || null,
+        p_app_version: body.app_version || null,
+        p_is_lifetime: hasLifetime,
       }
+    );
 
-      const deviceCount = count ?? 0;
-      if (deviceCount >= 3) {
-        return new Response(JSON.stringify({
-          success: false,
-          device_id: body.device_id,
-          device_count: deviceCount,
-          limit_reached: true,
-          error: "Device limit reached (max 3 for monthly plan)",
-        }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
-    // 6. Register device (upsert for idempotency)
-    const { error: upsertError } = await supabaseAdmin
-      .from("devices")
-      .upsert(
-        {
-          user_id: user.id,
-          device_id: body.device_id,
-          label: body.label || null,
-          platform: body.platform || null,
-          app_version: body.app_version || null,
-          last_seen_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,device_id" }
-      );
-
-    if (upsertError) {
+    if (rpcError) {
       return new Response(JSON.stringify({ success: false, error: "Failed to register device" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 7. Get updated device count
-    const { count: finalCount } = await supabaseAdmin
-      .from("devices")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .is("revoked_at", null);
+    if (!result.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        device_id: body.device_id,
+        device_count: result.device_count,
+        limit_reached: result.limit_reached,
+        error: result.error,
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const response: RegisterDeviceResponse = {
       success: true,
       device_id: body.device_id,
-      device_count: finalCount ?? 1,
+      device_count: result.device_count,
       limit_reached: false,
     };
 

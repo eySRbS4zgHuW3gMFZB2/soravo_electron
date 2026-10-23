@@ -14,12 +14,16 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await signIn(email, password);
-    if (error) {
-      setError(error);
+    try {
+      const { error } = await signIn(email, password);
+      if (error) {
+        setError(error);
+      } else {
+        navigate("/account");
+      }
+    } finally {
+      // Always reset loading, whether signIn resolved or rejected.
       setLoading(false);
-    } else {
-      navigate("/account");
     }
   };
 

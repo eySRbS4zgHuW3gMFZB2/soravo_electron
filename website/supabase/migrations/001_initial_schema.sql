@@ -41,10 +41,26 @@ CREATE POLICY "Users can read own devices"
   ON public.devices FOR SELECT
   USING (auth.uid() = user_id);
 
+CREATE POLICY "Users can insert own devices"
+  ON public.devices FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users may update only the revocation state of their own devices.
+-- Column-level privileges (below) restrict the updateable columns to revoked_at.
 CREATE POLICY "Users can update own devices"
   ON public.devices FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- Clients may modify only revoked_at; device_id and ownership are immutable client-side.
+REVOKE ALL ON public.devices FROM anon, authenticated;
+GRANT SELECT (id, user_id, device_id, label, platform, app_version, first_seen_at, last_seen_at, revoked_at) ON public.devices TO authenticated;
+GRANT INSERT (user_id, device_id, label, platform, app_version) ON public.devices TO authenticated;
+GRANT UPDATE (revoked_at) ON public.devices TO authenticated;
+
+-- Service-role only: device registration, revocation, heartbeat updates
+-- Registration and reactivation are routed through the register_device_atomic
+-- function (SECURITY DEFINER), which is grantable to service_role only.
 
 -- Entitlements
 CREATE TABLE IF NOT EXISTS public.entitlements (
@@ -97,11 +113,25 @@ CREATE TABLE IF NOT EXISTS public.webhook_events (
   event_type TEXT NOT NULL,
   received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   signature_valid BOOLEAN NOT NULL DEFAULT false,
-  processing_status TEXT NOT NULL CHECK (processing_status IN ('received', 'processing', 'processed', 'failed', 'duplicate')),
+  processing_status TEXT NOT NULL CHECK (processing_status IN ('received', 'processing', 'processed', 'failed', 'duplicate', 'support_review')),
+  claimed_at TIMESTAMPTZ,
+  lease_expires_at TIMESTAMPTZ,
+  claim_token UUID DEFAULT gen_random_uuid(),
+  retry_count INTEGER NOT NULL DEFAULT 0,
   processed_at TIMESTAMPTZ,
   error_code TEXT,
   UNIQUE (provider, provider_event_id)
 );
+
+-- Webhook events are server-side only: RLS enabled with no client policies,
+-- and anon/authenticated privileges are revoked so only service-role access
+-- (or a SECURITY DEFINER function) can read or modify them.
+ALTER TABLE public.webhook_events ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON public.webhook_events FROM anon, authenticated;
+GRANT SELECT ON public.webhook_events TO service_role;
+GRANT INSERT ON public.webhook_events TO service_role;
+GRANT UPDATE (processing_status, claim_token, claimed_at, lease_expires_at, retry_count, processed_at, error_code) ON public.webhook_events TO service_role;
 
 -- Admin audit events
 CREATE TABLE IF NOT EXISTS public.admin_audit_events (
@@ -114,6 +144,14 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_events (
   metadata JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Admin audit events are server-side only: RLS enabled with no client policies,
+-- and anon/authenticated privileges are revoked.
+ALTER TABLE public.admin_audit_events ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON public.admin_audit_events FROM anon, authenticated;
+GRANT SELECT ON public.admin_audit_events TO service_role;
+GRANT INSERT ON public.admin_audit_events TO service_role;
 
 -- Auto-create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -134,3 +172,77 @@ CREATE INDEX IF NOT EXISTS idx_devices_user_id ON public.devices(user_id);
 CREATE INDEX IF NOT EXISTS idx_entitlements_user_id ON public.entitlements(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user_id ON public.payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_events_provider_event ON public.webhook_events(provider, provider_event_id);
+-- Atomic device registration function (prevents race conditions)
+-- Returns: { success: boolean, device_count: integer, limit_reached: boolean, error: text }
+--
+-- Correctness notes:
+-- 1. A per-user advisory transaction lock serializes concurrent registrations for
+--    the same user, making the count-then-write sequence race-free.
+-- 2. The monthly limit applies only to NEW devices. Re-registering a device that
+--    is already known to the user (active or revoked) is always allowed and only
+--    refreshes last_seen_at (and clears revoked_at on reactivation), so a user at
+--    the 3-device limit can still refresh their existing devices.
+CREATE OR REPLACE FUNCTION public.register_device_atomic(
+  p_user_id UUID,
+  p_device_id TEXT,
+  p_label TEXT DEFAULT NULL,
+  p_platform TEXT DEFAULT NULL,
+  p_app_version TEXT DEFAULT NULL,
+  p_is_lifetime BOOLEAN DEFAULT FALSE
+)
+RETURNS JSONB AS
+DECLARE
+  v_device_count INTEGER;
+  v_is_existing BOOLEAN;
+BEGIN
+  -- Serialize per user to avoid race conditions on the limit check.
+  PERFORM pg_advisory_xact_lock(hashtext(p_user_id::text));
+
+  -- Is this a device the user already knows about (active or revoked)?
+  SELECT EXISTS (
+    SELECT 1 FROM public.devices
+    WHERE user_id = p_user_id AND device_id = p_device_id
+  ) INTO v_is_existing;
+
+  -- Apply the monthly limit (max 3 active devices) only to NEW devices.
+  IF NOT p_is_lifetime AND NOT v_is_existing THEN
+    SELECT COUNT(*) INTO v_device_count
+    FROM public.devices
+    WHERE user_id = p_user_id AND revoked_at IS NULL;
+
+    IF v_device_count >= 3 THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'device_count', v_device_count,
+        'limit_reached', true,
+        'error', 'Device limit reached (max 3 for monthly plan)'
+      );
+    END IF;
+  END IF;
+
+  -- Upsert device (idempotent: re-registering same device is safe).
+  -- Reactivation clears revoked_at so the device rejoins the active set.
+  INSERT INTO public.devices (user_id, device_id, label, platform, app_version, last_seen_at)
+  VALUES (p_user_id, p_device_id, p_label, p_platform, p_app_version, now())
+  ON CONFLICT (user_id, device_id) DO UPDATE SET
+    label = COALESCE(EXCLUDED.label, devices.label),
+    platform = COALESCE(EXCLUDED.platform, devices.platform),
+    app_version = COALESCE(EXCLUDED.app_version, devices.app_version),
+    last_seen_at = now(),
+    revoked_at = NULL;
+
+  -- Get updated count
+  SELECT COUNT(*) INTO v_device_count
+  FROM public.devices
+  WHERE user_id = p_user_id AND revoked_at IS NULL;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'device_count', v_device_count,
+    'limit_reached', false
+  );
+END;
+ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute to service role only
+GRANT EXECUTE ON FUNCTION public.register_device_atomic TO service_role;
