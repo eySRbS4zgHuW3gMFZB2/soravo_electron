@@ -1,0 +1,67 @@
+name: Database tests
+
+on:
+  pull_request:
+    paths:
+      - "website/supabase/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "website/supabase/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pg-tap:
+    name: PostgreSQL pgTAP (disposable)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: soravo_test
+          POSTGRES_PASSWORD: soravo_test
+          POSTGRES_DB: soravo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U soravo_test -d soravo_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: soravo_test
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: soravo_test
+      PGDATABASE: soravo_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Install pgTAP
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-16-pgtap
+
+      - name: Bootstrap Supabase-compatible test database
+        run: psql -v ON_ERROR_STOP=1 -f website/supabase/tests/bootstrap_pg.sql
+
+      - name: Apply fresh-install schema
+        run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/001_initial_schema.sql
+
+      - name: Run pgTAP SQL tests
+        run: |
+          pg_prove \
+            website/supabase/tests/webhook_claim_idempotency.test.sql \
+            website/supabase/tests/webhook_finalize_atomic.test.sql
