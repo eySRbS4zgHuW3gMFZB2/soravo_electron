@@ -293,65 +293,34 @@ Deno.serve(async (req: Request) => {
     // lease can still complete these writes before its fenced finalization returns 503.
     // Follow-up: move provisioning into a claim-checked transaction/RPC if stricter
     // fencing is required.
-    // Promote the pending row created at order time to the captured payment ID.
-    // A zero-row result is expected when no pending row exists or it was already captured.
+    // Atomically promote/record the payment, upsert the entitlement, and
+    // finalize the event in one claim-checked transaction. A stale token
+    // returns 0 and performs no business writes.
     const orderId = String(entity?.order_id ?? entity?.id ?? "");
-    if (orderId) {
-      const { error: promoteError } = await admin
-        .from("payments")
-        .update({
-          provider_payment_id: String(entity?.id ?? providerEventId),
-          status: "captured",
-          verified_at: new Date().toISOString(),
-        })
-        .eq("provider", "razorpay")
-        .eq("provider_order_id", orderId)
-        .eq("status", "pending")
-        .select("id");
-      if (promoteError) throw promoteError;
-    }
-
-    // Record payment as captured.
-    await admin.from("payments").upsert({
-      user_id: userId,
-      provider: "razorpay",
-      provider_payment_id: String(entity?.id ?? providerEventId),
-      provider_order_id: orderId,
-      amount_minor: amountMinor,
-      currency,
-      status: "captured",
-      verified_at: new Date().toISOString(),
-    }, { onConflict: "provider,provider_payment_id" }).throwOnError();
-
-    // Provision entitlement. Monthly has period end 30 days; lifetime no expiry and true lifetime.
     const now = new Date();
     const periodEnd = plan === "monthly" ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
 
-    await admin.from("entitlements").upsert({
-      user_id: userId,
-      plan_code: plan,
-      status: plan === "lifetime" ? "lifetime_active" : "active",
-      issued_at: now.toISOString(),
-      last_verified_at: now.toISOString(),
-      subscription_period_end: periodEnd,
-      lifetime: plan === "lifetime",
-    }, { onConflict: "user_id,plan_code" }).throwOnError();
-
-    // Require a returned row: a lost claim must not be acknowledged as processed.
-    const { data: processedRows, error: processedError } = await admin.from("webhook_events").update({
-      processing_status: "processed",
-      processed_at: new Date().toISOString(),
-    })
-      .eq("provider", "razorpay")
-      .eq("provider_event_id", providerEventId)
-      .eq("claim_token", claimToken)
-      .eq("processing_status", "processing")
-      .select("id");
-    if (processedError) throw processedError;
-    if (!processedRows?.length) {
+    const { data: finalizedCount, error: finalizeError } = await admin.rpc(
+      "finalize_webhook_payment_atomic",
+      {
+        p_provider: "razorpay",
+        p_provider_event_id: providerEventId,
+        p_claim_token: claimToken,
+        p_user_id: userId,
+        p_plan: plan,
+        p_provider_payment_id: String(entity?.id ?? providerEventId),
+        p_provider_order_id: orderId,
+        p_amount_minor: amountMinor,
+        p_currency: currency,
+        p_period_end: periodEnd,
+        p_lifetime: plan === "lifetime",
+      }
+    );
+    if (finalizeError) throw finalizeError;
+    if (!finalizedCount) {
       return new Response(JSON.stringify({ status: "processing" }), {
         status: 503,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Retry-After": "60" },
       });
     }
 

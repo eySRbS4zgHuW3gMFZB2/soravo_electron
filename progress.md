@@ -927,3 +927,7 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 ## 2026-10-24 — Auth and device review fixes
 
 Verified and repaired four review findings: preserve the current session and finish loading after session-restore errors, show retryable sign-out failures, correct signup confirmation copy, and add device-registration error diagnostics without changing HTTP responses. The temporary behavioral harness passes 11 checks. Website typecheck, production build, and all 19 existing tests also passed. Device-handler checks used synthetic Node fixtures because Deno is unavailable.
+
+## 2026-10-24 - P2-12 atomic webhook provisioning
+
+Added SECURITY DEFINER RPCs finalize_webhook_payment_atomic (plus alias finalize_webhook_payment) that atomically validate provider/event/claim token/processing status, then promote/record payment, upsert entitlement, and finalize the event in one transaction. Stale token returns 0 with no business writes. Edge function now calls the RPC instead of separate writes; claim fencing and retry semantics preserved. Added pgTAP coverage and updated handler tests. Tests: website vitest 31/31 passed; typecheck and production build passed. SQL/pgTAP not executed (no local Postgres).

@@ -40,7 +40,7 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - P2-09: Record the existing DNS, MX, SPF, DKIM and DMARC configuration so business email survives any future DNS move.
 - P2-10: Isolated Supabase setup and database-backed tests for device registration, entitlements, and webhook idempotency/claim semantics.
 - P2-11: Reconcile WP-004 USD pricing and P2-10 DB tests with PR #22.
-
+- P2-12: Atomic webhook provisioning RPC: fence payment, entitlement, and event finalization behind the current claim token in one transaction.
 ## P3 — Website
 - P3-01: Create `website/` independent package and lockfile, built fresh per ADR-0008. Historical `soravo` repo is reference-only for approved content and behavior; do not port implementation, schema, migrations or Edge Functions.
 - P3-02: Confirm design tokens and shadcn/ui usage; do not alter desktop Tailwind config to satisfy web.

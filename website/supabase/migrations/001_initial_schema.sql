@@ -255,3 +255,161 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 -- arbitrary user id and bypass the entitlement and device-limit checks.
 REVOKE EXECUTE ON FUNCTION public.register_device_atomic(UUID, TEXT, TEXT, TEXT, TEXT, BOOLEAN) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.register_device_atomic(UUID, TEXT, TEXT, TEXT, TEXT, BOOLEAN) TO service_role;
+
+-- Atomic webhook provisioning: validates the current claim token and processing
+-- status, then promotes/records the payment, upserts the entitlement, and
+-- finalizes the webhook event in one transaction. A stale token returns 0 and
+-- performs no business writes. SECURITY DEFINER, service-role only.
+CREATE OR REPLACE FUNCTION public.finalize_webhook_payment_atomic(
+  p_provider TEXT,
+  p_provider_event_id TEXT,
+  p_claim_token UUID,
+  p_user_id UUID,
+  p_plan TEXT,
+  p_provider_payment_id TEXT,
+  p_provider_order_id TEXT,
+  p_amount_minor INTEGER,
+  p_currency TEXT,
+  p_period_end TIMESTAMPTZ,
+  p_lifetime BOOLEAN
+)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_rows INTEGER;
+BEGIN
+  IF p_provider IS NULL OR p_provider = '' THEN
+    RAISE EXCEPTION 'invalid provider';
+  END IF;
+  IF p_provider_event_id IS NULL OR p_provider_event_id = '' THEN
+    RAISE EXCEPTION 'invalid provider_event_id';
+  END IF;
+  IF p_claim_token IS NULL THEN
+    RAISE EXCEPTION 'invalid claim_token';
+  END IF;
+  IF p_user_id IS NULL THEN
+    RAISE EXCEPTION 'invalid user_id';
+  END IF;
+  IF p_plan NOT IN ('monthly', 'lifetime') THEN
+    RAISE EXCEPTION 'invalid plan';
+  END IF;
+  IF p_provider_payment_id IS NULL OR p_provider_payment_id = '' THEN
+    RAISE EXCEPTION 'invalid provider_payment_id';
+  END IF;
+  IF p_amount_minor IS NULL OR p_amount_minor <= 0 THEN
+    RAISE EXCEPTION 'invalid amount';
+  END IF;
+  IF p_currency <> 'USD' THEN
+    RAISE EXCEPTION 'invalid currency';
+  END IF;
+
+  -- Atomically verify ownership of the claim. Lock the event row.
+  PERFORM 1
+  FROM public.webhook_events
+  WHERE provider = p_provider
+    AND provider_event_id = p_provider_event_id
+    AND claim_token = p_claim_token
+    AND processing_status = 'processing'
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN 0;
+  END IF;
+
+  -- Promote a pending payment row created at order time, if present.
+  IF p_provider_order_id IS NOT NULL AND p_provider_order_id <> '' THEN
+    UPDATE public.payments
+    SET provider_payment_id = p_provider_payment_id,
+        status = 'captured',
+        verified_at = now()
+    WHERE provider = p_provider
+      AND provider_order_id = p_provider_order_id
+      AND status = 'pending';
+  END IF;
+
+  -- Record the captured payment (idempotent by provider + payment id).
+  INSERT INTO public.payments (
+    user_id, provider, provider_payment_id, provider_order_id,
+    amount_minor, currency, status, verified_at
+  )
+  VALUES (
+    p_user_id, p_provider, p_provider_payment_id,
+    NULLIF(p_provider_order_id, ''), p_amount_minor, p_currency, 'captured', now()
+  )
+  ON CONFLICT (provider, provider_payment_id) DO UPDATE SET
+    user_id = EXCLUDED.user_id,
+    provider_order_id = COALESCE(EXCLUDED.provider_order_id, public.payments.provider_order_id),
+    amount_minor = EXCLUDED.amount_minor,
+    currency = EXCLUDED.currency,
+    status = 'captured',
+    verified_at = EXCLUDED.verified_at;
+
+  -- Upsert entitlement.
+  INSERT INTO public.entitlements (
+    user_id, plan_code, status, issued_at, last_verified_at,
+    subscription_period_end, lifetime
+  )
+  VALUES (
+    p_user_id, p_plan,
+    CASE WHEN p_plan = 'lifetime' THEN 'lifetime_active' ELSE 'active' END,
+    now(), now(), p_period_end, p_lifetime
+  )
+  ON CONFLICT (user_id, plan_code) DO UPDATE SET
+    status = EXCLUDED.status,
+    issued_at = EXCLUDED.issued_at,
+    last_verified_at = EXCLUDED.last_verified_at,
+    subscription_period_end = EXCLUDED.subscription_period_end,
+    lifetime = EXCLUDED.lifetime;
+
+  -- Finalize the event only while ownership still holds.
+  UPDATE public.webhook_events
+  SET processing_status = 'processed',
+      processed_at = now()
+  WHERE provider = p_provider
+    AND provider_event_id = p_provider_event_id
+    AND claim_token = p_claim_token
+    AND processing_status = 'processing';
+
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows = 0 THEN
+    RAISE EXCEPTION 'lost claim during finalization';
+  END IF;
+
+  RETURN v_rows;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.finalize_webhook_payment_atomic(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.finalize_webhook_payment_atomic(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN) TO service_role;
+
+-- Compatibility alias without the _atomic suffix.
+CREATE OR REPLACE FUNCTION public.finalize_webhook_payment(
+  p_provider TEXT,
+  p_provider_event_id TEXT,
+  p_claim_token UUID,
+  p_user_id UUID,
+  p_plan TEXT,
+  p_provider_payment_id TEXT,
+  p_provider_order_id TEXT,
+  p_amount_minor INTEGER,
+  p_currency TEXT,
+  p_period_end TIMESTAMPTZ,
+  p_lifetime BOOLEAN
+)
+RETURNS INTEGER
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT public.finalize_webhook_payment_atomic(
+    p_provider, p_provider_event_id, p_claim_token, p_user_id, p_plan,
+    p_provider_payment_id, p_provider_order_id, p_amount_minor, p_currency,
+    p_period_end, p_lifetime
+  );
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.finalize_webhook_payment(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.finalize_webhook_payment(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN) TO service_role;

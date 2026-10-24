@@ -17,9 +17,28 @@ const secret = "synthetic-webhook-secret";
 
 async function postgrest(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const url = new URL(String(input));
-  const table = url.pathname.split("/").at(-1);
+  const table = url.pathname.split("/").at(-1) ?? "";
   const body = init?.body ? JSON.parse(String(init.body)) : null;
   let rows: unknown[] = [];
+
+  // RPC: atomic webhook provisioning. Claim token arrives in the request body.
+  if (url.pathname.includes("/rpc/")) {
+    const rpcToken = body?.p_claim_token ? `eq.${body.p_claim_token}` : null;
+    if (dbError || paymentError) {
+      statusWrites.push({ token: rpcToken, count: 0 });
+      return Response.json({ message: "Synthetic database error" }, { status: 500 });
+    }
+    if (loseClaim) {
+      ledger.claim_token = nextToken;
+      ledger.processing_status = "processing";
+      statusWrites.push({ token: rpcToken, count: 0 });
+      return Response.json(0);
+    }
+    ledger.processing_status = "processed";
+    statusWrites.push({ token: rpcToken, count: 1 });
+    return Response.json(1);
+  }
+
   if (table === "webhook_events") {
     const terminalWrite = body && body.processing_status !== "processing";
     if (terminalWrite && dbError) {
