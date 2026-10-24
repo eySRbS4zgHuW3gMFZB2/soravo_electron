@@ -1,6 +1,6 @@
 # Razorpay Integration Design
 
-## Status: DESIGN ONLY — Not yet implemented
+## Status: PARTIALLY IMPLEMENTED (code/config only; external Razorpay setup pending)
 
 ## Prerequisites (before implementation)
 

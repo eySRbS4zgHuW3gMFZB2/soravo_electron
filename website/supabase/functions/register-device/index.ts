@@ -113,7 +113,7 @@ Deno.serve(async (req: Request) => {
     // 4. Check user's entitlement (monthly vs lifetime)
     const { data: entitlements, error: entError } = await supabaseAdmin
       .from("entitlements")
-      .select("plan_code, status, lifetime")
+      .select("plan_code, status, lifetime, subscription_period_end")
       .eq("user_id", user.id)
       .in("status", ["active", "lifetime_active"]);
 
@@ -125,7 +125,15 @@ Deno.serve(async (req: Request) => {
     }
 
     const hasLifetime = entitlements?.some((e) => e.lifetime === true) ?? false;
-    const hasMonthly = entitlements?.some((e) => e.plan_code === "monthly" && e.status === "active") ?? false;
+    const nowMs = Date.now();
+    const hasMonthly = entitlements?.some((e) =>
+      e.plan_code === "monthly" &&
+      e.status === "active" &&
+      (
+        e.subscription_period_end == null ||
+        new Date(e.subscription_period_end).getTime() > nowMs
+      )
+    ) ?? false;
 
     if (!hasLifetime && !hasMonthly) {
       return new Response(JSON.stringify({ success: false, error: "No active entitlement" }), {

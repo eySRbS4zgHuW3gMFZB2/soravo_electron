@@ -84,12 +84,10 @@ Deno.serve(async (req: Request) => {
 
   const eventType = typeof event?.event === "string" ? event.event : "unknown";
   const entity = event?.payload?.payment?.entity ?? event?.payload?.order?.entity ?? {};
-  const headerEventId = req.headers.get("x-razorpay-event-id");
   const providerEventId =
-    headerEventId?.trim() ||
-    (typeof event?.id === "string" && event.id.trim()
+    typeof event?.id === "string" && event.id.trim()
       ? event.id.trim()
-      : `${eventType}:${entity?.id ?? "unknown-entity"}:${entity?.created_at ?? "na"}`);
+      : `${eventType}:${entity?.id ?? "unknown-entity"}`;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -145,12 +143,56 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // Mark as processing.
-  await admin.from("webhook_events").update({
-    processing_status: "processing",
-    claimed_at: new Date().toISOString(),
-    lease_expires_at: new Date(Date.now() + 60_000).toISOString(),
-  }).eq("provider", "razorpay").eq("provider_event_id", providerEventId);
+  // Atomically claim the event before provisioning entitlements.
+  const claimNow = new Date().toISOString();
+  const leaseUntil = new Date(Date.now() + 60_000).toISOString();
+  let { data: claimedRows, error: claimError } = await admin
+    .from("webhook_events")
+    .update({
+      processing_status: "processing",
+      claimed_at: claimNow,
+      lease_expires_at: leaseUntil,
+    })
+    .eq("provider", "razorpay")
+    .eq("provider_event_id", providerEventId)
+    .in("processing_status", ["received", "failed"])
+    .select("id");
+  if (claimError) throw claimError;
+
+  if (!claimedRows?.length) {
+    ({ data: claimedRows, error: claimError } = await admin
+      .from("webhook_events")
+      .update({
+        processing_status: "processing",
+        claimed_at: claimNow,
+        lease_expires_at: leaseUntil,
+      })
+      .eq("provider", "razorpay")
+      .eq("provider_event_id", providerEventId)
+      .eq("processing_status", "processing")
+      .lt("lease_expires_at", claimNow)
+      .select("id"));
+    if (claimError) throw claimError;
+  }
+
+  if (!claimedRows?.length) {
+    const { data: current } = await admin
+      .from("webhook_events")
+      .select("processing_status")
+      .eq("provider", "razorpay")
+      .eq("provider_event_id", providerEventId)
+      .maybeSingle();
+    if (current?.processing_status === "processed") {
+      return new Response(JSON.stringify({ status: "duplicate" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ status: "processing" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   try {
     // Only captured payments or paid orders with captured payments provision entitlements.
@@ -190,7 +232,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Verify the user exists.
-    const { data: profile } = await admin.from("profiles").select("user_id").eq("user_id", userId).maybeSingle();
+    const { data: profile, error: profileError } = await admin.from("profiles").select("user_id").eq("user_id", userId).maybeSingle();
+    if (profileError) throw profileError;
     if (!profile) {
       await admin.from("webhook_events").update({
         processing_status: "failed",
@@ -209,6 +252,7 @@ Deno.serve(async (req: Request) => {
       await admin
         .from("payments")
         .update({
+          provider_payment_id: String(entity?.id ?? providerEventId),
           status: "captured",
           verified_at: new Date().toISOString(),
         })

@@ -41,6 +41,7 @@ describe("Razorpay webhook signature contract mirror", () => {
 
   it("keeps Razorpay receipts within 40 characters", () => {
     const receipt = `rcpt_${"12345678901234567890123456789012".slice(0, 32)}`;
+    expect(receipt).toMatch(/^rcpt_[0-9a-f]{32}$/);
     expect(receipt.length).toBeLessThanOrEqual(40);
   });
 
