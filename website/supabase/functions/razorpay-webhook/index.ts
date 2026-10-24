@@ -48,7 +48,7 @@ function safeCompareHex(a: string, b: string): boolean {
  * @returns The matching plan, or null for an unsupported amount or currency.
  */
 function derivePlan(amountMinor: number, currency: string): "monthly" | "lifetime" | null {
-  if (currency !== "INR") return null;
+  if (currency !== "USD") return null;
   if (amountMinor === 1200) return "monthly";
   if (amountMinor === 5000) return "lifetime";
   return null;

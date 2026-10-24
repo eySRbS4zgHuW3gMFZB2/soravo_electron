@@ -16,8 +16,8 @@ interface Plan {
 
 // Trusted plan configuration. Never accept amounts from the client.
 const PLANS: Record<string, Plan> = {
-  monthly: { code: "monthly", amount: 1200, currency: "INR" },
-  lifetime: { code: "lifetime", amount: 5000, currency: "INR" },
+  monthly: { code: "monthly", amount: 1200, currency: "USD" },
+  lifetime: { code: "lifetime", amount: 5000, currency: "USD" },
 };
 
 Deno.serve(async (req: Request) => {
