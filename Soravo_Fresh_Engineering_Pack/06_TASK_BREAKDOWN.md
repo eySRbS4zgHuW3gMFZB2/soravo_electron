@@ -38,6 +38,7 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - P2-07: Add migration reset/replay test in CI.
 - P2-08: **Choose the privileged backend (Cloudflare Pages Functions/Workers vs Supabase Edge Functions) and record the decision and rationale in ADR-0003.** Blocking for every server-side task below.
 - P2-09: Record the existing DNS, MX, SPF, DKIM and DMARC configuration so business email survives any future DNS move.
+- P2-10: Isolated Supabase setup and database-backed tests for device registration, entitlements, and webhook idempotency/claim semantics.
 
 ## P3 — Website
 - P3-01: Create `website/` independent package and lockfile, built fresh per ADR-0008. Historical `soravo` repo is reference-only for approved content and behavior; do not port implementation, schema, migrations or Edge Functions.
