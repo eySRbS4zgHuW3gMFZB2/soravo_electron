@@ -162,7 +162,7 @@ if (bundleIdx >= 0) {
       // Windows MSI layout: engine at <bundle>/crispasr/, VC++ DLLs at bundle root.
       const winCrispasrDir = join(bundlePath, "crispasr");
       const winCrispasrDirExists = existsSync(winCrispasrDir);
-      if (winCrispasrDirExists) {
+      if (winCrispasrDirExists && process.platform === "win32") {
         for (const f of winEngineFiles) {
           if (!existsSync(join(winCrispasrDir, f))) fail(`Missing from Windows bundle: crispasr/${f}`);
         }

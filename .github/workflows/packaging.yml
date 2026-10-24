@@ -26,6 +26,204 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate-engineering-pack:
+    name: Validate engineering pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Validate engineering pack
+        env:
+          PACK_DIR: Soravo_Fresh_Engineering_Pack
+        run: |
+          set -euo pipefail
+          cat > /tmp/validate-pack.mjs <<'PACK_VALIDATOR_EOF'
+          import { readdirSync, readFileSync, existsSync } from "node:fs";
+          import { join, dirname, resolve } from "node:path";
+
+          const PACK = process.env.PACK_DIR;
+          const errors = [];
+          const fail = (message) => errors.push(message);
+
+          const REQUIRED = [
+            "00_README.md",
+            "01_AUTHORITY_AND_SOURCE_OF_TRUTH.md",
+            "02_PRODUCT_REQUIREMENTS.md",
+            "03_COMMERCIAL_RULES.md",
+            "04_TECHNICAL_DESIGN.md",
+            "05_IMPLEMENTATION_PLAN.md",
+            "06_TASK_BREAKDOWN.md",
+            "07_AI_AGENT_OPERATING_RULES.md",
+            "08_SKILLS_AND_MCP_POLICY.md",
+            "09_GITHUB_CI_POLICY.md",
+            "10_SECURITY_BASELINE.md",
+            "11_ENVIRONMENT_AND_SECRETS.md",
+            "12_TEST_AND_BENCHMARK_PROTOCOL.md",
+            "13_RELEASE_RUNBOOK.md",
+            "14_FREE_BINARY_HOSTING_OPTIONS.md",
+            "15_ADR_INDEX.md",
+            "16_PRIVACY_LEGAL_LAUNCH_CHECKLIST.md",
+            "17_DEFINITION_OF_DONE.md",
+            "18_PROGRESS_AND_HANDOFF.md",
+            "19_STATE_AUDIT_PROTOCOL.md",
+            "20_SERVICE_LIMITS_AND_MONITORING.md",
+            "21_RENAME_AND_MIGRATION_RUNBOOK.md",
+            "22_REVERSE_ENGINEERING_AND_PROVENANCE.md",
+            "23_SOURCE_AUDIT_NOTES.md",
+            "24_AGENT_PROMPT_TEMPLATE.md",
+            "25_REFERENCE_LINKS.md",
+            "26_MANIFEST.json",
+            "27_PRODUCTION_CUTOVER_AND_ROLLBACK.md",
+            "28_GIT_WORKTREE_POLICY.md",
+            "INDEX.md",
+            "SORAVO_DECISION_MEMO_2026-10-22.md",
+          ];
+
+          if (!existsSync(PACK)) {
+            console.error(`The ${PACK} directory is missing.`);
+            process.exit(1);
+          }
+
+          const entries = readdirSync(PACK).filter((name) => !name.startsWith("."));
+          const present = new Set(entries);
+
+          for (const name of REQUIRED) {
+            if (!present.has(name)) fail(`missing required document: ${PACK}/${name}`);
+          }
+
+          let manifest = null;
+          try {
+            manifest = JSON.parse(readFileSync(join(PACK, "26_MANIFEST.json"), "utf8"));
+          } catch (error) {
+            fail(`${PACK}/26_MANIFEST.json is not valid JSON: ${error.message}`);
+          }
+          if (manifest === null) {
+            fail(`${PACK}/26_MANIFEST.json is missing or null`);
+          } else if (typeof manifest !== "object" || Array.isArray(manifest)) {
+            fail(`${PACK}/26_MANIFEST.json must be an object`);
+          } else if (!Array.isArray(manifest.files)) {
+            fail(`${PACK}/26_MANIFEST.json must have a "files" array`);
+          } else {
+            const listed = new Set(manifest.files);
+            for (const name of present) {
+              if (!listed.has(name)) fail(`file on disk but absent from the manifest: ${name}`);
+            }
+            for (const name of listed) {
+              if (!present.has(name)) fail(`file listed in the manifest but absent on disk: ${name}`);
+            }
+            if (!manifest.version) fail("26_MANIFEST.json has no version field");
+            if (manifest.decision_memo && !present.has(manifest.decision_memo)) {
+              fail(`manifest decision_memo not found on disk: ${manifest.decision_memo}`);
+            }
+            if (!manifest.decision_memo) fail("26_MANIFEST.json does not record a decision_memo");
+            const mw = manifest.mandatory_policies?.git_worktrees ?? {};
+            if (!manifest.mandatory_policies) {
+              fail("26_MANIFEST.json does not record mandatory_policies");
+            } else if (!mw.document || mw.document !== "28_GIT_WORKTREE_POLICY.md") {
+              fail('26_MANIFEST.json mandatory_policies.git_worktrees.document must name "28_GIT_WORKTREE_POLICY.md"');
+            } else if (mw.status !== "MANDATORY") {
+              fail('26_MANIFEST.json mandatory_policies.git_worktrees.status must equal "MANDATORY"');
+            }
+          }
+
+          for (const name of entries) {
+            if (!name.endsWith(".json")) continue;
+            try {
+              JSON.parse(readFileSync(join(PACK, name), "utf8"));
+            } catch (error) {
+              fail(`${PACK}/${name} is not valid JSON: ${error.message}`);
+            }
+          }
+          for (const name of ["package.json", "components.json"]) {
+            if (!existsSync(name)) continue;
+            try {
+              JSON.parse(readFileSync(name, "utf8"));
+            } catch (error) {
+              fail(`${name} is not valid JSON: ${error.message}`);
+            }
+          }
+
+          const LINKABLE = /\.(md|json|ya?ml|txt|svg|png|ico|css|html)$/i;
+          for (const name of entries.filter((n) => n.endsWith(".md"))) {
+            const text = readFileSync(join(PACK, name), "utf8");
+            for (const match of text.matchAll(/\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g)) {
+              const target = match[1];
+              if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue;
+              if (target.startsWith("#")) continue;
+              if (target.startsWith("//")) continue;
+              const pathPart = target.split("#")[0];
+              if (!pathPart) continue;
+              if (!LINKABLE.test(pathPart)) continue;
+              const resolved = resolve(dirname(join(PACK, name)), pathPart);
+              if (!existsSync(resolved)) {
+                fail(`${PACK}/${name}: broken link -> ${target}`);
+              }
+            }
+            for (const match of text.matchAll(/`(\d{2}_[A-Z_]+\.md|INDEX\.md|SORAVO_DECISION_MEMO_2026-10-22\.md)`/g)) {
+              if (!present.has(match[1])) {
+                fail(`${PACK}/${name}: unresolved document reference -> ${match[1]}`);
+              }
+            }
+          }
+
+          for (const name of entries) {
+            if (!name.endsWith(".md") && !name.endsWith(".json")) continue;
+            if (readFileSync(join(PACK, name)).includes(0x0d)) {
+              fail(`${PACK}/${name} contains CR bytes; text files must be stored with LF endings`);
+            }
+          }
+
+          const SECRET_PATTERNS = [
+            /sk_live_[A-Za-z0-9]{10,}/,
+            /sk_test_[A-Za-z0-9]{10,}/,
+            /whsec_[A-Za-z0-9]{10,}/,
+            /rzp_live_[A-Za-z0-9]{10,}/,
+            /rzp_test_[A-Za-z0-9]{10,}/,
+            /ghp_[A-Za-z0-9]{20,}/,
+            /github_pat_[A-Za-z0-9_]{20,}/,
+            /AKIA[0-9A-Z]{16}/,
+            /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+            /eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}/,
+          ];
+          for (const name of entries) {
+            const text = readFileSync(join(PACK, name), "utf8");
+            for (const pattern of SECRET_PATTERNS) {
+              if (pattern.test(text)) {
+                fail(`${PACK}/${name}: possible credential material matching ${pattern.source}`);
+              }
+            }
+          }
+
+          if (errors.length > 0) {
+            console.error("Engineering pack validation FAILED:\n");
+            for (const error of errors) console.error(`  - ${error}`);
+            process.exit(1);
+          }
+
+          console.log(`Engineering pack validation passed: ${entries.length} documents checked.`);
+          PACK_VALIDATOR_EOF
+          node /tmp/validate-pack.mjs
+
+      - name: Check that the working tree is unchanged by validation
+        run: |
+          set -euo pipefail
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "The validation step modified the working tree:" >&2
+            git status --porcelain >&2
+            exit 1
+          fi
+          echo "Working tree unchanged by validation."
+
   verify-packaging:
     name: Verify CrispASR packaging (Windows)
     runs-on: windows-latest
@@ -40,11 +238,21 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
+          cache: npm
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           toolchain: 1.90.0
+
+      - name: Cache Rust target
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          key: rust-target-windows-${{ runner.os }}-1.90.0-${{ hashFiles('src-tauri/Cargo.lock') }}-${{ hashFiles('src-tauri/Cargo.toml') }}-${{ hashFiles('src-tauri/tauri.conf.json') }}
+          path: |
+            src-tauri/target/
+            ~/.cargo/registry
+            ~/.cargo/git
 
       - name: Install frontend dependencies
         run: npm ci
@@ -79,11 +287,21 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
+          cache: npm
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           toolchain: 1.90.0
+
+      - name: Cache Rust target
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          key: rust-target-linux-${{ runner.os }}-1.90.0-${{ hashFiles('src-tauri/Cargo.lock') }}-${{ hashFiles('src-tauri/Cargo.toml') }}-${{ hashFiles('src-tauri/tauri.conf.json') }}
+          path: |
+            src-tauri/target/
+            ~/.cargo/registry
+            ~/.cargo/git
 
       - name: Install Linux system dependencies
         run: |
@@ -104,6 +322,54 @@ jobs:
 
       - name: Build Tauri app (Linux AppImage)
         run: npm run tauri:build
+
+      - name: Verify bundle configuration
+        run: node scripts/verify-packaging.mjs
+
+      - name: Verify CrispASR binary exists in source tree
+        run: |
+          if [ ! -f "third-party/crispasr/extracted/crispasr-linux-x86_64-cpu/crispasr" ]; then
+            echo "ERROR: CrispASR binary not found in source tree"
+            exit 1
+          fi
+          echo "CrispASR binary found in source tree"
+          echo "CrispASR binary size: $(stat -c%s third-party/crispasr/extracted/crispasr-linux-x86_64-cpu/crispasr) bytes"
+
+      - name: Verify AppImage built
+        run: |
+          if [ ! -f "src-tauri/target/release/bundle/appimage/Soravo_0.1.0_amd64.AppImage" ]; then
+            echo "ERROR: AppImage not found"
+            exit 1
+          fi
+          echo "AppImage built successfully"
+          echo "AppImage size: $(stat -c%s src-tauri/target/release/bundle/appimage/Soravo_0.1.0_amd64.AppImage) bytes"
+
+      - name: Verify AppImage contents
+        shell: bash
+        run: |
+          appimage="$GITHUB_WORKSPACE/src-tauri/target/release/bundle/appimage/Soravo_0.1.0_amd64.AppImage"
+          if [ ! -f "$appimage" ]; then echo "ERROR: No AppImage found"; exit 1; fi
+          extractDir="$HOME/appimage_extract"
+          rm -rf "$extractDir"
+          mkdir -p "$extractDir"
+          cd "$extractDir"
+          if "$appimage" --appimage-extract >/dev/null 2>&1; then
+            echo "AppImage extracted successfully"
+            # Find the bundle root (directory containing crispasr-linux/)
+            bundleRoot=$(find squashfs-root -type d -name "crispasr-linux" 2>/dev/null | head -1 | xargs dirname)
+            if [ -n "$bundleRoot" ]; then
+              echo "Found bundle root: $bundleRoot"
+              node "$GITHUB_WORKSPACE/scripts/verify-packaging.mjs" --bundle "$bundleRoot"
+            else
+              echo "ERROR: Could not find crispasr-linux/ in extracted AppImage"
+              echo "Searching for crispasr binary anywhere in extraction..."
+              find squashfs-root -name "*crispasr*" 2>/dev/null | head -10
+              exit 1
+            fi
+          else
+            echo "ERROR: AppImage extraction failed"
+            exit 1
+          fi
 
       - name: Verify bundle configuration
         run: node scripts/verify-packaging.mjs
