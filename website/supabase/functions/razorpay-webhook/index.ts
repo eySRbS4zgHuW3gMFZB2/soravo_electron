@@ -44,11 +44,11 @@ function safeCompareHex(a: string, b: string): boolean {
 }
 
 /**
- * Map the currently supported INR amounts in minor units to plan codes.
+ * Map the currently supported USD amounts in minor units to plan codes.
  * @returns The matching plan, or null for an unsupported amount or currency.
  */
 function derivePlan(amountMinor: number, currency: string): "monthly" | "lifetime" | null {
-  if (currency !== "INR") return null;
+  if (currency !== "USD") return null;
   if (amountMinor === 1200) return "monthly";
   if (amountMinor === 5000) return "lifetime";
   return null;
@@ -144,12 +144,15 @@ Deno.serve(async (req: Request) => {
   }
 
   // Atomically claim the event before provisioning entitlements.
+  // Each acquisition replaces the previous worker's token, including failed retries.
+  const claimToken = crypto.randomUUID();
   const claimNow = new Date().toISOString();
   const leaseUntil = new Date(Date.now() + 60_000).toISOString();
   let { data: claimedRows, error: claimError } = await admin
     .from("webhook_events")
     .update({
       processing_status: "processing",
+      claim_token: claimToken,
       claimed_at: claimNow,
       lease_expires_at: leaseUntil,
     })
@@ -164,6 +167,7 @@ Deno.serve(async (req: Request) => {
       .from("webhook_events")
       .update({
         processing_status: "processing",
+        claim_token: claimToken,
         claimed_at: claimNow,
         lease_expires_at: leaseUntil,
       })
@@ -208,11 +212,24 @@ Deno.serve(async (req: Request) => {
 
     if (!isCapturedPaymentEvent && !isPaidOrderWithCapturedPayment) {
       // Acknowledge authorization-only, failed, or unsupported events without granting entitlement.
-      await admin.from("webhook_events").update({
+      // A zero-row result means this worker no longer owns the claim; do not report success.
+      const { data: ignoredRows, error: ignoredError } = await admin.from("webhook_events").update({
         processing_status: "processed",
         processed_at: new Date().toISOString(),
         error_code: "ignored_non_captured",
-      }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).throwOnError();
+      })
+        .eq("provider", "razorpay")
+        .eq("provider_event_id", providerEventId)
+        .eq("claim_token", claimToken)
+        .eq("processing_status", "processing")
+        .select("id");
+      if (ignoredError) throw ignoredError;
+      if (!ignoredRows?.length) {
+        return new Response(JSON.stringify({ status: "processing" }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ status: "ignored" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -220,11 +237,23 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!userId || !plan) {
-      await admin.from("webhook_events").update({
+      const { data: invalidRows, error: invalidError } = await admin.from("webhook_events").update({
         processing_status: "failed",
         processed_at: new Date().toISOString(),
         error_code: "invalid_payload",
-      }).eq("provider", "razorpay").eq("provider_event_id", providerEventId);
+      })
+        .eq("provider", "razorpay")
+        .eq("provider_event_id", providerEventId)
+        .eq("claim_token", claimToken)
+        .eq("processing_status", "processing")
+        .select("id");
+      if (invalidError) throw invalidError;
+      if (!invalidRows?.length) {
+        return new Response(JSON.stringify({ status: "processing" }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ error: "Invalid payload" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
@@ -235,21 +264,40 @@ Deno.serve(async (req: Request) => {
     const { data: profile, error: profileError } = await admin.from("profiles").select("user_id").eq("user_id", userId).maybeSingle();
     if (profileError) throw profileError;
     if (!profile) {
-      await admin.from("webhook_events").update({
+      const { data: unknownUserRows, error: unknownUserError } = await admin.from("webhook_events").update({
         processing_status: "failed",
         processed_at: new Date().toISOString(),
         error_code: "unknown_user",
-      }).eq("provider", "razorpay").eq("provider_event_id", providerEventId);
+      })
+        .eq("provider", "razorpay")
+        .eq("provider_event_id", providerEventId)
+        .eq("claim_token", claimToken)
+        .eq("processing_status", "processing")
+        .select("id");
+      if (unknownUserError) throw unknownUserError;
+      if (!unknownUserRows?.length) {
+        return new Response(JSON.stringify({ status: "processing" }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ error: "Unknown user" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
     }
 
+    // Claim fencing is enforced on final webhook_events status writes. Payment and
+    // entitlement writes are idempotent by their conflict keys, but are not
+    // transactionally fenced against a concurrent reclaim; a worker that loses its
+    // lease can still complete these writes before its fenced finalization returns 503.
+    // Follow-up: move provisioning into a claim-checked transaction/RPC if stricter
+    // fencing is required.
     // Promote the pending row created at order time to the captured payment ID.
+    // A zero-row result is expected when no pending row exists or it was already captured.
     const orderId = String(entity?.order_id ?? entity?.id ?? "");
     if (orderId) {
-      await admin
+      const { error: promoteError } = await admin
         .from("payments")
         .update({
           provider_payment_id: String(entity?.id ?? providerEventId),
@@ -259,7 +307,8 @@ Deno.serve(async (req: Request) => {
         .eq("provider", "razorpay")
         .eq("provider_order_id", orderId)
         .eq("status", "pending")
-        .throwOnError();
+        .select("id");
+      if (promoteError) throw promoteError;
     }
 
     // Record payment as captured.
@@ -288,21 +337,47 @@ Deno.serve(async (req: Request) => {
       lifetime: plan === "lifetime",
     }, { onConflict: "user_id,plan_code" }).throwOnError();
 
-    await admin.from("webhook_events").update({
+    // Require a returned row: a lost claim must not be acknowledged as processed.
+    const { data: processedRows, error: processedError } = await admin.from("webhook_events").update({
       processing_status: "processed",
       processed_at: new Date().toISOString(),
-    }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).throwOnError();
+    })
+      .eq("provider", "razorpay")
+      .eq("provider_event_id", providerEventId)
+      .eq("claim_token", claimToken)
+      .eq("processing_status", "processing")
+      .select("id");
+    if (processedError) throw processedError;
+    if (!processedRows?.length) {
+      return new Response(JSON.stringify({ status: "processing" }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     return new Response(JSON.stringify({ status: "processed" }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    await admin.from("webhook_events").update({
+    // A zero-row update means this worker lost ownership after provisioning began.
+    // In that case, do not mark the reclaimed event failed.
+    const { data: failedRows, error: failedUpdateError } = await admin.from("webhook_events").update({
       processing_status: "failed",
       processed_at: new Date().toISOString(),
       error_code: "processing_exception",
-    }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).throwOnError();
+    })
+      .eq("provider", "razorpay")
+      .eq("provider_event_id", providerEventId)
+      .eq("claim_token", claimToken)
+      .eq("processing_status", "processing")
+      .select("id");
+    if (!failedUpdateError && !failedRows?.length) {
+      return new Response(JSON.stringify({ status: "processing" }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     return new Response(JSON.stringify({ error: "Processing failed" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
