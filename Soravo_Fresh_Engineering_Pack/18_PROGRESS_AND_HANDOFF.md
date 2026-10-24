@@ -610,3 +610,11 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - No payment processing
 - Clean-machine Linux test still outstanding (P1-08)
 - PR #17 and PR #18 not yet merged
+
+## Auth and device review fixes — 2026-10-24 (P2-06 / P3-04 / P4-04)
+
+- Task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/harden-auth-and-device-registration/c8575ad5`; base `1ae7c4c402d11ee2f9f41dea9c2c5c88299a3aa3`. The cloud runtime supplies this isolated task checkout; retained for review, with no integration performed.
+- Verified all four supplied findings: preserve current session and clear loading on returned/rejected restoration errors; catch sign-out failures with a retry message; describe confirmation as account creation; log entitlement/RPC/unexpected registration errors while retaining existing 500 responses.
+- Skills: loaded `code-review`; Supabase, React and security skills considered but unavailable in the declared local skill directory/session catalog. Used existing contracts and standard error handling. A read-only subagent independently verified the device logging finding; all edits and executable validation performed by the primary agent.
+- Temporary behavioral harness: 11 checks passed, covering real components and handler with synthetic fixtures; no production services or credentials used. Website typecheck, production build, and all 19 existing tests also passed. Validation evidence is kept outside the repository in `workspace-context/validation-record.md`.
+- No architecture/entitlement contract changes. Rollback: revert this patch. Work remains uncommitted for the user's review.

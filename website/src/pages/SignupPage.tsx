@@ -45,8 +45,8 @@ export function SignupPage() {
         <div className="w-full max-w-md text-center">
           <h1 className="text-3xl font-bold text-ink">Check your email</h1>
           <p className="mt-4 text-muted">
-            We sent a confirmation link to <strong>{email}</strong>. Click it to activate
-            your account and start your {plan} plan.
+            We sent a confirmation link to <strong>{email}</strong>. Click it to create
+            your account.
           </p>
           <Link to="/login" className="mt-6 inline-block text-ink underline">
             Back to login

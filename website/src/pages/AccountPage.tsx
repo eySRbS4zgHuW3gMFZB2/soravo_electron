@@ -14,6 +14,16 @@ export function AccountPage() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+
+  const handleSignOut = async () => {
+    setSignOutError(null);
+    try {
+      await signOut();
+    } catch {
+      setSignOutError("Sign-out failed. Please try again.");
+    }
+  };
 
   useEffect(() => {
     // When the user identity changes, clear any previous entitlements and
@@ -72,7 +82,7 @@ export function AccountPage() {
       <header className="border-b border-ink/10 px-6 py-4">
         <nav className="mx-auto flex max-w-6xl items-center justify-between">
           <Link to="/" className="text-xl font-bold text-ink">Soravo</Link>
-          <button onClick={signOut} className="text-sm text-muted hover:underline">
+          <button onClick={handleSignOut} className="text-sm text-muted hover:underline">
             Sign out
           </button>
         </nav>
@@ -81,6 +91,9 @@ export function AccountPage() {
       <main className="mx-auto max-w-6xl px-6 py-12">
         <h1 className="text-3xl font-bold text-ink">Account</h1>
         <p className="mt-2 text-muted">{user.email}</p>
+        {signOutError && (
+          <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{signOutError}</p>
+        )}
 
         <section className="mt-8">
           <h2 className="text-xl font-semibold text-ink">Entitlements</h2>

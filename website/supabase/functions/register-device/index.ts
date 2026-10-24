@@ -118,6 +118,7 @@ Deno.serve(async (req: Request) => {
       .in("status", ["active", "lifetime_active"]);
 
     if (entError) {
+      console.error("register-device: entitlement query failed", entError);
       return new Response(JSON.stringify({ success: false, error: "Failed to check entitlements" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -161,6 +162,7 @@ Deno.serve(async (req: Request) => {
     );
 
     if (rpcError) {
+      console.error("register-device: register_device_atomic RPC failed", rpcError);
       return new Response(JSON.stringify({ success: false, error: "Failed to register device" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -192,6 +194,7 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error("register-device: unexpected handler failure", error);
     return new Response(JSON.stringify({ success: false, error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

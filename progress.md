@@ -924,3 +924,6 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - **Package Manager**: Chocolatey 2.7.4
 - **MCP Servers**: Supabase (connected), Cloudflare (connected), REA (207 tools)
 - **GitHub Repo**: https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron (main = Tauri v2)
+## 2026-10-24 — Auth and device review fixes
+
+Verified and repaired four review findings: preserve the current session and finish loading after session-restore errors, show retryable sign-out failures, correct signup confirmation copy, and add device-registration error diagnostics without changing HTTP responses. The temporary behavioral harness passes 11 checks. Website typecheck, production build, and all 19 existing tests also passed. Device-handler checks used synthetic Node fixtures because Deno is unavailable.
