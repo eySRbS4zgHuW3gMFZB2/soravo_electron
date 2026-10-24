@@ -7,7 +7,7 @@ import { useAuth } from "../lib/auth";
  * The selected plan is displayed here; signup only creates an account.
  */
 export function SignupPage() {
-  const { signUp } = useAuth();
+  const { signUp, loading: authLoading, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const plan = searchParams.get("plan") || "monthly";
@@ -18,6 +18,32 @@ export function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Avoid the sign-up form flashing for an already authenticated visitor.
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <p className="text-muted">Loading...</p>
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <div className="text-center">
+          <p className="text-muted">You are already signed in.</p>
+          <button
+            type="button"
+            onClick={() => navigate("/account", { replace: true })}
+            className="mt-4 rounded-full bg-ink px-6 py-3 font-semibold text-lime"
+          >
+            Go to account
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   /** Submit account details, display the result, and reset the pending state. */
   const handleSubmit = async (e: React.FormEvent) => {

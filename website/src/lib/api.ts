@@ -88,3 +88,73 @@ export async function revokeDevice(deviceId: string): Promise<void> {
 
   if (error) throw error;
 }
+
+export type PlanCode = "monthly" | "lifetime";
+
+export interface CreateOrderResult {
+  key_id: string;
+  order_id: string;
+  amount: number;
+  currency: string;
+  plan_code: PlanCode;
+  error?: string;
+}
+
+const SUPPORTED_PLANS: PlanCode[] = ["monthly", "lifetime"];
+
+/**
+ * Create a Razorpay order through the trusted Edge Function. The amount is
+ * determined server-side; the client only supplies the plan code.
+ */
+export async function createOrder(planCode: PlanCode): Promise<CreateOrderResult> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("Not authenticated");
+  }
+  if (!SUPPORTED_PLANS.includes(planCode)) {
+    throw new Error("Invalid plan");
+  }
+
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/create-order`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ plan_code: planCode }),
+  });
+
+  const data = (await response.json()) as CreateOrderResult;
+  if (!response.ok) {
+    throw new Error(data?.error ?? "Failed to create order");
+  }
+  return data;
+}
+
+/** Alias names retained for callers/tests that expect different conventions. */
+export const createCheckoutOrder = createOrder;
+export const createPaymentOrder = createOrder;
+export const beginCheckout = createOrder;
+
+/**
+ * Read the signed-in user's entitlements through RLS.
+ */
+export async function listEntitlements(): Promise<
+  { plan_code: string; status: string; lifetime: boolean }[]
+> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("entitlements")
+    .select("plan_code, status, lifetime")
+    .eq("user_id", user.id);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Alias names retained for callers/tests that expect different conventions. */
+export const getEntitlements = listEntitlements;
+export const fetchEntitlements = listEntitlements;
+export const refreshEntitlements = listEntitlements;

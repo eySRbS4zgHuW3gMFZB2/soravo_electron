@@ -1,15 +1,26 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
-/** Render the email/password login form and navigate to the account on success. */
+/** Render the email/password login form, password recovery entry, and a clear auth-loading state. */
 export function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, loading: authLoading, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo") || searchParams.get("next") ||
+    searchParams.get("redirect") || searchParams.get("redirectTo") || "/account";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Avoid showing the logged-out form for an authenticated visitor.
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(returnTo, { replace: true });
+    }
+  }, [authLoading, user, navigate, returnTo]);
 
   /** Submit the login form, display failures, and reset the pending state. */
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,7 +32,7 @@ export function LoginPage() {
       if (error) {
         setError(error);
       } else {
-        navigate("/account");
+        navigate(returnTo, { replace: true });
       }
     } catch {
       setError("Unable to log in. Please try again.");
@@ -30,6 +41,14 @@ export function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <p className="text-muted">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
@@ -41,7 +60,7 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           {error && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
+            <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
           )}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-ink">Email</label>
@@ -73,6 +92,10 @@ export function LoginPage() {
             {loading ? "Logging in..." : "Log in"}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-muted">
+          <Link to="/forgot-password" className="underline">Forgot password?</Link>
+        </p>
       </div>
     </div>
   );

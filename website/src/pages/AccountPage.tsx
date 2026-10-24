@@ -1,67 +1,94 @@
-import { Link } from "react-router-dom";
-import { useAuth } from "../lib/auth";
-import { supabase } from "../lib/supabase";
 import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../lib/auth";
+import { listEntitlements } from "../lib/api";
 
 /**
  * Show the signed-in user's email and entitlements, with sign-out access.
  * Prompt signed-out visitors to log in and ignore stale entitlement responses.
  */
 export function AccountPage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [entitlements, setEntitlements] = useState<
     { plan_code: string; status: string; lifetime: boolean }[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null);
+
+  const refreshEntitlements = async () => {
+    if (!user) return;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await listEntitlements();
+      setEntitlements(data);
+    } catch {
+      setLoadError("Could not load entitlements. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSignOut = async () => {
     setSignOutError(null);
     try {
       await signOut();
+      navigate("/", { replace: true });
     } catch {
       setSignOutError("Sign-out failed. Please try again.");
     }
   };
 
   useEffect(() => {
-    // When the user identity changes, clear any previous entitlements and
-    // show loading again. If no user is signed in, stop loading immediately.
+    if (authLoading) return;
     if (!user) {
       setEntitlements([]);
-      setLoadError(null);
       setLoading(false);
       return;
     }
 
-    let stale = false;
-    setLoading(true);
-    setEntitlements([]);
-    setLoadError(null);
-
+    let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("entitlements")
-        .select("plan_code, status, lifetime")
-        .eq("user_id", user.id);
-      // Ignore results for a user identity that is no longer current.
-      if (!stale) {
-        if (error) {
-          setLoadError("Could not load entitlements. Please try again.");
-        } else {
-          setEntitlements(data ?? []);
-        }
-        setLoading(false);
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const data = await listEntitlements();
+        if (!cancelled) setEntitlements(data);
+      } catch {
+        if (!cancelled) setLoadError("Could not load entitlements. Please try again.");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
 
-    // Mark the request stale on cleanup so it can never update state after
-    // the user changes or the component unmounts.
     return () => {
-      stale = true;
+      cancelled = true;
     };
-  }, [user]);
+  }, [user, authLoading]);
+
+  // After a browser checkout callback, refresh a few times because webhook
+  // provisioning is authoritative and may lag behind the redirect.
+  useEffect(() => {
+    if (authLoading || !user || searchParams.get("checkout") !== "1") return;
+    setCheckoutNotice("Payment submitted. Entitlements update after server confirmation.");
+    const attempts = [0, 1500, 3000];
+    const timers = attempts.map((delay) =>
+      window.setTimeout(() => void refreshEntitlements(), delay)
+    );
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [authLoading, user, searchParams]);
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <p className="text-muted">Loading...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -94,9 +121,23 @@ export function AccountPage() {
         {signOutError && (
           <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{signOutError}</p>
         )}
+        {checkoutNotice && (
+          <p role="status" className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+            {checkoutNotice}
+          </p>
+        )}
 
         <section className="mt-8">
-          <h2 className="text-xl font-semibold text-ink">Entitlements</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-ink">Entitlements</h2>
+            <button
+              type="button"
+              onClick={() => void refreshEntitlements()}
+              className="text-sm text-muted hover:underline"
+            >
+              Refresh
+            </button>
+          </div>
           {loading ? (
             <p className="mt-4 text-muted">Loading...</p>
           ) : loadError ? (
