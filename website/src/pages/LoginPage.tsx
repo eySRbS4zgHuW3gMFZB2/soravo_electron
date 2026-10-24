@@ -24,6 +24,7 @@ export function LoginPage() {
     } catch {
       setError("Unable to log in. Please try again.");
     } finally {
+      // Always reset loading, whether signIn resolved or rejected.
       setLoading(false);
     }
   };

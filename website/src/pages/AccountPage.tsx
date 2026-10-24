@@ -12,29 +12,40 @@ export function AccountPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    setEntitlements([]);
-    setLoadError(null);
-    setLoading(true);
+    // When the user identity changes, clear any previous entitlements and
+    // show loading again. If no user is signed in, stop loading immediately.
     if (!user) {
+      setEntitlements([]);
+      setLoadError(null);
       setLoading(false);
       return;
     }
-    let active = true;
+
+    let stale = false;
+    setLoading(true);
+    setEntitlements([]);
+    setLoadError(null);
+
     (async () => {
       const { data, error } = await supabase
         .from("entitlements")
         .select("plan_code, status, lifetime")
         .eq("user_id", user.id);
-      if (!active) return;
-      if (error) {
-        setLoadError("Could not load entitlements. Please try again.");
-      } else {
-        setEntitlements(data ?? []);
+      // Ignore results for a user identity that is no longer current.
+      if (!stale) {
+        if (error) {
+          setLoadError("Could not load entitlements. Please try again.");
+        } else {
+          setEntitlements(data ?? []);
+        }
+        setLoading(false);
       }
-      setLoading(false);
     })();
+
+    // Mark the request stale on cleanup so it can never update state after
+    // the user changes or the component unmounts.
     return () => {
-      active = false;
+      stale = true;
     };
   }, [user]);
 
@@ -91,7 +102,8 @@ export function AccountPage() {
         <section className="mt-8">
           <h2 className="text-xl font-semibold text-ink">Devices</h2>
           <p className="mt-2 text-sm text-muted">
-            Device management will be available in a future update.
+            Devices are registered automatically when you sign in from the Soravo desktop app.
+            Monthly plans allow up to 3 active devices. Lifetime plans have no limit.
           </p>
         </section>
 

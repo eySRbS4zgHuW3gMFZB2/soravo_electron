@@ -43,7 +43,8 @@
                   "SORAVO_DECISION_MEMO_2026-10-22.md",
                   "31_NEW_PROJECT_ISOLATION_AND_SETUP.md",
                   "29_WEB_DESKTOP_AUTH_CONTRACT.md",
-                  "30_RAZORPAY_INTEGRATION_DESIGN.md"
+                  "30_RAZORPAY_INTEGRATION_DESIGN.md",
+                  "32_IMPLEMENTATION_PLAN_WEBSITE_PAYMENTS.md"
               ],
     "owner_decisions":  {
                             "platforms":  [
@@ -100,5 +101,5 @@
                                                  }
                            },
     "source_audit_date":  "2026-10-22",
-    "note":  "Website implementation has begun: the website foundation (React/TS/Vite, Supabase auth, pricing, account pages) and database schema with RLS are implemented in website/. Supabase project configuration, Razorpay payments, and desktop auth flow remain unimplemented. No repository rename, DNS change, Cloudflare production change, deployment, Supabase data change, or secret operation has been performed."
+    "note":  "Website implementation has begun: the website foundation (React/TS/Vite, Supabase auth, pricing, account pages) and the device-registration Edge Function are implemented in the repository. Supabase, payment (Razorpay), and desktop auth flows remain unimplemented. No repository rename, DNS change, Cloudflare production change, deployment, Supabase data change, or secret operation has been performed."
 }

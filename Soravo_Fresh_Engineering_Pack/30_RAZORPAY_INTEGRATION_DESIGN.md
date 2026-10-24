@@ -7,7 +7,7 @@
 1. Razorpay account with API keys (test + live)
 2. Webhook endpoint configured in Razorpay dashboard
 3. Webhook secret for signature verification
-4. Server-side API backend chosen (ADR-0003: Cloudflare Pages Functions vs Supabase Edge Functions — PROPOSED)
+4. Server-side API backend chosen (ADR-0003: Supabase Edge Functions — ACCEPTED)
 
 ## Integration Architecture
 
@@ -37,13 +37,11 @@
 4. User completes payment in Razorpay
 5. Razorpay sends webhook to server
 6. Server verifies webhook signature
-7. Server rejects authorization-only events (e.g., `payment.authorized` without capture). Payment
-   records may be created or updated in `pending`/`failed` state before capture verification.
-   A payment record or entitlement is finalized only for verified **captured** payment events or
-   a **paid** order whose payment status is confirmed captured.
-8. Server creates or updates the payment record (idempotent) throughout the lifecycle; status
-   reflects pending/failed/captured as events arrive.
-9. Server creates/updates entitlement only after verified capture
+7. Server rejects authorization-only events (e.g., `payment.authorized` without capture). A payment
+   record or entitlement is created only for verified **captured** payment events or a **paid**
+   order whose payment status is confirmed captured.
+8. Server creates payment record (idempotent) only after verified capture
+9. Server creates/updates entitlement (only after verified capture)
 10. Browser return/checkout success is informational only → does NOT grant entitlement
 
 ### Captured-Payment Verification
@@ -90,9 +88,8 @@
 
 ### Next Implementation Task
 
-1. Choose backend placement (ADR-0003): Cloudflare Pages Functions vs Supabase Edge Functions
-2. Implement server-side order creation endpoint
-3. Implement webhook verification and processing
-4. Implement entitlement provisioning
-5. Add device registration/limit checking
-6. Add automated tests for all flows
+1. Implement server-side order creation endpoint (Supabase Edge Function)
+2. Implement webhook verification and processing (Supabase Edge Function)
+3. Implement entitlement provisioning after verified capture
+4. Add device registration/limit checking
+5. Add automated tests for all flows
