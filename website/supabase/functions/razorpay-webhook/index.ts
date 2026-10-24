@@ -189,7 +189,7 @@ Deno.serve(async (req: Request) => {
       });
     }
     return new Response(JSON.stringify({ status: "processing" }), {
-      status: 200,
+      status: 503,
       headers: { "Content-Type": "application/json" },
     });
   }
