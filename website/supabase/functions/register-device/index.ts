@@ -9,8 +9,7 @@
 // Body: { device_id: string, label?: string, platform?: string, app_version?: string }
 // Response: { success: boolean, device_id: string, device_count: number, limit_reached: boolean }
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,7 +31,7 @@ interface RegisterDeviceResponse {
   error?: string;
 }
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -64,9 +63,16 @@ serve(async (req: Request) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      console.error("register-device: missing Supabase environment configuration");
+      return new Response(JSON.stringify({ success: false, error: "Server misconfigured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Client with anon key for JWT validation. The token is passed explicitly.
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
@@ -80,8 +86,21 @@ serve(async (req: Request) => {
     }
 
     // 2. Parse request body
-    const body: RegisterDeviceRequest = await req.json();
-    if (!body.device_id || typeof body.device_id !== "string" || body.device_id.length < 8) {
+    let body: RegisterDeviceRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ success: false, error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const optionalString = (value: unknown) => value == null || (typeof value === "string" && value.length <= 128);
+    if (
+      !body || typeof body !== "object" ||
+      typeof body.device_id !== "string" || body.device_id.length < 8 || body.device_id.length > 128 ||
+      !optionalString(body.label) || !optionalString(body.platform) || !optionalString(body.app_version)
+    ) {
       return new Response(JSON.stringify({ success: false, error: "Invalid device_id" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -118,9 +137,9 @@ serve(async (req: Request) => {
     // 5. Register device atomically via a database function.
     //    The function takes a per-user advisory lock so concurrent requests for
     //    the same user serialize; the limit check and upsert happen in one
-    //    transaction. The function permits re-registration of an already-known
-    //    device (active or revoked) without consuming a new device slot, and
-    //    clears revoked_at on reactivation.
+    //    transaction. Re-registering an already-ACTIVE device does not consume a
+    //    slot. A REVOKED device is treated as new: it must pass the limit check
+    //    before the function clears revoked_at.
     const { data: result, error: rpcError } = await supabaseAdmin.rpc(
       "register_device_atomic",
       {

@@ -162,7 +162,7 @@ BEGIN
   VALUES (NEW.id, NEW.raw_user_meta_data->>'display_name');
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

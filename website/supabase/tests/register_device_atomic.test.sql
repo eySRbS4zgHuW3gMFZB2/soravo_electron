@@ -33,7 +33,7 @@
 
 BEGIN;
 
-SELECT plan(9);
+SELECT plan(8);
 
 -- Fixture user (bypasses auth for direct function calls)
 -- Satisfies devices.user_id -> auth.users(id) foreign key.
@@ -52,13 +52,7 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 1. New device under limit -> allowed (activeCount = 0 before this call)
-SELECT lives_ok(
-  $$ INSERT INTO public.devices (user_id, device_id, platform)
-     VALUES ('00000000-0000-0000-0000-000000000001', 'dev-new', 'windows') $$,
-  'seed new device'
-);
-
+-- 1. New device under limit -> allowed (function creates dev-new itself)
 SELECT is(
   (public.register_device_atomic(
      '00000000-0000-0000-0000-000000000001', 'dev-new', NULL, 'windows', '1.0.0', false

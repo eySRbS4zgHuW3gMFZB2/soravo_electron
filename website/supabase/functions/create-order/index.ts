@@ -1,8 +1,7 @@
 // Supabase Edge Function: Razorpay Order Creation
 // Server-side only. Prices are never trusted from the client.
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +20,7 @@ const PLANS: Record<string, Plan> = {
   lifetime: { code: "lifetime", amount: 5000, currency: "INR" },
 };
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
@@ -40,9 +39,15 @@ serve(async (req: Request) => {
     }
     const token = authHeader.slice(7).trim();
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !anonKey || !serviceKey) {
+      return new Response(JSON.stringify({ error: "Server misconfigured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const client = createClient(supabaseUrl, anonKey);
     const { data: { user }, error: authError } = await client.auth.getUser(token);
@@ -53,8 +58,22 @@ serve(async (req: Request) => {
       });
     }
 
-    const body = await req.json();
-    const planCode = typeof body?.plan_code === "string" ? body.plan_code : "";
+    let body: { plan_code?: unknown };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!body || typeof body !== "object") {
+      return new Response(JSON.stringify({ error: "Invalid request body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const planCode = typeof body.plan_code === "string" ? body.plan_code : "";
     const plan = PLANS[planCode];
     if (!plan) {
       return new Response(JSON.stringify({ error: "Invalid plan" }), {
@@ -83,7 +102,7 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         amount: plan.amount,
         currency: plan.currency,
-        receipt: `${plan.code}_${user.id}_${Date.now()}`,
+        receipt: `rcpt_${crypto.randomUUID().replace(/-/g, "").slice(0, 32)}`,
         notes: {
           user_id: user.id,
           plan_code: plan.code,
@@ -104,6 +123,7 @@ serve(async (req: Request) => {
       user_id: user.id,
       provider: "razorpay",
       provider_payment_id: rzpData.id,
+      provider_order_id: rzpData.id,
       amount_minor: plan.amount,
       currency: plan.currency,
       status: "pending",

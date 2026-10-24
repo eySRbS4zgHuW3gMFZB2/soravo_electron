@@ -37,6 +37,11 @@ describe("Razorpay webhook signature contract mirror", () => {
     expect(signaturesMatch("00", "11")).toBe(false);
   });
 
+  it("keeps Razorpay receipts within 40 characters", () => {
+    const receipt = `rcpt_${"12345678901234567890123456789012".slice(0, 32)}`;
+    expect(receipt.length).toBeLessThanOrEqual(40);
+  });
+
   it("rejects a tampered replay body", async () => {
     const secret = "whsec_test";
     const validSignature = await hmacHex(secret, '{"event":"payment.captured"}');

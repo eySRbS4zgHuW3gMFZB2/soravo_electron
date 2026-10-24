@@ -1,8 +1,7 @@
 // Supabase Edge Function: Razorpay Webhook
 // Verifies signatures over the exact raw body and provisions entitlements only for captured payments.
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 
 const encoder = new TextEncoder();
 
@@ -42,7 +41,7 @@ function derivePlan(amountMinor: number, currency: string): "monthly" | "lifetim
   return null;
 }
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -72,12 +71,21 @@ serve(async (req: Request) => {
 
   const eventType = typeof event?.event === "string" ? event.event : "unknown";
   const entity = event?.payload?.payment?.entity ?? event?.payload?.order?.entity ?? {};
-  const providerEventId = typeof event?.id === "string"
-    ? event.id
-    : `${eventType}:${entity?.id ?? "none"}:${entity?.created_at ?? Date.now()}`;
+  const headerEventId = req.headers.get("x-razorpay-event-id");
+  const providerEventId =
+    headerEventId?.trim() ||
+    (typeof event?.id === "string" && event.id.trim()
+      ? event.id.trim()
+      : `${eventType}:${entity?.id ?? "unknown-entity"}:${entity?.created_at ?? "na"}`);
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) {
+    return new Response(JSON.stringify({ error: "Server misconfigured" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
   const admin = createClient(supabaseUrl, serviceKey);
 
   // Durable idempotency ledger. Duplicate means already handled.
@@ -149,7 +157,7 @@ serve(async (req: Request) => {
         processing_status: "processed",
         processed_at: new Date().toISOString(),
         error_code: "ignored_non_captured",
-      }).eq("provider", "razorpay").eq("provider_event_id", providerEventId);
+      }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).throwOnError();
       return new Response(JSON.stringify({ status: "ignored" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -182,17 +190,32 @@ serve(async (req: Request) => {
       });
     }
 
+    // Promote the pending row created at order time to the captured payment ID.
+    const orderId = String(entity?.order_id ?? entity?.id ?? "");
+    if (orderId) {
+      await admin
+        .from("payments")
+        .update({
+          status: "captured",
+          verified_at: new Date().toISOString(),
+        })
+        .eq("provider", "razorpay")
+        .eq("provider_order_id", orderId)
+        .eq("status", "pending")
+        .throwOnError();
+    }
+
     // Record payment as captured.
     await admin.from("payments").upsert({
       user_id: userId,
       provider: "razorpay",
       provider_payment_id: String(entity?.id ?? providerEventId),
-      provider_order_id: String(entity?.order_id ?? entity?.id ?? ""),
+      provider_order_id: orderId,
       amount_minor: amountMinor,
       currency,
       status: "captured",
       verified_at: new Date().toISOString(),
-    }, { onConflict: "provider,provider_payment_id" });
+    }, { onConflict: "provider,provider_payment_id" }).throwOnError();
 
     // Provision entitlement. Monthly has period end 30 days; lifetime no expiry and true lifetime.
     const now = new Date();
@@ -206,12 +229,12 @@ serve(async (req: Request) => {
       last_verified_at: now.toISOString(),
       subscription_period_end: periodEnd,
       lifetime: plan === "lifetime",
-    }, { onConflict: "user_id,plan_code" });
+    }, { onConflict: "user_id,plan_code" }).throwOnError();
 
     await admin.from("webhook_events").update({
       processing_status: "processed",
       processed_at: new Date().toISOString(),
-    }).eq("provider", "razorpay").eq("provider_event_id", providerEventId);
+    }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).throwOnError();
 
     return new Response(JSON.stringify({ status: "processed" }), {
       status: 200,
@@ -222,7 +245,7 @@ serve(async (req: Request) => {
       processing_status: "failed",
       processed_at: new Date().toISOString(),
       error_code: "processing_exception",
-    }).eq("provider", "razorpay").eq("provider_event_id", providerEventId);
+    }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).throwOnError();
     return new Response(JSON.stringify({ error: "Processing failed" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
