@@ -6,12 +6,13 @@ This document defines the secure callback/session exchange between the website a
 
 ## Flow
 
-1. **Desktop initiates auth:** Desktop app opens the system browser to `https://soravo.xyz/auth/desktop?state=<random_state>&redirect=soravo://auth/callback`
-2. **User authenticates in browser:** Supabase Auth handles login/signup in the browser
-3. **Server generates one-time code:** After successful auth, the server creates a short-lived (60s), single-use code bound to the user session
-4. **Browser redirects to desktop:** Browser redirects to `soravo://auth/callback?code=<one_time_code>&state=<random_state>`
-5. **Desktop exchanges code:** Desktop app sends the code to the server's token exchange endpoint
-6. **Server returns session:** Server validates the one-time code and returns a session token (refresh token stored in OS credential storage)
+1. **Desktop generates PKCE verifier:** Desktop app generates a high-entropy `code_verifier` and stores it locally. It computes `code_challenge = BASE64URL(SHA256(code_verifier))` with method `S256`.
+2. **Desktop initiates auth:** Desktop app opens the system browser to `https://soravo.xyz/auth/desktop?state=<random_state>&code_challenge=<s256_challenge>&code_challenge_method=S256&redirect=soravo://auth/callback`
+3. **User authenticates in browser:** Supabase Auth handles login/signup in the browser. The server stores the `state` and `code_challenge` against the pending flow.
+4. **Server generates one-time code:** After successful auth, the server creates a short-lived (60s), single-use code bound to the user session and to the stored `code_challenge`.
+5. **Browser redirects to desktop:** Browser redirects to `soravo://auth/callback?code=<one_time_code>&state=<random_state>`
+6. **Desktop exchanges code:** Desktop app sends the code and the stored `code_verifier` to the server's token exchange endpoint.
+7. **Server validates verifier:** The server recomputes `BASE64URL(SHA256(code_verifier))`, compares it to the stored `code_challenge`, and only then issues a session token (refresh token stored in OS credential storage). A verifier that does not match the stored challenge is rejected.
 
 ## Security Requirements
 

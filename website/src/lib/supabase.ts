@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
@@ -9,6 +9,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
       "Copy website/.env.example to website/.env and fill in values."
   );
 }
+
+// Prevent authentication from making requests with placeholder credentials.
+// In development (no env vars), the client is still created for page previews,
+// but auth operations return a clear configuration error.
+export const isConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
 export const supabase = createClient(
   supabaseUrl || "https://placeholder.supabase.co",

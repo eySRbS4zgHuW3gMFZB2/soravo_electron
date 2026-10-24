@@ -37,9 +37,24 @@
 4. User completes payment in Razorpay
 5. Razorpay sends webhook to server
 6. Server verifies webhook signature
-7. Server creates payment record (idempotent)
-8. Server creates/updates entitlement (only after verified payment)
-9. Browser return/checkout success is informational only — does NOT grant entitlement
+7. Server rejects authorization-only events (e.g., `payment.authorized` without capture). A payment
+   record or entitlement is created only for verified **captured** payment events or a **paid**
+   order whose payment status is confirmed captured.
+8. Server creates payment record (idempotent) only after verified capture
+9. Server creates/updates entitlement (only after verified capture)
+10. Browser return/checkout success is informational only → does NOT grant entitlement
+
+### Captured-Payment Verification
+
+- The webhook handler must verify the event payload reflects an actual captured payment:
+  - `payment.captured` events: status is `captured` and the captured amount is non-zero and
+    matches the order amount.
+  - `order.paid` events: the order status is `paid` **and** the accompanying payment(s) are in
+    `captured` state before any entitlement is provisioned.
+- Authorization-only events (`payment.authorized`, or `order.paid` where payment is only authorized,
+  not captured) are logged and acknowledged but NEVER create payment records or entitlements.
+- If the provider reports a pending/failed capture, no entitlement is granted; the payment is
+  recorded as `pending`/`failed` per the state machine.
 
 ### Entitlement Provisioning
 

@@ -66,6 +66,8 @@ CREATE POLICY "Users can read own entitlements"
   ON public.entitlements FOR SELECT
   USING (auth.uid() = user_id);
 
+GRANT SELECT ON public.entitlements TO authenticated;
+
 -- Payments
 CREATE TABLE IF NOT EXISTS public.payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -103,6 +105,10 @@ CREATE TABLE IF NOT EXISTS public.webhook_events (
   UNIQUE (provider, provider_event_id)
 );
 
+ALTER TABLE public.webhook_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.webhook_events FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.webhook_events TO service_role;
+
 -- Admin audit events
 CREATE TABLE IF NOT EXISTS public.admin_audit_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -114,6 +120,10 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_events (
   metadata JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.admin_audit_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.admin_audit_events FROM anon, authenticated;
+GRANT SELECT, INSERT ON public.admin_audit_events TO service_role;
 
 -- Auto-create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

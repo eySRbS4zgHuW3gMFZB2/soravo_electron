@@ -14,12 +14,17 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await signIn(email, password);
-    if (error) {
-      setError(error);
+    try {
+      const { error } = await signIn(email, password);
+      if (error) {
+        setError(error);
+      } else {
+        navigate("/account");
+      }
+    } catch {
+      setError("Unable to log in. Please try again.");
+    } finally {
       setLoading(false);
-    } else {
-      navigate("/account");
     }
   };
 

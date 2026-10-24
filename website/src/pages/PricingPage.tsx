@@ -37,7 +37,7 @@ export function PricingPage() {
               to="/signup?plan=monthly"
               className="mt-8 block rounded-full bg-ink py-3 text-center font-semibold text-lime"
             >
-              Start monthly
+              Create account for monthly
             </Link>
           </div>
 
@@ -62,7 +62,7 @@ export function PricingPage() {
               to="/signup?plan=lifetime"
               className="mt-8 block rounded-full bg-lime py-3 text-center font-semibold text-ink"
             >
-              Buy lifetime
+              Create account for lifetime
             </Link>
           </div>
         </div>
