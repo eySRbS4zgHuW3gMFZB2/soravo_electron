@@ -1,8 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { createHmac } from "node:crypto";
 
-function hmacHex(secret: string, body: string): string {
-  return createHmac("sha256", secret).update(body).digest("hex");
+async function hmacHex(secret: string, body: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
+  return Array.from(new Uint8Array(signature))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function signaturesMatch(a: string, b: string): boolean {
@@ -10,24 +19,28 @@ function signaturesMatch(a: string, b: string): boolean {
   const normalizedB = b.trim().toLowerCase();
   if (normalizedA.length !== normalizedB.length) return false;
   let diff = 0;
-  for (let i = 0; i < normalizedA.length; i++) diff |= normalizedA.charCodeAt(i) ^ normalizedB.charCodeAt(i);
+  for (let i = 0; i < normalizedA.length; i++) {
+    diff |= normalizedA.charCodeAt(i) ^ normalizedB.charCodeAt(i);
+  }
   return diff === 0;
 }
 
 describe("Razorpay webhook signature contract mirror", () => {
-  it("matches a valid HMAC-SHA256 signature", () => {
+  it("matches a valid HMAC-SHA256 signature", async () => {
     const body = '{"event":"payment.captured"}';
     const secret = "whsec_test";
-    const sig = hmacHex(secret, body);
-    expect(signaturesMatch(sig, hmacHex(secret, body))).toBe(true);
+    const signature = await hmacHex(secret, body);
+    expect(signaturesMatch(signature, await hmacHex(secret, body))).toBe(true);
   });
+
   it("rejects an invalid signature", () => {
     expect(signaturesMatch("00", "11")).toBe(false);
   });
-  it("rejects a tampered replay body", () => {
+
+  it("rejects a tampered replay body", async () => {
     const secret = "whsec_test";
-    const validSig = hmacHex(secret, '{"event":"payment.captured"}');
+    const validSignature = await hmacHex(secret, '{"event":"payment.captured"}');
     const tamperedBody = '{"event":"payment.captured","amount":999}';
-    expect(signaturesMatch(validSig, hmacHex(secret, tamperedBody))).toBe(false);
+    expect(signaturesMatch(validSignature, await hmacHex(secret, tamperedBody))).toBe(false);
   });
 });
