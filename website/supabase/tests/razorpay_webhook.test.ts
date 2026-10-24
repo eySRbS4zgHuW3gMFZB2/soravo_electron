@@ -9,6 +9,7 @@ let ledger: LedgerRow;
 let loseClaim: boolean;
 let unknownUser: boolean;
 let paymentError: boolean;
+let dbError: boolean;
 let statusWrites: { token: string | null; count: number }[];
 const priorToken = "11111111-1111-4111-8111-111111111111";
 const nextToken = "22222222-2222-4222-8222-222222222222";
@@ -21,6 +22,10 @@ async function postgrest(input: string | URL | Request, init?: RequestInit): Pro
   let rows: unknown[] = [];
   if (table === "webhook_events") {
     const terminalWrite = body && body.processing_status !== "processing";
+    if (terminalWrite && dbError) {
+      statusWrites.push({ token: url.searchParams.get("claim_token"), count: 0 });
+      return Response.json({ message: "Synthetic database error" }, { status: 500 });
+    }
     if (terminalWrite && loseClaim) {
       ledger.claim_token = nextToken;
       ledger.processing_status = "processing";
@@ -88,6 +93,7 @@ beforeEach(() => {
   loseClaim = false;
   unknownUser = false;
   paymentError = false;
+  dbError = false;
   statusWrites = [];
   vi.stubGlobal("fetch", vi.fn(postgrest));
 });
@@ -123,7 +129,7 @@ describe("webhook claim ownership", () => {
     unknownUser = path === "unknown_user";
     paymentError = path === "processing_exception";
     const response = await deliver(path === "ignored" ? "payment.authorized" : "payment.captured", path !== "invalid_payload");
-    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(response.status).toBe(503);
     expect(ledger.claim_token).toBe(nextToken);
     expect(ledger.processing_status).toBe("processing");
     expect(statusWrites.length).toBeGreaterThan(0);
@@ -133,5 +139,18 @@ describe("webhook claim ownership", () => {
       expect(write.token).not.toBe(`eq.${nextToken}`);
       expect(write.count).toBe(0);
     }
+  });
+
+  it("returns 500 when a finalization database update fails", async () => {
+    dbError = true;
+    const response = await deliver();
+    expect(response.status).toBe(500);
+    expect(statusWrites.length).toBeGreaterThan(0);
+  });
+
+  it("returns 500 when payment provisioning fails", async () => {
+    paymentError = true;
+    const response = await deliver();
+    expect(response.status).toBe(500);
   });
 });
