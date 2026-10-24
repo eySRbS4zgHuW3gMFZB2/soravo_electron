@@ -549,7 +549,7 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 
 ### What is NOT implemented yet
 
-- No Edge Functions written yet
+- Device registration Edge Function implemented (register-device); payment and entitlement Edge Functions remain unimplemented
 - No payment processing
 - No webhook handling
 - No entitlement provisioning
@@ -578,3 +578,35 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - No Cloudflare Pages project created (requires owner approval)
 - No DNS changes
 - No environment variables configured in production
+
+## Website Foundation (2026-10-23)
+
+### What was implemented
+
+- website/ directory with Vite + React 18 + TypeScript + Tailwind v4
+- shadcn/ui-compatible component structure (radix-nova style)
+- Pages: LandingPage, PricingPage, LoginPage, SignupPage, AccountPage
+- Supabase client integration with auth context
+- Database schema migration (profiles, devices, entitlements, payments, webhook_events, admin_audit_events)
+- RLS policies for all tables
+- Web-desktop auth contract document (29_WEB_DESKTOP_AUTH_CONTRACT.md)
+- Razorpay integration design document (30_RAZORPAY_INTEGRATION_DESIGN.md)
+- .env.example with placeholders
+- Basic test for Supabase client
+
+### What genuinely works
+
+- Website dev server starts and renders all pages
+- Supabase auth client is configured (requires env vars)
+- Database schema is defined with RLS policies
+- Pricing page shows the approved prices: USD 12/month (recurring, max 3 devices, 14-day offline grace) and USD 50 lifetime (unlimited devices, indefinite offline)
+- Device registration Edge Function implemented (register-device) with atomic limit enforcement and JWT validation
+
+### Remaining blockers
+
+- Supabase project not yet created/configured (requires owner approval)
+- Razorpay integration not implemented (design only)
+- Web-desktop auth flow not implemented (contract only)
+- No payment processing
+- Clean-machine Linux test still outstanding (P1-08)
+- PR #17 and PR #18 not yet merged
