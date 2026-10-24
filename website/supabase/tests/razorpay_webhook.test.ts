@@ -172,4 +172,23 @@ describe("webhook claim ownership", () => {
     const response = await deliver();
     expect(response.status).toBe(500);
   });
+
+  it("does not provision on order.paid without a captured payment", async () => {
+    const body = JSON.stringify({
+      id: "evt_claim_1",
+      event: "order.paid",
+      payload: { payment: { entity: {
+        id: "pay_test", order_id: "order_test", status: "created", currency: "USD",
+        amount: 1200, notes: { user_id: "test-user" },
+      } } },
+    });
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
+    const hex = Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    const response = await handler(new Request("https://webhook.invalid", {
+      method: "POST", body, headers: { "x-razorpay-signature": hex },
+    }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "ignored" });
+  });
 });

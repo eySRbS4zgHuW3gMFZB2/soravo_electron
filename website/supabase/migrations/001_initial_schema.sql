@@ -280,6 +280,10 @@ SET search_path = public
 AS $$
 DECLARE
   v_rows INTEGER;
+  v_existing_user UUID;
+  v_existing_amount INTEGER;
+  v_existing_currency TEXT;
+  v_existing_order TEXT;
 BEGIN
   IF p_provider IS NULL OR p_provider = '' THEN
     RAISE EXCEPTION 'invalid provider';
@@ -305,6 +309,21 @@ BEGIN
   IF p_currency IS NULL OR p_currency <> 'USD' THEN
     RAISE EXCEPTION 'invalid currency';
   END IF;
+  IF p_lifetime IS NULL OR p_lifetime <> (p_plan = 'lifetime') THEN
+    RAISE EXCEPTION 'invalid lifetime flag';
+  END IF;
+  IF p_plan = 'monthly' AND (p_period_end IS NULL OR p_period_end <= now()) THEN
+    RAISE EXCEPTION 'invalid period end';
+  END IF;
+  IF p_plan = 'lifetime' AND p_period_end IS NOT NULL THEN
+    RAISE EXCEPTION 'invalid period end';
+  END IF;
+  IF p_plan = 'monthly' AND p_amount_minor <> 1200 THEN
+    RAISE EXCEPTION 'amount does not match plan';
+  END IF;
+  IF p_plan = 'lifetime' AND p_amount_minor <> 5000 THEN
+    RAISE EXCEPTION 'amount does not match plan';
+  END IF;
 
   -- Atomically verify ownership of the claim. Lock the event row.
   PERFORM 1
@@ -319,33 +338,62 @@ BEGIN
     RETURN 0;
   END IF;
 
-  -- Promote a pending payment row created at order time, if present.
+  -- Bind promotion to the server-created pending record. A mismatched pending
+  -- row must abort the transaction rather than be promoted or overwritten.
   IF p_provider_order_id IS NOT NULL AND p_provider_order_id <> '' THEN
+    IF EXISTS (
+      SELECT 1 FROM public.payments
+      WHERE provider = p_provider
+        AND provider_order_id = p_provider_order_id
+        AND status = 'pending'
+        AND (user_id <> p_user_id OR amount_minor <> p_amount_minor OR currency <> p_currency)
+    ) THEN
+      RAISE EXCEPTION 'pending payment binding mismatch';
+    END IF;
+
     UPDATE public.payments
     SET provider_payment_id = p_provider_payment_id,
         status = 'captured',
         verified_at = now()
     WHERE provider = p_provider
       AND provider_order_id = p_provider_order_id
-      AND status = 'pending';
+      AND status = 'pending'
+      AND user_id = p_user_id
+      AND amount_minor = p_amount_minor
+      AND currency = p_currency;
   END IF;
 
-  -- Record the captured payment (idempotent by provider + payment id).
-  INSERT INTO public.payments (
-    user_id, provider, provider_payment_id, provider_order_id,
-    amount_minor, currency, status, verified_at
-  )
-  VALUES (
-    p_user_id, p_provider, p_provider_payment_id,
-    NULLIF(p_provider_order_id, ''), p_amount_minor, p_currency, 'captured', now()
-  )
-  ON CONFLICT (provider, provider_payment_id) DO UPDATE SET
-    user_id = EXCLUDED.user_id,
-    provider_order_id = COALESCE(EXCLUDED.provider_order_id, public.payments.provider_order_id),
-    amount_minor = EXCLUDED.amount_minor,
-    currency = EXCLUDED.currency,
-    status = 'captured',
-    verified_at = EXCLUDED.verified_at;
+  -- Record the captured payment. Immutable identity fields are never
+  -- overwritten on conflict; a conflicting existing row aborts instead.
+    SELECT user_id, amount_minor, currency, provider_order_id
+      INTO v_existing_user, v_existing_amount, v_existing_currency, v_existing_order
+    FROM public.payments
+    WHERE provider = p_provider
+      AND provider_payment_id = p_provider_payment_id
+    FOR UPDATE;
+
+    IF FOUND THEN
+      IF v_existing_user <> p_user_id
+         OR v_existing_amount <> p_amount_minor
+         OR v_existing_currency <> p_currency THEN
+        RAISE EXCEPTION 'payment identity conflict';
+      END IF;
+      UPDATE public.payments
+      SET status = 'captured',
+          verified_at = now(),
+          provider_order_id = COALESCE(NULLIF(p_provider_order_id, ''), provider_order_id)
+      WHERE provider = p_provider
+        AND provider_payment_id = p_provider_payment_id;
+    ELSE
+      INSERT INTO public.payments (
+        user_id, provider, provider_payment_id, provider_order_id,
+        amount_minor, currency, status, verified_at
+      )
+      VALUES (
+        p_user_id, p_provider, p_provider_payment_id,
+        NULLIF(p_provider_order_id, ''), p_amount_minor, p_currency, 'captured', now()
+      );
+    END IF;
 
   -- Upsert entitlement.
   INSERT INTO public.entitlements (

@@ -16,10 +16,14 @@
 
 BEGIN;
 
-SELECT plan(16);
+SELECT plan(20);
 
 INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
 VALUES ('11111111-2222-3333-4444-555555555555','webhook-finalize@example.com','x',now(),now(),now(),'','','','')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
+VALUES ('22222222-2222-3333-4444-555555555555','webhook-finalize2@example.com','x',now(),now(),now(),'','','','')
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed a claimed webhook event with a known token.
@@ -170,11 +174,69 @@ SELECT is(
   'rejected transaction writes no payment'
 );
 
+-- H1: conflicting payment identity must abort, not reassign.
+INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
+VALUES ('razorpay','evt_conflict_1','payment.captured',true,'processing','44444444-4444-4444-8444-444444444444'::uuid);
+
+INSERT INTO public.payments (user_id, provider, provider_payment_id, amount_minor, currency, status)
+VALUES ('11111111-2222-3333-4444-555555555555'::uuid,'razorpay','pay_conflict',1200,'USD','captured');
+
+SELECT throws_ok(
+  $$SELECT public.finalize_webhook_payment_atomic(
+      'razorpay','evt_conflict_1','44444444-4444-4444-8444-444444444444'::uuid,
+      '22222222-2222-3333-4444-555555555555'::uuid,
+      'monthly','pay_conflict','order_x',1200,'USD',now() + interval '30 days',false
+    )$$,
+  NULL, NULL,
+  'conflicting payment identity aborts'
+);
+
+-- Ensure the original payment identity is preserved.
+SELECT is(
+  (SELECT user_id::text FROM public.payments WHERE provider_payment_id='pay_conflict'),
+  '11111111-2222-3333-4444-555555555555',
+  'conflicting call preserves original payment owner'
+);
+
+-- H2: pending promotion requires matching user/amount/currency.
+INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
+VALUES ('razorpay','evt_pending_1','payment.captured',true,'processing','55555555-5555-4555-8555-555555555555'::uuid);
+
+INSERT INTO public.payments (user_id, provider, provider_order_id, amount_minor, currency, status)
+VALUES ('11111111-2222-3333-4444-555555555555'::uuid,'razorpay','order_pending',1200,'USD','pending');
+
+SELECT throws_ok(
+  $$SELECT public.finalize_webhook_payment_atomic(
+      'razorpay','evt_pending_1','55555555-5555-4555-8555-555555555555'::uuid,
+      '22222222-2222-3333-4444-555555555555'::uuid,
+      'monthly','pay_pending','order_pending',1200,'USD',now() + interval '30 days',false
+    )$$,
+  NULL, NULL,
+  'pending payment binding mismatch aborts'
+);
+
+-- valid pending promotion succeeds.
+INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
+VALUES ('razorpay','evt_pending_2','payment.captured',true,'processing','66666666-6666-4666-8666-666666666666'::uuid);
+
+INSERT INTO public.payments (user_id, provider, provider_order_id, amount_minor, currency, status)
+VALUES ('11111111-2222-3333-4444-555555555555'::uuid,'razorpay','order_pending_ok',1200,'USD','pending');
+
+SELECT is(
+  public.finalize_webhook_payment_atomic(
+    'razorpay','evt_pending_2','66666666-6666-4666-8666-666666666666'::uuid,
+    '11111111-2222-3333-4444-555555555555'::uuid,
+    'monthly','pay_pending_ok','order_pending_ok',1200,'USD',now() + interval '30 days',false
+  ),
+  1,
+  'valid pending payment is promoted'
+);
+
 -- Cleanup
-DELETE FROM public.payments WHERE provider='razorpay' AND provider_payment_id IN ('pay_test','pay_test2');
+DELETE FROM public.payments WHERE provider='razorpay' AND provider_payment_id IN ('pay_test','pay_test2','pay_conflict','pay_pending','pay_pending_ok');
 DELETE FROM public.entitlements WHERE user_id='11111111-2222-3333-4444-555555555555'::uuid;
 DELETE FROM public.webhook_events WHERE provider='razorpay' AND provider_event_id IN ('evt_finalize_1','evt_finalize_2');
-DELETE FROM auth.users WHERE id='11111111-2222-3333-4444-555555555555'::uuid;
+DELETE FROM auth.users WHERE id IN ('11111111-2222-3333-4444-555555555555'::uuid,'22222222-2222-3333-4444-555555555555'::uuid);
 
 SELECT * FROM finish();
 ROLLBACK;

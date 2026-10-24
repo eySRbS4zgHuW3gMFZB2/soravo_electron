@@ -100,12 +100,13 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(supabaseUrl, serviceKey);
 
   // Durable idempotency ledger. Duplicate means already handled.
-  const { data: existing } = await admin
+  const { data: existing, error: existingError } = await admin
     .from("webhook_events")
     .select("id, processing_status")
     .eq("provider", "razorpay")
     .eq("provider_event_id", providerEventId)
     .maybeSingle();
+  if (existingError) throw existingError;
 
   if (existing?.processing_status === "processed") {
     return new Response(JSON.stringify({ status: "duplicate" }), {
@@ -208,7 +209,13 @@ Deno.serve(async (req: Request) => {
     const plan = derivePlan(amountMinor, currency);
 
     const isCapturedPaymentEvent = eventTypeLower === "payment.captured" && paymentStatus === "captured" && amountMinor > 0;
-    const isPaidOrderWithCapturedPayment = eventTypeLower === "order.paid" && String(entity?.status ?? "") === "paid";
+    // order.paid alone does not prove capture: require an accompanying captured
+    // payment entity before provisioning. Otherwise rely on payment.captured.
+    const isPaidOrderWithCapturedPayment =
+      eventTypeLower === "order.paid" &&
+      String(entity?.status ?? "") === "paid" &&
+      paymentStatus === "captured" &&
+      amountMinor > 0;
 
     if (!isCapturedPaymentEvent && !isPaidOrderWithCapturedPayment) {
       // Acknowledge authorization-only, failed, or unsupported events without granting entitlement.
