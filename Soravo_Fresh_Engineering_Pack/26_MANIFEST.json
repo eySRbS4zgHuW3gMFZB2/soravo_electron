@@ -41,7 +41,9 @@
                   "28_GIT_WORKTREE_POLICY.md",
                   "INDEX.md",
                   "SORAVO_DECISION_MEMO_2026-10-22.md",
-                  "31_NEW_PROJECT_ISOLATION_AND_SETUP.md"
+                  "31_NEW_PROJECT_ISOLATION_AND_SETUP.md",
+                  "29_WEB_DESKTOP_AUTH_CONTRACT.md",
+                  "30_RAZORPAY_INTEGRATION_DESIGN.md"
               ],
     "owner_decisions":  {
                             "platforms":  [
@@ -98,5 +100,5 @@
                                                  }
                            },
     "source_audit_date":  "2026-10-22",
-    "note":  "Documentation reconciliation only. No repository rename, DNS change, Cloudflare production change, deployment, Supabase data change, secret operation or application source modification was performed. Implementation has not started."
+    "note":  "Website implementation has begun: the website foundation (React/TS/Vite, Supabase auth, pricing, account pages) and database schema with RLS are implemented in website/. Supabase project configuration, Razorpay payments, and desktop auth flow remain unimplemented. No repository rename, DNS change, Cloudflare production change, deployment, Supabase data change, or secret operation has been performed."
 }
