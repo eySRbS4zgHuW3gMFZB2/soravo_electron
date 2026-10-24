@@ -156,7 +156,7 @@ jobs:
           const LINKABLE = /\.(md|json|ya?ml|txt|svg|png|ico|css|html)$/i;
           for (const name of entries.filter((n) => n.endsWith(".md"))) {
             const text = readFileSync(join(PACK, name), "utf8");
-            for (const match of text.matchAll(/\]\(([^)\s]+)\)/g)) {
+            for (const match of text.matchAll(/\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g)) {
               const target = match[1];
               if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue;
               if (target.startsWith("#")) continue;
