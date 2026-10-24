@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 
+/** Display monthly and lifetime plans with links to signup for the selected plan. */
 export function PricingPage() {
   return (
     <div className="min-h-screen">

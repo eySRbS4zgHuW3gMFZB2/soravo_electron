@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 
+/** Generate a lowercase HMAC-SHA256 signature for a test body and secret. */
 async function hmacHex(secret: string, body: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -14,6 +15,7 @@ async function hmacHex(secret: string, body: string): Promise<string> {
     .join("");
 }
 
+/** Compare trimmed, lowercase signatures, rejecting unequal lengths first. */
 function signaturesMatch(a: string, b: string): boolean {
   const normalizedA = a.trim().toLowerCase();
   const normalizedB = b.trim().toLowerCase();

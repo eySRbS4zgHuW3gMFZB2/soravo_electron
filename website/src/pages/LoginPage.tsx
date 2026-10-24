@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
+/** Render the email/password login form and navigate to the account on success. */
 export function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  /** Submit the login form, display failures, and reset the pending state. */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

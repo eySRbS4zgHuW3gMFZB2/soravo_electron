@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 
+/** Render the public product overview, feature highlights, and pricing links. */
 export function LandingPage() {
   return (
     <div className="min-h-screen">

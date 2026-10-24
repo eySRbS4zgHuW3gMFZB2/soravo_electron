@@ -30,6 +30,7 @@ interface Input {
 
 type Outcome = { allowed: true } | { allowed: false; limitReached: true };
 
+/** Mirror SQL admission rules, bypassing the cap for lifetime or active devices. */
 function mirrorRegisterDeviceAtomic(input: Input): Outcome {
   const bypassLimit = input.isLifetime || input.isExistingActive;
   if (!bypassLimit && input.activeCount >= MAX_ACTIVE) {

@@ -13,6 +13,10 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * Provide the current Supabase session and authentication actions to descendants.
+ * Restore the initial session, subscribe to changes, and unsubscribe on unmount.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  /** Sign in with email and password, returning configuration or provider errors. */
   const signIn = async (email: string, password: string) => {
     if (!isConfigured) {
       return { error: "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY." };
@@ -38,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  /** Create an account with optional display name metadata and return any error. */
   const signUp = async (email: string, password: string, displayName?: string) => {
     if (!isConfigured) {
       return { error: "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY." };
@@ -50,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  /** Sign out and clear the local session; throw if Supabase rejects the request. */
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
@@ -65,6 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Read the session and authentication actions from the nearest AuthProvider.
+ * @throws If called outside an AuthProvider.
+ */
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");

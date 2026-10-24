@@ -10,6 +10,16 @@ export interface DeviceRegistrationResult {
   error?: string;
 }
 
+/**
+ * Register or refresh a device through the Edge Function using the current session.
+ *
+ * @param deviceId - Device identifier included in the registration request.
+ * @param label - Optional display name for the device.
+ * @param platform - Optional operating system name.
+ * @param appVersion - Optional desktop application version.
+ * @returns The server's registration result, or a failure result when signed out.
+ * @throws If the network request fails or the response cannot be parsed as JSON.
+ */
 export async function registerDevice(
   deviceId: string,
   label?: string,
@@ -38,6 +48,12 @@ export async function registerDevice(
   return response.json();
 }
 
+/**
+ * List non-revoked devices visible under RLS, ordered by most recent activity.
+ *
+ * @returns The device records, or an empty array when none are returned.
+ * @throws If the caller is not authenticated or the database query fails.
+ */
 export async function listDevices(): Promise<{ id: string; device_id: string; label: string | null; platform: string | null; last_seen_at: string }[]> {
   // Ensure the caller is authenticated before listing devices.
   const { data: { user } } = await supabase.auth.getUser();
@@ -53,6 +69,12 @@ export async function listDevices(): Promise<{ id: string; device_id: string; la
   return data ?? [];
 }
 
+/**
+ * Mark a device belonging to the current user as revoked.
+ *
+ * @param deviceId - Device identifier to revoke within the current user's account.
+ * @throws If the caller is not authenticated or the database update fails.
+ */
 export async function revokeDevice(deviceId: string): Promise<void> {
   // Get current user to ensure ownership
   const { data: { user } } = await supabase.auth.getUser();

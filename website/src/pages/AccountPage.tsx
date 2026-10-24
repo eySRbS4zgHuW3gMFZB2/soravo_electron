@@ -3,6 +3,10 @@ import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import { useEffect, useState } from "react";
 
+/**
+ * Show the signed-in user's email and entitlements, with sign-out access.
+ * Prompt signed-out visitors to log in and ignore stale entitlement responses.
+ */
 export function AccountPage() {
   const { user, signOut } = useAuth();
   const [entitlements, setEntitlements] = useState<

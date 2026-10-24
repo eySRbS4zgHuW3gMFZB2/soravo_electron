@@ -6,6 +6,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { AccountPage } from "./pages/AccountPage";
 
+/** Render the website routes within the shared authentication provider. */
 export default function App() {
   return (
     <AuthProvider>

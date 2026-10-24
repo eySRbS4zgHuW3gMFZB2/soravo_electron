@@ -20,8 +20,7 @@ import { registerDevice, listDevices, revokeDevice } from "./api";
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch as typeof fetch;
 
-// Helper to build a chainable "select → is → order" mock that resolves to a
-// stub result, matching how listDevices() chains calls.
+/** Configure the chained device-list query mock to resolve with the supplied rows. */
 function mockListDevices(data: unknown[]) {
   mockFrom.mockReturnValue({
     select: vi.fn(() => ({

@@ -5,12 +5,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 
 const encoder = new TextEncoder();
 
+/** Encode each buffer byte as two lowercase hexadecimal characters. */
 function toHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
+/**
+ * Sign the exact UTF-8 message with HMAC-SHA256 using the supplied secret.
+ * @returns The signature encoded as lowercase hexadecimal.
+ */
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -23,6 +28,10 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   return toHex(signature);
 }
 
+/**
+ * Compare trimmed, lowercase signatures, rejecting unequal lengths first.
+ * Accumulate differences across every character when lengths match.
+ */
 function safeCompareHex(a: string, b: string): boolean {
   const normalizedA = a.trim().toLowerCase();
   const normalizedB = b.trim().toLowerCase();
@@ -34,6 +43,10 @@ function safeCompareHex(a: string, b: string): boolean {
   return diff === 0;
 }
 
+/**
+ * Map the currently supported INR amounts in minor units to plan codes.
+ * @returns The matching plan, or null for an unsupported amount or currency.
+ */
 function derivePlan(amountMinor: number, currency: string): "monthly" | "lifetime" | null {
   if (currency !== "INR") return null;
   if (amountMinor === 1200) return "monthly";

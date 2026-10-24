@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
+/**
+ * Render signup with the plan query parameter and a confirmation message on success.
+ * The selected plan is displayed here; signup only creates an account.
+ */
 export function SignupPage() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
@@ -15,6 +19,7 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  /** Submit account details, display the result, and reset the pending state. */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
