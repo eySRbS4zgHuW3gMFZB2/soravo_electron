@@ -283,7 +283,6 @@ DECLARE
   v_existing_user UUID;
   v_existing_amount INTEGER;
   v_existing_currency TEXT;
-  v_existing_order TEXT;
 BEGIN
   IF p_provider IS NULL OR p_provider = '' THEN
     RAISE EXCEPTION 'invalid provider';
@@ -365,8 +364,8 @@ BEGIN
 
   -- Record the captured payment. Immutable identity fields are never
   -- overwritten on conflict; a conflicting existing row aborts instead.
-    SELECT user_id, amount_minor, currency, provider_order_id
-      INTO v_existing_user, v_existing_amount, v_existing_currency, v_existing_order
+    SELECT user_id, amount_minor, currency
+      INTO v_existing_user, v_existing_amount, v_existing_currency
     FROM public.payments
     WHERE provider = p_provider
       AND provider_payment_id = p_provider_payment_id

@@ -209,13 +209,10 @@ Deno.serve(async (req: Request) => {
     const plan = derivePlan(amountMinor, currency);
 
     const isCapturedPaymentEvent = eventTypeLower === "payment.captured" && paymentStatus === "captured" && amountMinor > 0;
-    // order.paid alone does not prove capture: require an accompanying captured
-    // payment entity before provisioning. Otherwise rely on payment.captured.
-    const isPaidOrderWithCapturedPayment =
-      eventTypeLower === "order.paid" &&
-      String(entity?.status ?? "") === "paid" &&
-      paymentStatus === "captured" &&
-      amountMinor > 0;
+    // order.paid is never sufficient evidence of capture on its own. Provisioning
+    // happens only on payment.captured; order.paid is acknowledged without
+    // granting entitlements so a later payment.captured can complete it.
+    const isPaidOrderWithCapturedPayment = false;
 
     if (!isCapturedPaymentEvent && !isPaidOrderWithCapturedPayment) {
       // Acknowledge authorization-only, failed, or unsupported events without granting entitlement.
