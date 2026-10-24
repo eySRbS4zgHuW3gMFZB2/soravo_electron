@@ -10,8 +10,8 @@ Local development notes.
   - These are public/publishable values. Security depends on RLS, not secrecy.
 - `website/supabase/.env.local` is for local Supabase Edge Function development only.
   - It is ignored by git.
-  - Start Edge Functions with the CLI's supported env file option:
-    - `supabase functions serve --env-file website/supabase/.env.local`
+  - From the `website/` directory, start Edge Functions with the CLI's supported env file option:
+    - `supabase functions serve --env-file supabase/.env.local`
   - Values:
     - `SUPABASE_URL`
     - `SUPABASE_ANON_KEY`

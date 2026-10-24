@@ -7,7 +7,9 @@
 
 BEGIN;
 
-SELECT plan(6);
+SELECT plan(9);
+
+CREATE TEMP TABLE webhook_test_claims (name TEXT PRIMARY KEY, token UUID NOT NULL);
 
 INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
 VALUES ('11111111-2222-3333-4444-555555555555','webhook-test@example.com','x',now(),now(),now(),'','','','')
@@ -18,12 +20,16 @@ VALUES ('razorpay','evt_claim_1','payment.captured',true,'received');
 
 WITH c1 AS (
   UPDATE public.webhook_events
-  SET processing_status='processing', claimed_at=now(), lease_expires_at=now()+interval '1 minute'
+  SET processing_status='processing', claimed_at=now(), lease_expires_at=now()+interval '1 minute', claim_token=gen_random_uuid()
   WHERE provider='razorpay' AND provider_event_id='evt_claim_1'
     AND processing_status IN ('received','failed')
   RETURNING id
 )
 SELECT is((SELECT count(*)::int FROM c1),1,'first webhook claim acquires the lease');
+
+INSERT INTO webhook_test_claims
+SELECT 'prior', claim_token FROM public.webhook_events
+WHERE provider='razorpay' AND provider_event_id='evt_claim_1';
 
 WITH c2 AS (
   UPDATE public.webhook_events
@@ -47,6 +53,16 @@ WITH c3 AS (
 )
 SELECT is((SELECT count(*)::int FROM c3),1,'expired lease can be reclaimed atomically');
 
+INSERT INTO webhook_test_claims
+SELECT 'reclaimed', claim_token FROM public.webhook_events
+WHERE provider='razorpay' AND provider_event_id='evt_claim_1';
+
+SELECT isnt(
+  (SELECT token FROM webhook_test_claims WHERE name='prior'),
+  (SELECT token FROM webhook_test_claims WHERE name='reclaimed'),
+  'reclaim replaces the prior claim token'
+);
+
 SELECT throws_ok(
   $$INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status)
     VALUES ('razorpay','evt_claim_1','payment.captured',true,'received')$$,
@@ -54,9 +70,23 @@ SELECT throws_ok(
   'duplicate webhook event rejected by unique constraint (idempotent delivery)'
 );
 
-UPDATE public.webhook_events
-SET processing_status='processed', processed_at=now()
-WHERE provider='razorpay' AND provider_event_id='evt_claim_1';
+WITH stale_finalization AS (
+  UPDATE public.webhook_events
+  SET processing_status='processed', processed_at=now()
+  WHERE provider='razorpay' AND provider_event_id='evt_claim_1'
+    AND claim_token=(SELECT token FROM webhook_test_claims WHERE name='prior')
+  RETURNING id
+)
+SELECT is((SELECT count(*)::int FROM stale_finalization),0,'prior claim token cannot finalize the reclaimed event');
+
+WITH current_finalization AS (
+  UPDATE public.webhook_events
+  SET processing_status='processed', processed_at=now()
+  WHERE provider='razorpay' AND provider_event_id='evt_claim_1'
+    AND claim_token=(SELECT token FROM webhook_test_claims WHERE name='reclaimed')
+  RETURNING id
+)
+SELECT is((SELECT count(*)::int FROM current_finalization),1,'reclaimed claim token finalizes exactly one event');
 
 SELECT is(
   (SELECT count(*)::int FROM public.webhook_events

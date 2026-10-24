@@ -144,12 +144,15 @@ Deno.serve(async (req: Request) => {
   }
 
   // Atomically claim the event before provisioning entitlements.
+  // Each acquisition replaces the previous worker's token, including failed retries.
+  const claimToken = crypto.randomUUID();
   const claimNow = new Date().toISOString();
   const leaseUntil = new Date(Date.now() + 60_000).toISOString();
   let { data: claimedRows, error: claimError } = await admin
     .from("webhook_events")
     .update({
       processing_status: "processing",
+      claim_token: claimToken,
       claimed_at: claimNow,
       lease_expires_at: leaseUntil,
     })
@@ -164,6 +167,7 @@ Deno.serve(async (req: Request) => {
       .from("webhook_events")
       .update({
         processing_status: "processing",
+        claim_token: claimToken,
         claimed_at: claimNow,
         lease_expires_at: leaseUntil,
       })
@@ -212,7 +216,14 @@ Deno.serve(async (req: Request) => {
         processing_status: "processed",
         processed_at: new Date().toISOString(),
         error_code: "ignored_non_captured",
-      }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).throwOnError();
+      })
+        .eq("provider", "razorpay")
+        .eq("provider_event_id", providerEventId)
+        .eq("claim_token", claimToken)
+        .eq("processing_status", "processing")
+        .select("id")
+        .single()
+        .throwOnError();
       return new Response(JSON.stringify({ status: "ignored" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -224,7 +235,11 @@ Deno.serve(async (req: Request) => {
         processing_status: "failed",
         processed_at: new Date().toISOString(),
         error_code: "invalid_payload",
-      }).eq("provider", "razorpay").eq("provider_event_id", providerEventId);
+      })
+        .eq("provider", "razorpay")
+        .eq("provider_event_id", providerEventId)
+        .eq("claim_token", claimToken)
+        .eq("processing_status", "processing");
       return new Response(JSON.stringify({ error: "Invalid payload" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
@@ -239,7 +254,11 @@ Deno.serve(async (req: Request) => {
         processing_status: "failed",
         processed_at: new Date().toISOString(),
         error_code: "unknown_user",
-      }).eq("provider", "razorpay").eq("provider_event_id", providerEventId);
+      })
+        .eq("provider", "razorpay")
+        .eq("provider_event_id", providerEventId)
+        .eq("claim_token", claimToken)
+        .eq("processing_status", "processing");
       return new Response(JSON.stringify({ error: "Unknown user" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
@@ -288,10 +307,18 @@ Deno.serve(async (req: Request) => {
       lifetime: plan === "lifetime",
     }, { onConflict: "user_id,plan_code" }).throwOnError();
 
+    // Require a returned row: a lost claim must not be acknowledged as processed.
     await admin.from("webhook_events").update({
       processing_status: "processed",
       processed_at: new Date().toISOString(),
-    }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).throwOnError();
+    })
+      .eq("provider", "razorpay")
+      .eq("provider_event_id", providerEventId)
+      .eq("claim_token", claimToken)
+      .eq("processing_status", "processing")
+      .select("id")
+      .single()
+      .throwOnError();
 
     return new Response(JSON.stringify({ status: "processed" }), {
       status: 200,
@@ -302,7 +329,11 @@ Deno.serve(async (req: Request) => {
       processing_status: "failed",
       processed_at: new Date().toISOString(),
       error_code: "processing_exception",
-    }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).throwOnError();
+    })
+      .eq("provider", "razorpay")
+      .eq("provider_event_id", providerEventId)
+      .eq("claim_token", claimToken)
+      .eq("processing_status", "processing").throwOnError();
     return new Response(JSON.stringify({ error: "Processing failed" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
