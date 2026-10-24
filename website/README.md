@@ -1,48 +1,38 @@
-# Soravo Website
+# Soravo website
 
-Commercial website for Soravo, built with React, TypeScript, Vite, and Tailwind CSS.
+Local development notes.
 
-## Development
+## Environment files
 
-```bash
-cd website
-npm install
-npm run dev
-```
+- `website/.env` is for Vite client variables only:
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+  - These are public/publishable values. Security depends on RLS, not secrecy.
+- `website/supabase/.env.local` is for local Supabase Edge Function development only.
+  - It is ignored by git.
+  - Start Edge Functions with the CLI's supported env file option:
+    - `supabase functions serve --env-file website/supabase/.env.local`
+  - Values:
+    - `SUPABASE_URL`
+    - `SUPABASE_ANON_KEY`
+    - `SUPABASE_SERVICE_ROLE_KEY` (server-only)
+    - `RAZORPAY_KEY_ID` (test mode only)
+    - `RAZORPAY_KEY_SECRET` (server-only, test mode only)
+    - `RAZORPAY_WEBHOOK_SECRET` (server-only)
+    - `RAZORPAY_CURRENCY=USD`
+- `website/supabase/.env.local.example` contains placeholders only and is safe to commit.
 
-Opens at http://localhost:3000.
+## Deployed Edge Function secrets
 
-## Build
+For deployed functions, enter Edge Function secrets in the NEW Supabase project's dashboard. Do not use the old `soravo` project. Never expose Razorpay or service-role secrets as `VITE_*` values.
 
-```bash
-npm run build
-```
+## Currency status
 
-Output in `website/dist/`.
+Product requirements specify USD. The implementation uses USD amounts `1200` and `5000` minor units. Owner/provider confirmation is still needed before live USD checkout; no live payment or account setting was changed.
 
-## Test
+## Commands
 
-```bash
-npm test
-```
-
-## Environment
-
-Copy `.env.example` to `.env` and fill in Supabase credentials:
-
-```bash
-cp .env.example .env
-```
-
-## Deployment
-
-Deployed to Cloudflare Pages. See `Soravo_Fresh_Engineering_Pack/` for deployment details.
-
-## Architecture
-
-- React 18 + TypeScript + Vite
-- Tailwind CSS v4
-- shadcn/ui (radix-nova style)
-- Supabase Auth for identity
-- Supabase Postgres for data (RLS enabled)
-- Razorpay for payments (design only, not yet implemented)
+- `npm run typecheck`
+- `npm run test`
+- `npm run build`
+- `npm run dev`
