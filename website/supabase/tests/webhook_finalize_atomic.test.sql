@@ -16,7 +16,7 @@
 
 BEGIN;
 
-SELECT plan(12);
+SELECT plan(16);
 
 INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
 VALUES ('11111111-2222-3333-4444-555555555555','webhook-finalize@example.com','x',now(),now(),now(),'','','','')
@@ -111,6 +111,46 @@ SELECT throws_ok(
     )$$,
   NULL, NULL,
   'invalid currency rejected'
+);
+
+SELECT throws_ok(
+  $$SELECT public.finalize_webhook_payment_atomic(
+      'razorpay','evt_finalize_2','33333333-3333-4333-8333-333333333333'::uuid,
+      '11111111-2222-3333-4444-555555555555'::uuid,
+      NULL,'pay_test2','order_test2',1200,'USD',now() + interval '30 days',false
+    )$$,
+  NULL, NULL,
+  'NULL plan rejected (three-valued logic)'
+);
+
+SELECT throws_ok(
+  $$SELECT public.finalize_webhook_payment_atomic(
+      'razorpay','evt_finalize_2','33333333-3333-4333-8333-333333333333'::uuid,
+      '11111111-2222-3333-4444-555555555555'::uuid,
+      'monthly','pay_test2','order_test2',1200,NULL,now() + interval '30 days',false
+    )$$,
+  NULL, NULL,
+  'NULL currency rejected (three-valued logic)'
+);
+
+SELECT throws_ok(
+  $$SELECT public.finalize_webhook_payment_atomic(
+      NULL,'evt_finalize_2','33333333-3333-4333-8333-333333333333'::uuid,
+      '11111111-2222-3333-4444-555555555555'::uuid,
+      'monthly','pay_test2','order_test2',1200,'USD',now() + interval '30 days',false
+    )$$,
+  NULL, NULL,
+  'NULL provider rejected'
+);
+
+SELECT throws_ok(
+  $$SELECT public.finalize_webhook_payment_atomic(
+      'razorpay','evt_finalize_2','33333333-3333-4333-8333-333333333333'::uuid,
+      '11111111-2222-3333-4444-555555555555'::uuid,
+      'monthly',NULL,'order_test2',1200,'USD',now() + interval '30 days',false
+    )$$,
+  NULL, NULL,
+  'NULL provider_payment_id rejected'
 );
 
 SELECT throws_ok(

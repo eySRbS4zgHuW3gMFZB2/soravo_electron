@@ -287,12 +287,10 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Claim fencing is enforced on final webhook_events status writes. Payment and
-    // entitlement writes are idempotent by their conflict keys, but are not
-    // transactionally fenced against a concurrent reclaim; a worker that loses its
-    // lease can still complete these writes before its fenced finalization returns 503.
-    // Follow-up: move provisioning into a claim-checked transaction/RPC if stricter
-    // fencing is required.
+    // Payment and entitlement provisioning now runs inside the claim-checked
+    // finalize_webhook_payment_atomic RPC (one transaction). A worker that loses
+    // its claim cannot commit business writes; finalization returns 0 and the
+    // handler responds 503.
     // Atomically promote/record the payment, upsert the entitlement, and
     // finalize the event in one claim-checked transaction. A stale token
     // returns 0 and performs no business writes.

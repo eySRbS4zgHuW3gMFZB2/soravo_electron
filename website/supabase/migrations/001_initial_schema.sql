@@ -276,7 +276,7 @@ CREATE OR REPLACE FUNCTION public.finalize_webhook_payment_atomic(
 RETURNS INTEGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public
 AS $$
 DECLARE
   v_rows INTEGER;
@@ -293,7 +293,7 @@ BEGIN
   IF p_user_id IS NULL THEN
     RAISE EXCEPTION 'invalid user_id';
   END IF;
-  IF p_plan NOT IN ('monthly', 'lifetime') THEN
+  IF p_plan IS NULL OR p_plan NOT IN ('monthly', 'lifetime') THEN
     RAISE EXCEPTION 'invalid plan';
   END IF;
   IF p_provider_payment_id IS NULL OR p_provider_payment_id = '' THEN
@@ -302,7 +302,7 @@ BEGIN
   IF p_amount_minor IS NULL OR p_amount_minor <= 0 THEN
     RAISE EXCEPTION 'invalid amount';
   END IF;
-  IF p_currency <> 'USD' THEN
+  IF p_currency IS NULL OR p_currency <> 'USD' THEN
     RAISE EXCEPTION 'invalid currency';
   END IF;
 
@@ -402,7 +402,7 @@ CREATE OR REPLACE FUNCTION public.finalize_webhook_payment(
 RETURNS INTEGER
 LANGUAGE sql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public
 AS $$
   SELECT public.finalize_webhook_payment_atomic(
     p_provider, p_provider_event_id, p_claim_token, p_user_id, p_plan,
