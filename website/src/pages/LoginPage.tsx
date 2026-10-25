@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../lib/auth";
+import { useAuth, sanitizeReturnTo } from "../lib/auth";
 
 /** Render the email/password login form, password recovery entry, and a clear auth-loading state. */
 export function LoginPage() {
   const { signIn, loading: authLoading, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get("returnTo") || searchParams.get("next") ||
-    searchParams.get("redirect") || searchParams.get("redirectTo") || "/account";
+  const returnTo = sanitizeReturnTo(
+    searchParams.get("returnTo") || searchParams.get("next") ||
+      searchParams.get("redirect") || searchParams.get("redirectTo")
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

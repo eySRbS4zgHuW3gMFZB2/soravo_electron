@@ -190,6 +190,19 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Accept only same-origin relative paths for post-auth redirects so that a
+ * crafted `returnTo` cannot become an open redirect.
+ */
+export function sanitizeReturnTo(value: string | null | undefined, fallback = "/account"): string {
+  if (!value) return fallback;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.includes("://")) {
+    return fallback;
+  }
+  return trimmed;
+}
+
 /** Alias names retained for callers/tests that expect different conventions. */
 export const RequireAuth = ProtectedRoute;
 export const AuthGate = ProtectedRoute;

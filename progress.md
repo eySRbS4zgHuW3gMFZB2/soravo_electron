@@ -931,3 +931,15 @@ Verified and repaired four review findings: preserve the current session and fin
 ## 2026-10-24 - P2-12 atomic webhook provisioning
 
 Added SECURITY DEFINER RPCs finalize_webhook_payment_atomic (plus alias finalize_webhook_payment) that atomically validate provider/event/claim token/processing status, then promote/record payment, upsert entitlement, and finalize the event in one transaction. Stale token returns 0 with no business writes. Edge function now calls the RPC instead of separate writes; claim fencing and retry semantics preserved. Added pgTAP coverage and updated handler tests. Tests: website vitest 31/31 passed; typecheck and production build passed. SQL/pgTAP not executed (no local Postgres).
+
+## 2026-10-24 — Website account/checkout workstream (worktree P3-10)
+
+- Worktree: .worktrees/P3-10-website-account-checkout
+- Branch: feature/P3-10-website-account-checkout
+- Base: ea9063d (feat/P1-WEB-AUTH-CHECKOUT)
+- Scope: website/src and website auth/client helpers only; no backend edits.
+- Added feature/download/help and legal placeholder pages (privacy, terms, refunds, support, license).
+- Added safe post-login redirect handling (sanitizeReturnTo).
+- Account page: device list + revoke, entitlement status/period, monthly/lifetime behavior.
+- Added Playwright smoke tests and reduced-motion/focus accessibility styles.
+- Tests: npm test (46 pass), typecheck/build pass. Playwright smoke run pending browser download.

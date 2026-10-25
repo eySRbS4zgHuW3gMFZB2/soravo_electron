@@ -124,8 +124,8 @@ export async function createOrder(planCode: PlanCode): Promise<CreateOrderResult
     body: JSON.stringify({ plan_code: planCode }),
   });
 
-  const data = (await response.json()) as CreateOrderResult;
-  if (!response.ok) {
+  const data = (await response.json().catch(() => null)) as CreateOrderResult | null;
+  if (!response.ok || !data) {
     throw new Error(data?.error ?? "Failed to create order");
   }
   return data;
@@ -140,14 +140,14 @@ export const beginCheckout = createOrder;
  * Read the signed-in user's entitlements through RLS.
  */
 export async function listEntitlements(): Promise<
-  { plan_code: string; status: string; lifetime: boolean }[]
+  { plan_code: string; status: string; lifetime: boolean; subscription_period_end: string | null }[]
 > {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
   const { data, error } = await supabase
     .from("entitlements")
-    .select("plan_code, status, lifetime")
+    .select("plan_code, status, lifetime, subscription_period_end")
     .eq("user_id", user.id);
 
   if (error) throw error;

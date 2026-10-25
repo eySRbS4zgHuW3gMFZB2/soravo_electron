@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
-import { listEntitlements } from "../lib/api";
+import { listEntitlements, listDevices, revokeDevice } from "../lib/api";
 
 /**
  * Show the signed-in user's email and entitlements, with sign-out access.
@@ -12,8 +12,14 @@ export function AccountPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [entitlements, setEntitlements] = useState<
-    { plan_code: string; status: string; lifetime: boolean }[]
+    { plan_code: string; status: string; lifetime: boolean; subscription_period_end: string | null }[]
   >([]);
+  const [devices, setDevices] = useState<
+    { id: string; device_id: string; label: string | null; platform: string | null; last_seen_at: string }[]
+  >([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [devicesError, setDevicesError] = useState<string | null>(null);
+  const [revoking, setRevoking] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -33,6 +39,32 @@ export function AccountPage() {
     }
   };
 
+  const refreshDevices = async () => {
+    if (!user) return;
+    setDevicesLoading(true);
+    setDevicesError(null);
+    try {
+      const data = await listDevices();
+      setDevices(data);
+    } catch {
+      setDevicesError("Could not load devices. Please try again.");
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
+
+  const handleRevokeDevice = async (deviceId: string) => {
+    setRevoking(deviceId);
+    try {
+      await revokeDevice(deviceId);
+      await refreshDevices();
+    } catch {
+      setDevicesError("Could not revoke the device. Please try again.");
+    } finally {
+      setRevoking(null);
+    }
+  };
+
   const handleSignOut = async () => {
     setSignOutError(null);
     try {
@@ -48,6 +80,8 @@ export function AccountPage() {
     if (!user) {
       setEntitlements([]);
       setLoading(false);
+      setDevices([]);
+      setDevicesLoading(false);
       return;
     }
 
@@ -62,6 +96,17 @@ export function AccountPage() {
         if (!cancelled) setLoadError("Could not load entitlements. Please try again.");
       } finally {
         if (!cancelled) setLoading(false);
+      }
+
+      setDevicesLoading(true);
+      setDevicesError(null);
+      try {
+        const deviceData = await listDevices();
+        if (!cancelled) setDevices(deviceData);
+      } catch {
+        if (!cancelled) setDevicesError("Could not load devices. Please try again.");
+      } finally {
+        if (!cancelled) setDevicesLoading(false);
       }
     })();
 
@@ -148,9 +193,28 @@ export function AccountPage() {
             <ul className="mt-4 space-y-3">
               {entitlements.map((e, i) => (
                 <li key={i} className="rounded-lg border border-ink/10 p-4">
-                  <span className="font-semibold text-ink">{e.plan_code}</span>
-                  <span className="ml-2 text-sm text-muted">— {e.status}</span>
-                  {e.lifetime && <span className="ml-2 text-xs text-lime">Lifetime</span>}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold text-ink capitalize">{e.plan_code}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${e.lifetime ? "bg-lime text-ink" : "bg-ink/10 text-ink"}`}>
+                      {e.lifetime ? "Lifetime" : e.status}
+                    </span>
+                  </div>
+                  <dl className="mt-3 space-y-1 text-sm text-muted">
+                    <div className="flex gap-2">
+                      <dt className="font-medium text-ink">Status:</dt>
+                      <dd>{e.status}</dd>
+                    </div>
+                    {!e.lifetime && e.subscription_period_end && (
+                      <div className="flex gap-2">
+                        <dt className="font-medium text-ink">Period ends:</dt>
+                        <dd>{new Date(e.subscription_period_end).toLocaleDateString()}</dd>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <dt className="font-medium text-ink">Usage:</dt>
+                      <dd>{e.lifetime ? "Unlimited devices, indefinite offline use" : "Up to 3 active devices, 14-day offline grace"}</dd>
+                    </div>
+                  </dl>
                 </li>
               ))}
             </ul>
@@ -158,11 +222,45 @@ export function AccountPage() {
         </section>
 
         <section className="mt-8">
-          <h2 className="text-xl font-semibold text-ink">Devices</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-ink">Devices</h2>
+            <button type="button" onClick={() => void refreshDevices()} className="text-sm text-muted hover:underline">
+              Refresh
+            </button>
+          </div>
           <p className="mt-2 text-sm text-muted">
             Devices are registered automatically when you sign in from the Soravo desktop app.
             Monthly plans allow up to 3 active devices. Lifetime plans have no limit.
           </p>
+          {devicesError && (
+            <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{devicesError}</p>
+          )}
+          {devicesLoading ? (
+            <p className="mt-4 text-muted">Loading devices...</p>
+          ) : devices.length === 0 ? (
+            <p className="mt-4 text-muted">No active devices registered.</p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {devices.map((device) => (
+                <li key={device.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink/10 p-4">
+                  <div>
+                    <p className="font-semibold text-ink">{device.label || device.device_id}</p>
+                    <p className="text-sm text-muted">
+                      {device.platform || "Unknown platform"} · Last seen {new Date(device.last_seen_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={revoking === device.device_id}
+                    onClick={() => void handleRevokeDevice(device.device_id)}
+                    className="rounded-full border border-ink/20 px-3 py-1 text-sm text-ink disabled:opacity-50"
+                  >
+                    {revoking === device.device_id ? "Revoking..." : "Revoke"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section className="mt-8">

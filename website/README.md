@@ -34,5 +34,16 @@ Product requirements specify USD. The implementation uses USD amounts `1200` and
 
 - `npm run typecheck`
 - `npm run test`
+- `npm run test:playwright` (run `npm run dev` first or let Playwright start it)
 - `npm run build`
 - `npm run dev`
+
+## Routes
+
+Core pages: `/`, `/features`, `/pricing`, `/download`, `/help`.
+Auth and recovery: `/login`, `/signup`, `/forgot-password`, `/reset-password`.
+Account: `/account` (protected).
+Legal placeholder pages: `/privacy`, `/terms`, `/refunds`, `/support`, `/license`.
+
+Legal pages are clearly marked as owner/legal-review placeholders and contain no approved policy text yet.
+Entitlements are server-authoritative; browser checkout callbacks only refresh UI state.

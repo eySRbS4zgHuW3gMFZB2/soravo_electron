@@ -7,8 +7,11 @@ export function LandingPage() {
       <header className="border-b border-ink/10 px-6 py-4">
         <nav className="mx-auto flex max-w-6xl items-center justify-between">
           <span className="text-xl font-bold text-ink">Soravo</span>
-          <div className="flex gap-6 text-sm">
+          <div className="flex flex-wrap gap-6 text-sm">
+            <Link to="/features" className="hover:underline">Features</Link>
             <Link to="/pricing" className="hover:underline">Pricing</Link>
+            <Link to="/download" className="hover:underline">Download</Link>
+            <Link to="/help" className="hover:underline">Help</Link>
             <Link to="/login" className="hover:underline">Log in</Link>
             <Link to="/signup" className="rounded-full bg-ink px-4 py-2 text-lime">Sign up</Link>
           </div>
@@ -47,7 +50,14 @@ export function LandingPage() {
       </main>
 
       <footer className="border-t border-ink/10 px-6 py-8 text-center text-sm text-muted">
-        &copy; {new Date().getFullYear()} Soravo. All rights reserved.
+        <div className="flex flex-wrap justify-center gap-4">
+          <Link to="/privacy" className="hover:underline">Privacy</Link>
+          <Link to="/terms" className="hover:underline">Terms</Link>
+          <Link to="/refunds" className="hover:underline">Refunds</Link>
+          <Link to="/support" className="hover:underline">Support</Link>
+          <Link to="/license" className="hover:underline">License</Link>
+        </div>
+        <p className="mt-4">&copy; {new Date().getFullYear()} Soravo. All rights reserved.</p>
       </footer>
     </div>
   );
