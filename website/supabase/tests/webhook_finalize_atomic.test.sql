@@ -236,6 +236,7 @@ SELECT is(
 INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
 VALUES ('razorpay','evt_extend_1','payment.captured',true,'processing','77777777-7777-4777-8777-777777777777'::uuid);
 
+DELETE FROM public.entitlements WHERE user_id='11111111-2222-3333-4444-555555555555'::uuid AND plan_code='monthly';
 INSERT INTO public.entitlements (user_id, plan_code, status, issued_at, last_verified_at, subscription_period_end, lifetime)
 VALUES ('11111111-2222-3333-4444-555555555555'::uuid,'monthly','active',now(),now(),now()+interval '10 days',false);
 
