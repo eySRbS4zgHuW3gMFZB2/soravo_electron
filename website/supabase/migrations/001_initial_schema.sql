@@ -391,6 +391,17 @@ BEGIN
         WHERE provider = p_provider
           AND provider_payment_id = p_provider_payment_id;
       END IF;
+    ELSE
+      INSERT INTO public.payments (
+        user_id, provider, provider_payment_id, provider_order_id,
+        amount_minor, currency, status, verified_at
+      )
+      VALUES (
+        p_user_id, p_provider, p_provider_payment_id,
+        NULLIF(p_provider_order_id, ''), p_amount_minor, p_currency, 'captured', now()
+      );
+    END IF;
+
   -- Upsert entitlement only once per captured payment. A duplicate event for the
   -- same payment_id must not extend the monthly period again.
   IF NOT v_payment_already_captured THEN
