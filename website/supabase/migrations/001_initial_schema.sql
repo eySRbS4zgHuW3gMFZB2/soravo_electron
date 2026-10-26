@@ -283,6 +283,8 @@ DECLARE
   v_existing_user UUID;
   v_existing_amount INTEGER;
   v_existing_currency TEXT;
+  v_existing_status TEXT;
+  v_payment_already_captured BOOLEAN := FALSE;
 BEGIN
   IF p_provider IS NULL OR p_provider = '' THEN
     RAISE EXCEPTION 'invalid provider';
@@ -364,8 +366,8 @@ BEGIN
 
   -- Record the captured payment. Immutable identity fields are never
   -- overwritten on conflict; a conflicting existing row aborts instead.
-    SELECT user_id, amount_minor, currency
-      INTO v_existing_user, v_existing_amount, v_existing_currency
+    SELECT user_id, amount_minor, currency, status
+      INTO v_existing_user, v_existing_amount, v_existing_currency, v_existing_status
     FROM public.payments
     WHERE provider = p_provider
       AND provider_payment_id = p_provider_payment_id
@@ -377,25 +379,22 @@ BEGIN
          OR v_existing_currency <> p_currency THEN
         RAISE EXCEPTION 'payment identity conflict';
       END IF;
-      UPDATE public.payments
-      SET status = 'captured',
-          verified_at = now(),
-          provider_order_id = COALESCE(NULLIF(p_provider_order_id, ''), provider_order_id)
-      WHERE provider = p_provider
-        AND provider_payment_id = p_provider_payment_id;
-    ELSE
-      INSERT INTO public.payments (
-        user_id, provider, provider_payment_id, provider_order_id,
-        amount_minor, currency, status, verified_at
-      )
-      VALUES (
-        p_user_id, p_provider, p_provider_payment_id,
-        NULLIF(p_provider_order_id, ''), p_amount_minor, p_currency, 'captured', now()
-      );
-    END IF;
-
-  -- Upsert entitlement.
-  INSERT INTO public.entitlements (
+      v_payment_already_captured := (v_existing_status = 'captured');
+      -- Only promote an un-captured payment row. A duplicate event for an
+      -- already captured payment must not advance the captured timestamp or be
+      -- treated as fresh entitlement evidence.
+      IF NOT v_payment_already_captured THEN
+        UPDATE public.payments
+        SET status = 'captured',
+            verified_at = now(),
+            provider_order_id = COALESCE(NULLIF(p_provider_order_id, ''), provider_order_id)
+        WHERE provider = p_provider
+          AND provider_payment_id = p_provider_payment_id;
+      END IF;
+  -- Upsert entitlement only once per captured payment. A duplicate event for the
+  -- same payment_id must not extend the monthly period again.
+  IF NOT v_payment_already_captured THEN
+    INSERT INTO public.entitlements (
     user_id, plan_code, status, issued_at, last_verified_at,
     subscription_period_end, lifetime
   )
@@ -416,6 +415,7 @@ BEGIN
       ELSE EXCLUDED.subscription_period_end
     END,
     lifetime = EXCLUDED.lifetime;
+  END IF;
 
   -- Finalize the event only while ownership still holds.
   UPDATE public.webhook_events
