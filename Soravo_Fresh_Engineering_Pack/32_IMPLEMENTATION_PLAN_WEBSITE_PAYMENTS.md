@@ -84,7 +84,7 @@ This is the first server-side API endpoint and establishes the pattern for all s
 ### Database-backed contract tests (pgTAP)
 
 - website/supabase/tests/register_device_atomic.test.sql contains **pgTAP tests** that exercise the
-  real public.register_device_atomic SQL function (not the JS mirror) for all 7 decision cases:
+  real public.register_device_atomic SQL function (not the JS mirror) for the six listed decision cases (plus cleanup):
   - New device, under limit → allowed
   - New device, at limit (3 active) → denied (limit_reached)
   - Active device refresh at limit → allowed (refresh is not a new slot)
@@ -97,11 +97,7 @@ This is the first server-side API endpoint and establishes the pattern for all s
 migration applied (website/supabase/migrations/001_initial_schema.sql) and pgtap extension installed.
 Run with: pg_prove -d <test_db_url> website/supabase/tests/register_device_atomic.test.sql
 
-**Limitation:** No PostgreSQL/Supabase test database is available in this development environment or
-in the GitHub Actions CI runner (no DB harness provisioned). The tests are therefore documented but
-not executed. The JS contract-mirror tests in website/src/lib/deviceLimit.test.ts provide partial
-coverage of the decision logic. Database-backed coverage should be added when a test database setup
-becomes available.
+**Limitation:** The GitHub Actions database workflow provisions disposable PostgreSQL and pgTAP and runs the database tests. The edge-function handler tests remain JS/contract-level coverage; actual Deno deployment is still deferred.
 
 ### Acceptance Criteria
 

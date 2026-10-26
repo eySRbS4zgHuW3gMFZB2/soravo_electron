@@ -17,7 +17,7 @@ export function DownloadPage() {
       <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="text-4xl font-bold text-ink">Download</h1>
         <p className="mt-4 text-lg text-muted">
-          Windows installers are published on the releases page with SHA-256 checksums.
+          Windows installers will be published on the releases page with SHA-256 checksums.
         </p>
         <div className="mt-8 rounded-xl border border-ink/10 p-6">
           <h2 className="text-xl font-semibold text-ink">Windows</h2>

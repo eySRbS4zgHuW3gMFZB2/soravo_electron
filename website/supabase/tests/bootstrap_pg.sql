@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS auth.users (
   confirmation_token text,
   email_change text,
   email_change_token_new text,
-  recovery_token text
+  recovery_token text,
+  raw_user_meta_data jsonb
 );
 
 -- Grant minimal schema usage so role-based tests can reference objects.

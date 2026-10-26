@@ -101,5 +101,5 @@
                                                  }
                            },
     "source_audit_date":  "2026-10-22",
-    "note":  "Website implementation has begun: the website foundation (React/TS/Vite, Supabase auth, pricing, account pages) and the device-registration Edge Function are implemented in the repository. Supabase, payment (Razorpay), and desktop auth flows remain unimplemented. No repository rename, DNS change, Cloudflare production change, deployment, Supabase data change, or secret operation has been performed."
+    "note":  "Website implementation has begun: the website foundation (React/TS/Vite, Supabase auth, pricing, account pages) and the device-registration Edge Function are implemented in the repository. Razorpay payment code (create-order, razorpay-webhook, finalize_webhook_payment_atomic) is implemented; live provider setup and Deno deployment remain pending. Desktop auth flows remain pending. No repository rename, DNS change, Cloudflare production change, deployment, Supabase data change, or secret operation has been performed."
 }

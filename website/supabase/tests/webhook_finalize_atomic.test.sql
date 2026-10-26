@@ -202,8 +202,8 @@ SELECT is(
 INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
 VALUES ('razorpay','evt_pending_1','payment.captured',true,'processing','55555555-5555-4555-8555-555555555555'::uuid);
 
-INSERT INTO public.payments (user_id, provider, provider_order_id, amount_minor, currency, status)
-VALUES ('11111111-2222-3333-4444-555555555555'::uuid,'razorpay','order_pending',1200,'USD','pending');
+INSERT INTO public.payments (user_id, provider, provider_payment_id, provider_order_id, amount_minor, currency, status)
+VALUES ('11111111-2222-3333-4444-555555555555'::uuid,'razorpay','order_pending','order_pending',1200,'USD','pending');
 
 SELECT throws_ok(
   $$SELECT public.finalize_webhook_payment_atomic(
@@ -219,8 +219,8 @@ SELECT throws_ok(
 INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
 VALUES ('razorpay','evt_pending_2','payment.captured',true,'processing','66666666-6666-4666-8666-666666666666'::uuid);
 
-INSERT INTO public.payments (user_id, provider, provider_order_id, amount_minor, currency, status)
-VALUES ('11111111-2222-3333-4444-555555555555'::uuid,'razorpay','order_pending_ok',1200,'USD','pending');
+INSERT INTO public.payments (user_id, provider, provider_payment_id, provider_order_id, amount_minor, currency, status)
+VALUES ('11111111-2222-3333-4444-555555555555'::uuid,'razorpay','order_pending_ok','order_pending_ok',1200,'USD','pending');
 
 SELECT is(
   public.finalize_webhook_payment_atomic(
