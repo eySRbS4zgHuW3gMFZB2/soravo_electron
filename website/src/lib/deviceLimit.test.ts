@@ -15,9 +15,8 @@ import { describe, it, expect } from "vitest";
  * This pins the expected behavior so changes to the SQL semantics are caught.
  *
  * Database-backed coverage of the real SQL function lives in
- * website/supabase/tests/register_device_atomic.test.sql (pgTAP). It is not
- * wired into CI because the repository does not provision a Postgres/Supabase
- * test database on the runner; run it locally where a test DB exists.
+ * website/supabase/tests/register_device_atomic.test.sql (pgTAP) and is wired
+ * into the GitHub Actions database workflow against disposable PostgreSQL.
  */
 
 const MAX_ACTIVE = 3;

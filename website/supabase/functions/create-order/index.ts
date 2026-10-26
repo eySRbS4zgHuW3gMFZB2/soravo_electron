@@ -110,9 +110,10 @@ Deno.serve(async (req: Request) => {
       }),
     });
 
-    const rzpData = await rzpRes.json();
+    const rzpData = await rzpRes.json().catch(() => null);
     if (!rzpRes.ok) {
-      return new Response(JSON.stringify({ error: "Failed to create order", details: rzpData }), {
+      console.error("create-order: Razorpay order creation failed", rzpRes.status, rzpData?.error?.code);
+      return new Response(JSON.stringify({ error: "Failed to create order" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

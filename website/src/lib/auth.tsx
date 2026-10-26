@@ -197,10 +197,15 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 export function sanitizeReturnTo(value: string | null | undefined, fallback = "/account"): string {
   if (!value) return fallback;
   const trimmed = value.trim();
-  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.includes("://")) {
+  if (!trimmed.startsWith("/") || /[\\]/.test(trimmed)) return fallback;
+  try {
+    const base = "http://sanitize.invalid";
+    const url = new URL(trimmed, base);
+    if (url.origin !== base) return fallback;
+    return url.pathname + url.search + url.hash;
+  } catch {
     return fallback;
   }
-  return trimmed;
 }
 
 /** Alias names retained for callers/tests that expect different conventions. */

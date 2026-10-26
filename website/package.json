@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Soravo commercial website — accounts, entitlements, downloads",
   "license": "MIT",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",

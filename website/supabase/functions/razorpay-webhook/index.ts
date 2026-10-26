@@ -205,7 +205,19 @@ Deno.serve(async (req: Request) => {
     const eventTypeLower = eventType.toLowerCase();
     const amountMinor = Number(entity?.amount ?? 0);
     const currency = String(entity?.currency ?? "");
-    const userId = String(entity?.notes?.user_id ?? entity?.notes?.userId ?? "");
+    const orderId = String(entity?.order_id ?? entity?.id ?? "");
+    let userId = String(entity?.notes?.user_id ?? entity?.notes?.userId ?? "");
+    if (!userId && entity?.order_id) {
+      const { data: pendingPayment, error: pendingPaymentError } = await admin
+        .from("payments")
+        .select("user_id")
+        .eq("provider", "razorpay")
+        .eq("provider_order_id", String(entity.order_id))
+        .eq("status", "pending")
+        .maybeSingle();
+      if (pendingPaymentError) throw pendingPaymentError;
+      userId = String(pendingPayment?.user_id ?? "");
+    }
     const plan = derivePlan(amountMinor, currency);
 
     const isCapturedPaymentEvent = eventTypeLower === "payment.captured" && paymentStatus === "captured" && amountMinor > 0;
@@ -258,8 +270,8 @@ Deno.serve(async (req: Request) => {
           headers: { "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: "Invalid payload" }), {
-        status: 400,
+      return new Response(JSON.stringify({ status: "rejected", error: "Invalid payload" }), {
+        status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
@@ -285,8 +297,8 @@ Deno.serve(async (req: Request) => {
           headers: { "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: "Unknown user" }), {
-        status: 400,
+      return new Response(JSON.stringify({ status: "rejected", error: "Unknown user" }), {
+        status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
@@ -298,7 +310,6 @@ Deno.serve(async (req: Request) => {
     // Atomically promote/record the payment, upsert the entitlement, and
     // finalize the event in one claim-checked transaction. A stale token
     // returns 0 and performs no business writes.
-    const orderId = String(entity?.order_id ?? entity?.id ?? "");
     const now = new Date();
     const periodEnd = plan === "monthly" ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
 

@@ -21,15 +21,9 @@
 --   revoked device   + activeCount < 3 -> allowed (reactivation)
 --   lifetime param   + any -> allowed
 --
--- NOTE: This suite is not wired into GitHub Actions CI because the repository
--- does not provision a Postgres/Supabase test database on the runner. The
--- pgTAP extension, Auth schema (auth.users), and migration must all be present
--- before running. Run locally where a test DB exists.
---
--- LIMITATION: No PostgreSQL/Supabase test database was available during
--- development. These tests are provided as the canonical database-backed
--- coverage but have NOT been executed. They are type-checked against the
--- function signature only.
+-- This suite is wired into the GitHub Actions database workflow, which
+-- provisions disposable PostgreSQL with pgTAP before execution. Run locally
+-- only when that workflow is unavailable.
 
 BEGIN;
 
