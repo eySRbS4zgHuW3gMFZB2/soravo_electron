@@ -410,8 +410,9 @@ BEGIN
     last_verified_at = EXCLUDED.last_verified_at,
     subscription_period_end = CASE
       WHEN EXCLUDED.lifetime THEN NULL
-      WHEN subscription_period_end IS NOT NULL AND subscription_period_end > now()
-        THEN subscription_period_end + INTERVAL '30 days'
+      WHEN entitlements.subscription_period_end IS NOT NULL
+       AND entitlements.subscription_period_end > now()
+        THEN entitlements.subscription_period_end + INTERVAL '30 days'
       ELSE EXCLUDED.subscription_period_end
     END,
     lifetime = EXCLUDED.lifetime;
