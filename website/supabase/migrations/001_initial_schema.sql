@@ -408,7 +408,12 @@ BEGIN
     status = EXCLUDED.status,
     issued_at = EXCLUDED.issued_at,
     last_verified_at = EXCLUDED.last_verified_at,
-    subscription_period_end = EXCLUDED.subscription_period_end,
+    subscription_period_end = CASE
+      WHEN EXCLUDED.lifetime THEN NULL
+      WHEN subscription_period_end IS NOT NULL AND subscription_period_end > now()
+        THEN subscription_period_end + INTERVAL '30 days'
+      ELSE EXCLUDED.subscription_period_end
+    END,
     lifetime = EXCLUDED.lifetime;
 
   -- Finalize the event only while ownership still holds.

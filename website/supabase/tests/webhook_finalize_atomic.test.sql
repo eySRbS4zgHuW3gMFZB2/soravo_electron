@@ -16,7 +16,7 @@
 
 BEGIN;
 
-SELECT plan(20);
+SELECT plan(22);
 
 INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
 VALUES ('11111111-2222-3333-4444-555555555555','webhook-finalize@example.com','x',now(),now(),now(),'','','','')
@@ -232,10 +232,34 @@ SELECT is(
   'valid pending payment is promoted'
 );
 
+-- Preserve prepaid monthly time when another payment arrives.
+INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
+VALUES ('razorpay','evt_extend_1','payment.captured',true,'processing','77777777-7777-4777-8777-777777777777'::uuid);
+
+INSERT INTO public.entitlements (user_id, plan_code, status, issued_at, last_verified_at, subscription_period_end, lifetime)
+VALUES ('11111111-2222-3333-4444-555555555555'::uuid,'monthly','active',now(),now(),now()+interval '10 days',false);
+
+SELECT is(
+  public.finalize_webhook_payment_atomic(
+    'razorpay','evt_extend_1','77777777-7777-4777-8777-777777777777'::uuid,
+    '11111111-2222-3333-4444-555555555555'::uuid,
+    'monthly','pay_extend','order_extend',1200,'USD',now()+interval '30 days',false
+  ),
+  1,
+  'active monthly payment finalizes successfully'
+);
+
+SELECT ok(
+  (SELECT subscription_period_end > now() + interval '39 days'
+   FROM public.entitlements
+   WHERE user_id='11111111-2222-3333-4444-555555555555'::uuid AND plan_code='monthly'),
+  'future monthly entitlement is extended instead of overwritten'
+);
+
 -- Cleanup
 DELETE FROM public.payments WHERE provider='razorpay' AND provider_payment_id IN ('pay_test','pay_test2','pay_conflict','pay_pending','pay_pending_ok');
 DELETE FROM public.entitlements WHERE user_id='11111111-2222-3333-4444-555555555555'::uuid;
-DELETE FROM public.webhook_events WHERE provider='razorpay' AND provider_event_id IN ('evt_finalize_1','evt_finalize_2');
+DELETE FROM public.webhook_events WHERE provider='razorpay' AND provider_event_id IN ('evt_finalize_1','evt_finalize_2','evt_extend_1');
 DELETE FROM auth.users WHERE id IN ('11111111-2222-3333-4444-555555555555'::uuid,'22222222-2222-3333-4444-555555555555'::uuid);
 
 SELECT * FROM finish();
