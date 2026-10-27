@@ -283,12 +283,48 @@ Deno.serve(async (req: Request) => {
             else if (eventTypeLower.includes("resumed") || eventTypeLower.includes("activated")) subscriptionStatus = "active";
             else if (eventTypeLower.includes("completed")) subscriptionStatus = "completed";
           }
+          const eventCreatedAtUnix = Number(event?.created_at ?? entity?.created_at ?? 0);
           if (subscriptionStatus) {
-            const { error: subscriptionStatusError } = await admin.from("subscriptions").update({
+            const { data: currentSub } = await admin
+              .from("subscriptions")
+              .select("last_event_created_at")
+              .eq("provider", "razorpay")
+              .eq("provider_subscription_id", providerSubscriptionId)
+              .maybeSingle();
+            const lastUnix = currentSub?.last_event_created_at
+              ? Math.floor(new Date(currentSub.last_event_created_at).getTime() / 1000)
+              : 0;
+            if (lastUnix && eventCreatedAtUnix && eventCreatedAtUnix < lastUnix) {
+              const { data: staleRows } = await admin.from("webhook_events").update({
+                processing_status: "processed",
+                processed_at: new Date().toISOString(),
+                error_code: "stale_event",
+              }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).eq("claim_token", claimToken).eq("processing_status", "processing").select("id");
+              if (!staleRows?.length) {
+                return new Response(JSON.stringify({ status: "processing" }), {
+                  status: 503,
+                  headers: { "Content-Type": "application/json", "Retry-After": "60" },
+                });
+              }
+              return new Response(JSON.stringify({ status: "ignored", reason: "stale_event" }), {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              });
+            }
+
+            const updatePayload: Record<string, unknown> = {
               status: subscriptionStatus,
               updated_at: new Date().toISOString(),
-            }).eq("provider", "razorpay").eq("provider_subscription_id", providerSubscriptionId);
-            if (subscriptionStatusError) console.error("razorpay-webhook: subscription status update failed", subscriptionStatusError.code);
+            };
+            if (eventCreatedAtUnix > 0) {
+              updatePayload.last_event_created_at = new Date(eventCreatedAtUnix * 1000).toISOString();
+            }
+            const { error: subscriptionStatusError } = await admin
+              .from("subscriptions")
+              .update(updatePayload)
+              .eq("provider", "razorpay")
+              .eq("provider_subscription_id", providerSubscriptionId);
+            if (subscriptionStatusError) throw subscriptionStatusError;
           }
         }
         if (eventTypeLower === "payment.failed" && entity?.id) {
@@ -310,8 +346,8 @@ Deno.serve(async (req: Request) => {
             }
           }
         }
-      } catch {
-        // Status reconciliation must never block acknowledging a valid event.
+      } catch (error) {
+        throw error;
       }
 
       // Acknowledge authorization-only, failed, or unsupported events without granting entitlement.
@@ -402,11 +438,24 @@ Deno.serve(async (req: Request) => {
     let periodEnd: string | null = null;
     if (plan === "monthly") {
       const currentEndUnix = subscriptionEntity?.current_end ?? entity?.current_end;
-      if (currentEndUnix && !Number.isNaN(Number(currentEndUnix))) {
-        periodEnd = new Date(Number(currentEndUnix) * 1000).toISOString();
-      } else {
-        periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      if (!currentEndUnix || Number.isNaN(Number(currentEndUnix))) {
+        const { data: invalidRows } = await admin.from("webhook_events").update({
+          processing_status: "failed",
+          processed_at: new Date().toISOString(),
+          error_code: "missing_period_end",
+        }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).eq("claim_token", claimToken).eq("processing_status", "processing").select("id");
+        if (!invalidRows?.length) {
+          return new Response(JSON.stringify({ status: "processing" }), {
+            status: 503,
+            headers: { "Content-Type": "application/json", "Retry-After": "60" },
+          });
+        }
+        return new Response(JSON.stringify({ status: "rejected", error: "Missing provider period end" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       }
+      periodEnd = new Date(Number(currentEndUnix) * 1000).toISOString();
     }
 
     const { data: finalizedCount, error: finalizeError } = await admin.rpc(
@@ -436,7 +485,8 @@ Deno.serve(async (req: Request) => {
     // Reconcile recurring subscription metadata after a successful grant.
     try {
       if (providerSubscriptionId && plan === "monthly") {
-        const { error: subscriptionUpsertError } = await admin.from("subscriptions").upsert({
+        const grantEventCreatedAtUnix = Number(event?.created_at ?? entity?.created_at ?? 0);
+        const subscriptionUpsertPayload: Record<string, unknown> = {
           user_id: userId,
           provider: "razorpay",
           provider_subscription_id: providerSubscriptionId,
@@ -444,7 +494,14 @@ Deno.serve(async (req: Request) => {
           status: "active",
           current_period_end: periodEnd,
           updated_at: new Date().toISOString(),
-        }, { onConflict: "provider_subscription_id" });
+        };
+        if (grantEventCreatedAtUnix > 0) {
+          subscriptionUpsertPayload.last_event_created_at = new Date(grantEventCreatedAtUnix * 1000).toISOString();
+        }
+        const { error: subscriptionUpsertError } = await admin.from("subscriptions").upsert(
+          subscriptionUpsertPayload,
+          { onConflict: "provider_subscription_id" }
+        );
         if (subscriptionUpsertError) console.error("razorpay-webhook: subscription upsert failed", subscriptionUpsertError.code);
       }
       if (entity?.id) {

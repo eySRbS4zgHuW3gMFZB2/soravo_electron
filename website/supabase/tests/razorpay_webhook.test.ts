@@ -80,6 +80,8 @@ async function deliver(eventType = "payment.captured", validPayload = true): Pro
     payload: { payment: { entity: {
       id: "pay_test", order_id: "order_test", status: "captured", currency: "USD",
       amount: validPayload ? 1200 : 1, notes: { user_id: "test-user" },
+    } }, subscription: { entity: {
+      id: "sub_test", current_end: 2000000000,
     } } },
   });
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);

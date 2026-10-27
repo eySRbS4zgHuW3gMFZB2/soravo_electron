@@ -146,6 +146,59 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Correlation ID for billing diagnostics.
+    const requestId = crypto.randomUUID();
+
+    // Do not create another checkout for an existing entitlement or open subscription.
+    const { data: existingEntitlements } = await admin
+      .from("entitlements")
+      .select("plan_code, status, lifetime")
+      .eq("user_id", user.id)
+      .in("plan_code", ["monthly", "lifetime"]);
+    if (existingEntitlements) {
+      const lifetime = existingEntitlements.find((e: any) => e.plan_code === "lifetime");
+      const monthly = existingEntitlements.find((e: any) => e.plan_code === "monthly");
+      if (lifetime?.lifetime || lifetime?.status === "lifetime_active") {
+        return new Response(JSON.stringify({ error: "Lifetime entitlement already active" }), {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (monthly?.status === "active" || monthly?.status === "payment_pending") {
+        return new Response(JSON.stringify({ error: "Monthly subscription already active" }), {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    const { data: openSubscription } = await admin
+      .from("subscriptions")
+      .select("provider_subscription_id, status")
+      .eq("user_id", user.id)
+      .in("status", ["created", "authenticated", "active"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (openSubscription?.provider_subscription_id) {
+      if (openSubscription.status === "active" || openSubscription.status === "authenticated") {
+        return new Response(JSON.stringify({ error: "Monthly subscription already active" }), {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({
+        key_id: razorpayKeyId,
+        subscription_id: openSubscription.provider_subscription_id,
+        amount: plan.amount,
+        currency: plan.currency,
+        plan_code: "monthly",
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Monthly recurring subscription. Reuse or create the trusted plan idempotently.
     let monthlyPlanId: string | null = null;
     const { data: existingPlan } = await admin
@@ -201,7 +254,7 @@ Deno.serve(async (req: Request) => {
           provider_plan_id: monthlyPlanId,
         });
         if (insertError && insertError.code !== "23505") {
-          console.error("create-order: razorpay_plans insert failed", insertError.code);
+          console.error("create-order: razorpay_plans insert failed", insertError.code, requestId);
         }
         if (insertError) {
           // A concurrent request may have created it; reuse that row.
@@ -273,9 +326,30 @@ Deno.serve(async (req: Request) => {
         paid_count: Number(subscriptionData.paid_count ?? 0),
         charge_at: subscriptionData.charge_at ? new Date(Number(subscriptionData.charge_at) * 1000).toISOString() : null,
         current_period_end: subscriptionData.current_end ? new Date(Number(subscriptionData.current_end) * 1000).toISOString() : null,
+        last_event_created_at: new Date().toISOString(),
       });
-      if (subInsertError && subInsertError.code !== "23505") {
-        console.error("create-order: subscription row insert failed", subInsertError.code);
+      if (subInsertError?.code === "23505") {
+        const { data: existingAfterRace } = await admin
+          .from("subscriptions")
+          .select("provider_subscription_id")
+          .eq("user_id", user.id)
+          .in("status", ["created", "authenticated", "active"])
+          .limit(1)
+          .maybeSingle();
+        if (existingAfterRace?.provider_subscription_id) {
+          return new Response(JSON.stringify({
+            key_id: razorpayKeyId,
+            subscription_id: existingAfterRace.provider_subscription_id,
+            amount: plan.amount,
+            currency: plan.currency,
+            plan_code: "monthly",
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else if (subInsertError) {
+        console.error("create-order: subscription row insert failed", subInsertError.code, requestId);
       }
     }
 
