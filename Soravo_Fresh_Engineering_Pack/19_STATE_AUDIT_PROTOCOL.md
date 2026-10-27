@@ -65,3 +65,8 @@ Runtime-isolated checkout on `coderabbit/auth-test-cors-preflight/73226cf9`, bas
 ### 2026-10-27 — Delivery conflict resolution
 
 Merged remote head `5c34e97bf0d04c4716c9b4af9c6e49a18c6bd433` into task commit `9e48ed2` on `feature/supabase-resend-auth-e2e`. Retained remote JSON mock helper, CORS methods, unit-test script and password recovery changes; retained typed Route handling and Supabase API version header allowance. Fresh checks passed: auth browser 7/7, route harness 12/12, unit tests 48/48, website/spec typecheck and build. No push performed.
+
+
+## 2026-10-27 — Recovery visibility review (87c71ff9)
+
+Confirmed sole isolated worktree on `coderabbit/verify-password-recovery-state/87c71ff9`, base `260ff874d256694cdd607c0703617cb0b13375ef`, initially clean. Fixed loading and missing-ID recovery verification gaps; retained provider in-memory/storage behavior. Website tests 63/63, typecheck/build and recovery browser smoke 1/1 pass. See matching handoff entry and workspace validation record for commands, hashes and browser preparation; no integration or remote changes.

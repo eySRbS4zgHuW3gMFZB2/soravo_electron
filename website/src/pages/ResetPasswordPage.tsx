@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
-import { supabase } from "../lib/supabase";
 
 /** Update the recovery password with clear loading/success/error states. */
 export function ResetPasswordPage() {
@@ -12,93 +11,11 @@ export function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [recoveryReady, setRecoveryReady] = useState<boolean | null>(null);
-  const [isRecovery, setIsRecovery] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const hash = window.location.hash || "";
-    const search = window.location.search || "";
-    if (
-      hash.includes("type=recovery") ||
-      hash.includes("access_token") ||
-      search.includes("type=recovery") ||
-      search.includes("code=")
-    ) {
-      return true;
-    }
-    try {
-      return Boolean(window.sessionStorage.getItem("soravo:password-recovery-user"));
-    } catch {
-      return false;
-    }
-  });
-
-  // A recovery link establishes a session and emits PASSWORD_RECOVERY. Without
-  // that recovery state, a normal signed-in session is not a valid reset flow.
-  useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsRecovery(true);
-        try {
-          window.sessionStorage.setItem(
-            "soravo:password-recovery-user",
-            nextSession?.user?.id ?? "1"
-          );
-        } catch {
-          // Ignore storage failures; URL/session state still drives the flow.
-        }
-      }
-      if (event === "SIGNED_OUT") {
-        setIsRecovery(false);
-        try {
-          window.sessionStorage.removeItem("soravo:password-recovery-user");
-        } catch {
-          // Ignore storage failures.
-        }
-      }
-    });
-    return () => {
-      data.subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (authLoading) return;
-    let storedUserId: string | null = null;
-    try {
-      storedUserId = window.sessionStorage.getItem("soravo:password-recovery-user");
-    } catch {
-      storedUserId = null;
-    }
-    const sameUser = session?.user
-      ? session.user.id
-        ? storedUserId === session.user.id
-        : Boolean(storedUserId)
-      : false;
-    if (storedUserId && !sameUser) {
-      try {
-        window.sessionStorage.removeItem("soravo:password-recovery-user");
-      } catch {
-        // Ignore storage failures.
-      }
-      setIsRecovery(false);
-      setRecoveryReady(false);
-      return;
-    }
-    if (!session?.user) {
-      try {
-        window.sessionStorage.removeItem("soravo:password-recovery-user");
-      } catch {
-        // Ignore storage failures.
-      }
-    }
-    setRecoveryReady(sameUser && isRecovery);
-  }, [authLoading, session, isRecovery]);
-
-  const verifiedRecovery = session?.user
-    ? session.user.id
-      ? passwordRecoveryUserId === session.user.id
-      : Boolean(passwordRecoveryUserId)
-    : false;
+  // AuthProvider retains PASSWORD_RECOVERY identities in memory even when
+  // session storage is unavailable, and restores saved identities on reload.
+  const verifiedRecovery = Boolean(
+    session?.user.id && passwordRecoveryUserId === session.user.id
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,7 +63,11 @@ export function ResetPasswordPage() {
           <div role="status" className="mt-8 rounded-lg bg-green-50 p-4 text-sm text-green-700">
             Password updated. Redirecting to login...
           </div>
-        ) : (!authLoading && !verifiedRecovery) ? (
+        ) : authLoading ? (
+          <div role="status" className="mt-8 text-sm text-muted">
+            Verifying recovery link...
+          </div>
+        ) : !verifiedRecovery ? (
           <div role="alert" className="mt-8 rounded-lg bg-red-50 p-4 text-sm text-red-600">
             This recovery link is invalid or has expired. Request a new password reset link.
           </div>

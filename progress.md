@@ -952,3 +952,8 @@ Shared CORS headers and successful OPTIONS responses across Supabase auth/REST t
 ### 2026-10-27 — Delivery conflict resolution
 
 Merged remote head `5c34e97bf0d04c4716c9b4af9c6e49a18c6bd433` into task commit `9e48ed2` on `feature/supabase-resend-auth-e2e`. Retained remote JSON mock helper, CORS methods, unit-test script and password recovery changes; retained typed Route handling and Supabase API version header allowance. Fresh checks passed: auth browser 7/7, route harness 12/12, unit tests 48/48, website/spec typecheck and build. No push performed.
+
+
+## 2026-10-27 — Password recovery visibility review
+
+Fixed ResetPasswordPage loading and missing-user-ID verification gaps; reused AuthProvider recovery identity for events and saved sessions, including blocked storage. Removed unused duplicate page tracking. Regression tests first reproduced 3 failures; final website suite 63/63, typecheck/build and recovery browser smoke 1/1 pass. Details: engineering pack handoff entry 87c71ff9 and workspace validation record.
