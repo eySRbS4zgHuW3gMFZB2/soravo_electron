@@ -326,6 +326,11 @@ BEGIN
     RAISE EXCEPTION 'amount does not match plan';
   END IF;
 
+  -- Serialize concurrent finalizations for the same logical payment/order and
+  -- for the same user/plan so a grant decision is database-level and atomic.
+  PERFORM pg_advisory_xact_lock(hashtext(p_provider || ':' || COALESCE(NULLIF(p_provider_order_id, ''), p_provider_payment_id)));
+  PERFORM pg_advisory_xact_lock(hashtext(p_user_id::text || ':' || p_plan));
+
   -- Atomically verify ownership of the claim. Lock the event row.
   PERFORM 1
   FROM public.webhook_events
