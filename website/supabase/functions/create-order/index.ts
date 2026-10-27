@@ -1,5 +1,7 @@
-// Supabase Edge Function: Razorpay Order Creation
+// Supabase Edge Function: Razorpay checkout creation
 // Server-side only. Prices are never trusted from the client.
+// Monthly uses Razorpay Subscriptions (genuinely recurring); lifetime uses a
+// normal one-time Razorpay order.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 
@@ -91,50 +93,193 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Create Razorpay order server-side with trusted amount/plan.
     const basicAuth = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
-    const rzpRes = await fetch("https://api.razorpay.com/v1/orders", {
+    const admin = createClient(supabaseUrl, serviceKey);
+
+    if (plan.code === "lifetime") {
+      const rzpRes = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: plan.amount,
+          currency: plan.currency,
+          receipt: `rcpt_${crypto.randomUUID().replace(/-/g, "").slice(0, 32)}`,
+          notes: {
+            user_id: user.id,
+            plan_code: plan.code,
+          },
+        }),
+      });
+
+      const rzpData = await rzpRes.json().catch(() => null);
+      if (!rzpRes.ok) {
+        console.error("create-order: Razorpay order creation failed", rzpRes.status, rzpData?.error?.code);
+        return new Response(JSON.stringify({ error: "Failed to create order" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      await admin.from("payments").insert({
+        user_id: user.id,
+        provider: "razorpay",
+        provider_payment_id: String(rzpData.id),
+        provider_order_id: rzpData.id,
+        provider_subscription_id: null,
+        amount_minor: plan.amount,
+        currency: plan.currency,
+        status: "pending",
+      }).throwOnError();
+
+      return new Response(JSON.stringify({
+        key_id: razorpayKeyId,
+        order_id: rzpData.id,
+        amount: rzpData.amount,
+        currency: rzpData.currency,
+        plan_code: plan.code,
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Monthly recurring subscription. Reuse or create the trusted plan idempotently.
+    let monthlyPlanId: string | null = null;
+    const { data: existingPlan } = await admin
+      .from("razorpay_plans")
+      .select("provider_plan_id")
+      .eq("provider", "razorpay")
+      .eq("plan_code", "monthly")
+      .eq("amount_minor", plan.amount)
+      .eq("currency", plan.currency)
+      .maybeSingle();
+
+    if (existingPlan?.provider_plan_id) {
+      monthlyPlanId = String(existingPlan.provider_plan_id);
+    } else {
+      const planRes = await fetch("https://api.razorpay.com/v1/plans", {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          period: "monthly",
+          interval: 1,
+          item: {
+            name: "Soravo Monthly",
+            amount: plan.amount,
+            currency: plan.currency,
+            description: "Soravo monthly subscription",
+          },
+          notes: {
+            plan_code: "monthly",
+          },
+        }),
+      });
+      const planData = await planRes.json().catch(() => null);
+      if (!planRes.ok || !planData?.id) {
+        console.error("create-order: Razorpay plan creation failed", planRes.status, planData?.error?.code);
+        return new Response(JSON.stringify({ error: "Failed to create subscription plan" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      monthlyPlanId = String(planData.id);
+      try {
+        const { error: insertError } = await admin.from("razorpay_plans").insert({
+          provider: "razorpay",
+          plan_code: "monthly",
+          amount_minor: plan.amount,
+          currency: plan.currency,
+          period: "monthly",
+          interval: 1,
+          provider_plan_id: monthlyPlanId,
+        });
+        if (insertError) {
+          // A concurrent request may have created it; reuse that row.
+          const { data: retryPlan } = await admin
+            .from("razorpay_plans")
+            .select("provider_plan_id")
+            .eq("provider", "razorpay")
+            .eq("plan_code", "monthly")
+            .eq("amount_minor", plan.amount)
+            .eq("currency", plan.currency)
+            .maybeSingle();
+          if (retryPlan?.provider_plan_id) monthlyPlanId = String(retryPlan.provider_plan_id);
+        }
+      } catch {
+        const { data: retryPlan } = await admin
+          .from("razorpay_plans")
+          .select("provider_plan_id")
+          .eq("provider", "razorpay")
+          .eq("plan_code", "monthly")
+          .eq("amount_minor", plan.amount)
+          .eq("currency", plan.currency)
+          .maybeSingle();
+        if (retryPlan?.provider_plan_id) monthlyPlanId = String(retryPlan.provider_plan_id);
+      }
+    }
+
+    if (!monthlyPlanId) {
+      return new Response(JSON.stringify({ error: "Failed to resolve subscription plan" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const subscriptionRes = await fetch("https://api.razorpay.com/v1/subscriptions", {
       method: "POST",
       headers: {
         Authorization: `Basic ${basicAuth}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: plan.amount,
-        currency: plan.currency,
-        receipt: `rcpt_${crypto.randomUUID().replace(/-/g, "").slice(0, 32)}`,
+        plan_id: monthlyPlanId,
+        total_count: 120,
+        quantity: 1,
+        customer_notify: true,
         notes: {
           user_id: user.id,
-          plan_code: plan.code,
+          plan_code: "monthly",
         },
       }),
     });
 
-    const rzpData = await rzpRes.json().catch(() => null);
-    if (!rzpRes.ok) {
-      console.error("create-order: Razorpay order creation failed", rzpRes.status, rzpData?.error?.code);
-      return new Response(JSON.stringify({ error: "Failed to create order" }), {
+    const subscriptionData = await subscriptionRes.json().catch(() => null);
+    if (!subscriptionRes.ok || !subscriptionData?.id) {
+      console.error("create-order: Razorpay subscription creation failed", subscriptionRes.status, subscriptionData?.error?.code);
+      return new Response(JSON.stringify({ error: "Failed to create subscription" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, serviceKey);
-    await supabaseAdmin.from("payments").insert({
-      user_id: user.id,
-      provider: "razorpay",
-      provider_payment_id: rzpData.id,
-      provider_order_id: rzpData.id,
-      amount_minor: plan.amount,
-      currency: plan.currency,
-      status: "pending",
-    }).throwOnError();
+    try {
+      await admin.from("subscriptions").insert({
+        user_id: user.id,
+        provider: "razorpay",
+        provider_subscription_id: String(subscriptionData.id),
+        plan_code: "monthly",
+        status: String(subscriptionData.status ?? "created"),
+        total_count: Number(subscriptionData.total_count ?? 120),
+        paid_count: Number(subscriptionData.paid_count ?? 0),
+        charge_at: subscriptionData.charge_at ? new Date(Number(subscriptionData.charge_at) * 1000).toISOString() : null,
+        current_period_end: subscriptionData.current_end ? new Date(Number(subscriptionData.current_end) * 1000).toISOString() : null,
+      });
+    } catch {
+      // Subscription already recorded is acceptable for retry paths.
+    }
 
     return new Response(JSON.stringify({
       key_id: razorpayKeyId,
-      order_id: rzpData.id,
-      amount: rzpData.amount,
-      currency: rzpData.currency,
+      subscription_id: subscriptionData.id,
+      amount: plan.amount,
+      currency: plan.currency,
       plan_code: plan.code,
     }), {
       status: 200,

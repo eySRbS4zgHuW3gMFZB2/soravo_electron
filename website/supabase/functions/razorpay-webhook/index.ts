@@ -83,7 +83,17 @@ Deno.serve(async (req: Request) => {
   }
 
   const eventType = typeof event?.event === "string" ? event.event : "unknown";
-  const entity = event?.payload?.payment?.entity ?? event?.payload?.order?.entity ?? {};
+  const paymentEntity = event?.payload?.payment?.entity ?? null;
+  const orderEntity = event?.payload?.order?.entity ?? null;
+  const subscriptionEntity = event?.payload?.subscription?.entity ?? null;
+  const entity = paymentEntity ?? orderEntity ?? subscriptionEntity ?? {};
+  const providerSubscriptionId = String(
+    entity?.subscription_id ??
+      paymentEntity?.subscription_id ??
+      subscriptionEntity?.id ??
+      ""
+  ).trim();
+
   const providerEventId =
     typeof event?.id === "string" && event.id.trim()
       ? event.id.trim()
@@ -206,7 +216,15 @@ Deno.serve(async (req: Request) => {
     const amountMinor = Number(entity?.amount ?? 0);
     const currency = String(entity?.currency ?? "");
     const orderId = String(entity?.order_id ?? entity?.id ?? "");
-    let userId = String(entity?.notes?.user_id ?? entity?.notes?.userId ?? "");
+    let userId = String(
+      entity?.notes?.user_id ??
+        entity?.notes?.userId ??
+        paymentEntity?.notes?.user_id ??
+        paymentEntity?.notes?.userId ??
+        subscriptionEntity?.notes?.user_id ??
+        subscriptionEntity?.notes?.userId ??
+        ""
+    );
     if (!userId && entity?.order_id) {
       const { data: pendingPayment, error: pendingPaymentError } = await admin
         .from("payments")
@@ -218,15 +236,79 @@ Deno.serve(async (req: Request) => {
       if (pendingPaymentError) throw pendingPaymentError;
       userId = String(pendingPayment?.user_id ?? "");
     }
+    if (!userId && providerSubscriptionId) {
+      const { data: subscriptionRow, error: subscriptionError } = await admin
+        .from("subscriptions")
+        .select("user_id")
+        .eq("provider", "razorpay")
+        .eq("provider_subscription_id", providerSubscriptionId)
+        .maybeSingle();
+      if (subscriptionError) throw subscriptionError;
+      userId = String(subscriptionRow?.user_id ?? "");
+    }
+    if (!userId && providerSubscriptionId) {
+      const { data: pendingSubscriptionPayment, error: pendingSubscriptionPaymentError } = await admin
+        .from("payments")
+        .select("user_id")
+        .eq("provider", "razorpay")
+        .eq("provider_subscription_id", providerSubscriptionId)
+        .eq("status", "pending")
+        .maybeSingle();
+      if (pendingSubscriptionPaymentError) throw pendingSubscriptionPaymentError;
+      userId = String(pendingSubscriptionPayment?.user_id ?? "");
+    }
     const plan = derivePlan(amountMinor, currency);
 
-    const isCapturedPaymentEvent = eventTypeLower === "payment.captured" && paymentStatus === "captured" && amountMinor > 0;
+    const isCapturedPaymentEvent =
+      (eventTypeLower === "payment.captured" ||
+        eventTypeLower === "subscription.charged" ||
+        eventTypeLower === "subscription.authenticated") &&
+      paymentStatus === "captured" &&
+      amountMinor > 0;
     // order.paid is never sufficient evidence of capture on its own. Provisioning
-    // happens only on payment.captured; order.paid is acknowledged without
-    // granting entitlements so a later payment.captured can complete it.
+    // happens only on explicit captured payment events; order.paid is acknowledged
+    // without granting entitlements so a later payment.captured can complete it.
     const isPaidOrderWithCapturedPayment = false;
 
     if (!isCapturedPaymentEvent && !isPaidOrderWithCapturedPayment) {
+      // Best-effort status reconciliation for failed/halted/cancelled subscription states.
+      try {
+        if (providerSubscriptionId) {
+          let subscriptionStatus: string | null = subscriptionEntity?.status ? String(subscriptionEntity.status) : null;
+          if (!subscriptionStatus) {
+            if (eventTypeLower.includes("halted")) subscriptionStatus = "halted";
+            else if (eventTypeLower.includes("pending")) subscriptionStatus = "pending";
+            else if (eventTypeLower.includes("cancelled")) subscriptionStatus = "cancelled";
+            else if (eventTypeLower.includes("paused")) subscriptionStatus = "paused";
+            else if (eventTypeLower.includes("resumed") || eventTypeLower.includes("activated")) subscriptionStatus = "active";
+            else if (eventTypeLower.includes("completed")) subscriptionStatus = "completed";
+          }
+          if (subscriptionStatus) {
+            await admin.from("subscriptions").update({
+              status: subscriptionStatus,
+              updated_at: new Date().toISOString(),
+            }).eq("provider", "razorpay").eq("provider_subscription_id", providerSubscriptionId);
+          }
+        }
+        if (eventTypeLower === "payment.failed" && entity?.id) {
+          const failedUserId = userId || null;
+          if (failedUserId) {
+            await admin.from("payments").insert({
+              user_id: failedUserId,
+              provider: "razorpay",
+              provider_payment_id: String(entity.id),
+              provider_order_id: entity?.order_id ? String(entity.order_id) : null,
+              provider_subscription_id: providerSubscriptionId || null,
+              amount_minor: amountMinor || 1200,
+              currency: currency || "USD",
+              status: "failed",
+            } as any);
+          }
+        }
+      } catch {
+        // Status reconciliation must never block acknowledging a valid event.
+      }
+
       // Acknowledge authorization-only, failed, or unsupported events without granting entitlement.
       // A zero-row result means this worker no longer owns the claim; do not report success.
       const { data: ignoredRows, error: ignoredError } = await admin.from("webhook_events").update({
@@ -312,8 +394,15 @@ Deno.serve(async (req: Request) => {
     // Atomically promote/record the payment, upsert the entitlement, and
     // finalize the event in one claim-checked transaction. A stale token
     // returns 0 and performs no business writes.
-    const now = new Date();
-    const periodEnd = plan === "monthly" ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
+    let periodEnd: string | null = null;
+    if (plan === "monthly") {
+      const currentEndUnix = subscriptionEntity?.current_end ?? entity?.current_end;
+      if (currentEndUnix && !Number.isNaN(Number(currentEndUnix))) {
+        periodEnd = new Date(Number(currentEndUnix) * 1000).toISOString();
+      } else {
+        periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      }
+    }
 
     const { data: finalizedCount, error: finalizeError } = await admin.rpc(
       "finalize_webhook_payment_atomic",
@@ -337,6 +426,28 @@ Deno.serve(async (req: Request) => {
         status: 503,
         headers: { "Content-Type": "application/json", "Retry-After": "60" },
       });
+    }
+
+    // Reconcile recurring subscription metadata after a successful grant.
+    try {
+      if (providerSubscriptionId) {
+        await admin.from("subscriptions").upsert({
+          user_id: userId,
+          provider: "razorpay",
+          provider_subscription_id: providerSubscriptionId,
+          plan_code: "monthly",
+          status: plan === "monthly" ? "active" : "active",
+          current_period_end: periodEnd,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "provider_subscription_id" }).select("id");
+      }
+      if (entity?.id) {
+        await admin.from("payments").update({
+          provider_subscription_id: providerSubscriptionId || null,
+        }).eq("provider", "razorpay").eq("provider_payment_id", String(entity.id));
+      }
+    } catch {
+      // Metadata reconciliation is secondary to the authoritative grant.
     }
 
     return new Response(JSON.stringify({ status: "processed" }), {

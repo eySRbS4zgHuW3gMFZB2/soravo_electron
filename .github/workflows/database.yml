@@ -62,6 +62,9 @@ jobs:
       - name: Apply fresh-install schema
         run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/001_initial_schema.sql
 
+      - name: Apply billing migration
+        run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/002_billing_subscriptions.sql
+
       - name: Run pgTAP SQL tests
         run: |
            pg_prove \
