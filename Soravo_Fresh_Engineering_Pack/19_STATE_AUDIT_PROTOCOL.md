@@ -70,3 +70,8 @@ Merged remote head `5c34e97bf0d04c4716c9b4af9c6e49a18c6bd433` into task commit `
 ## 2026-10-27 — Recovery visibility review (87c71ff9)
 
 Confirmed sole isolated worktree on `coderabbit/verify-password-recovery-state/87c71ff9`, base `260ff874d256694cdd607c0703617cb0b13375ef`, initially clean. Fixed loading and missing-ID recovery verification gaps; retained provider in-memory/storage behavior. Website tests 63/63, typecheck/build and recovery browser smoke 1/1 pass. See matching handoff entry and workspace validation record for commands, hashes and browser preparation; no integration or remote changes.
+
+
+## 2026-10-27 — Recovery initialization review (7804fa0e)
+
+Confirmed sole runtime-isolated named worktree on `coderabbit/fix-password-recovery-loading/7804fa0e`, base `cfb565df8ce325c834c79ced3f66ec329fddb30b`, initially clean. Supplied finding reproduced and repaired without changing recovery authorization. Targeted tests 36/36, full website suite 68/68, typecheck/build passed. Base Website CI/CI/Packaging passed; no patch CI or integration. Auth browser suite 7/7 and manual diff/security checks passed. Exact validation outcomes are recorded in workspace-context/validation-record.md outside Git; see matching handoff entry.

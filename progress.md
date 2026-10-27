@@ -957,3 +957,8 @@ Merged remote head `5c34e97bf0d04c4716c9b4af9c6e49a18c6bd433` into task commit `
 ## 2026-10-27 — Password recovery visibility review
 
 Fixed ResetPasswordPage loading and missing-user-ID verification gaps; reused AuthProvider recovery identity for events and saved sessions, including blocked storage. Removed unused duplicate page tracking. Regression tests first reproduced 3 failures; final website suite 63/63, typecheck/build and recovery browser smoke 1/1 pass. Details: engineering pack handoff entry 87c71ff9 and workspace validation record.
+
+
+## 2026-10-27 — Password recovery initialization gate
+
+Verified the deferred Supabase recovery event race. Keep verification pending until recovery identity is recorded; failed initialization/session restoration still completes. Added regression coverage (two baseline failures reproduced); targeted tests 36/36, website suite 68/68, typecheck/build passed. Auth browser suite 7/7 and manual diff/security checks passed. Full evidence: workspace-context/validation-record.md; scope and checkout: handoff entry 7804fa0e.

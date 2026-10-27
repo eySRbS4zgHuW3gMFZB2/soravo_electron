@@ -50,11 +50,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    // URL hints only keep verification pending; the recovery event supplies identity.
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    new URLSearchParams(window.location.search).forEach((value, key) => params.set(key, value));
+    let recoveryPending = params.get("type") === "recovery" && Boolean(params.get("access_token"));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       if (event === "PASSWORD_RECOVERY" && nextSession?.user?.id) {
         setPasswordRecoveryUserId(nextSession.user.id);
+        recoveryPending = false;
         try {
           window.sessionStorage.setItem("soravo:password-recovery-user", nextSession.user.id);
         } catch {
@@ -63,25 +68,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (event === "SIGNED_OUT") {
         setPasswordRecoveryUserId(null);
+        recoveryPending = false;
         try {
           window.sessionStorage.removeItem("soravo:password-recovery-user");
         } catch {
           // Ignore storage failures.
         }
       }
-      // Stop the loading gate once Supabase reports any auth state.
-      setLoading(false);
+      // INITIAL_SESSION can precede the deferred PASSWORD_RECOVERY notification.
+      if (!recoveryPending) setLoading(false);
     });
 
     (async () => {
       try {
-        await supabase.auth.initialize();
+        const result = await supabase.auth.initialize();
+        if (result?.error) recoveryPending = false;
         const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session?.user?.id) recoveryPending = false;
         if (!error && mounted) setSession(data.session);
       } catch {
         // Preserve the current session if restoration fails.
+        recoveryPending = false;
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted && !recoveryPending) setLoading(false);
       }
     })();
 

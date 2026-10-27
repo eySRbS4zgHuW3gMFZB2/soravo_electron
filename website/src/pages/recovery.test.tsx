@@ -105,6 +105,53 @@ describe("ResetPasswordPage", () => {
     expect(screen.getByRole("alert").textContent).toMatch(/invalid or has expired/i);
   });
 
+  it.each(["hash", "query"])("waits for the recovery event after initializing a %s callback", async (location) => {
+    const params = "type=recovery&access_token=synthetic&refresh_token=synthetic&expires_in=3600&token_type=bearer";
+    window.history.replaceState(null, "", `/reset-password${location === "hash" ? "#" : "?"}${params}`);
+    const session = { user: { id: "user-1", email: "a@example.com" } };
+    let resolveInitialization!: (value: unknown) => void;
+    mockAuth.initialize.mockReturnValue(new Promise((resolve) => { resolveInitialization = resolve; }));
+    let notifyAuth!: (event: string, session: unknown) => void;
+    mockAuth.onAuthStateChange.mockImplementation((cb?: (event: string, session: unknown) => void) => {
+      notifyAuth = cb!;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+    renderResetPage();
+
+    act(() => notifyAuth("INITIAL_SESSION", session));
+    expect(screen.getByRole("status").textContent).toMatch(/verifying/i);
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    await act(async () => resolveInitialization({ error: null }));
+    expect(mockAuth.getSession).toHaveBeenCalled();
+    expect(screen.getByRole("status").textContent).toMatch(/verifying/i);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByLabelText(/new password/i)).toBeNull();
+
+    act(() => notifyAuth("PASSWORD_RECOVERY", session));
+    expect(screen.getByLabelText(/new password/i)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it.each(["error", "rejection", "missing session"])("finishes recovery verification on initialization %s", async (failure) => {
+    window.history.replaceState(null, "", "/reset-password#type=recovery&access_token=synthetic");
+    mockAuth.onAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } });
+    if (failure === "error") {
+      mockAuth.initialize.mockResolvedValue({ error: new Error("Expired link") });
+    } else if (failure === "rejection") {
+      mockAuth.initialize.mockRejectedValue(new Error("Unable to initialize"));
+    } else {
+      mockAuth.initialize.mockResolvedValue({ error: null });
+      mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    }
+    renderResetPage();
+
+    expect((await screen.findByRole("alert")).textContent).toMatch(/invalid or has expired/i);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByLabelText(/new password/i)).toBeNull();
+    expect(mockAuth.updateUser).not.toHaveBeenCalled();
+  });
+
   it.each([
     { name: "a normal signed-in session", url: "/reset-password", storedId: null, userId: "user-1" },
     { name: "a recovery hash alone", url: "/reset-password#type=recovery", storedId: null, userId: "user-1" },
