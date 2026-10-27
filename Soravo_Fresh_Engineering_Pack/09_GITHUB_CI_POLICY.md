@@ -16,7 +16,7 @@ While the active repository remains public, standard GitHub-hosted runner usage 
    - formatting/lint/typecheck/build where configured;
    - Rust format check, clippy and tests;
    - Windows build/test on Windows runner;
-   - **Linux build/test on a Linux runner — deferred until task P1-05 has delivered a Linux engine.** A **verification** build is permitted once the engine exists, because the Linux release gate cannot be satisfied without one; what stays prohibited until the full gate passes is publishing a Linux artifact and describing Linux as supported. **Linux jobs become required checks only at that point.** Until then a Linux job must not be a required check, because Phase 1 is Windows-only and the Windows release path proceeds independently of Linux;
+   - **Linux build/test on a Linux runner - verification build permitted now, publication still blocked.** A **verification** build is permitted now because the Linux CrispASR engine is tracked and bundled; the Linux release gate cannot be satisfied without it, and what stays prohibited until the full gate passes is publishing a Linux artifact and describing Linux as supported. **Linux jobs become required checks only at that point.** Until then a Linux job must not be a required check, because Phase 1 is Windows-only and the Windows release path proceeds independently of Linux;
    - upload installers as temporary CI artifacts, not customer releases on every PR.
 
 2. `ci-website.yml`

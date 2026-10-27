@@ -33,9 +33,15 @@ Product requirements specify USD. The implementation uses USD amounts `1200` and
 
 - `npm run typecheck`
 - `npm run test`
-- `npm run test:playwright` (run `npm run dev` first or let Playwright start it)
+- `npm run test:playwright` (starts Vite and builds/serves the site with Wrangler Pages; install Chromium once with `npx playwright install --with-deps chromium`)
 - `npm run build`
 - `npm run dev`
+- `npm run preview:pages` (serve an existing `dist/` build locally on port 8788 with Pages redirects)
+
+Playwright's `chromium` project covers Vite client routes and UI smoke tests.
+The `pages-chromium` project repeats navigation tests against the production
+build via Wrangler Pages, including direct HTTP requests, reloads, SPA fallback,
+and static assets. Run it alone with `npm run test:playwright -- --project=pages-chromium`.
 
 ## Routes
 

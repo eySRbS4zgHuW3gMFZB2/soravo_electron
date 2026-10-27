@@ -29,19 +29,19 @@ The public GitHub repo was inspected on 2026-10-22. Observed files include `READ
 - The README and progress history disagree in places about Whisper vs CrispASR. Current product decision: preserve the existing CrispASR implementation; do not switch engines as part of commercial integration.
 - The checked Tauri config showed `bundle.resources: []` and `bundle.externalBin: []`. This is a **release blocker to verify**, because CrispASR and required companion files must be present in the installed application, not merely in the development tree.
   - Re-confirmed 2026-10-22: `third-party/bin/` is git-ignored with **0 tracked files** (developer-machine only, produced by `npm run fetch:asr`); the engine is **committed** at `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`. A release build produced ~6.15 MB (MSI) / ~4.28 MB (NSIS), far smaller than the ~20 MB engine, corroborating that it is not bundled. See `23_SOURCE_AUDIT_NOTES.md` finding 3 and ADR-0010.
-- Current config sets bundle targets to `all`, but that does not prove Linux builds or Linux runtime behavior are tested. Windows is the only platform with an engine artifact in the repository; **Linux is BLOCKED** until a Linux engine is obtained, licensed, tracked and bundled (task P1-05).
+- Current config sets bundle targets to `all`, but that does not prove Linux builds or Linux runtime behavior are tested. Windows and Linux engine artifacts are tracked, but Linux packaging was added later; the clean-machine verification gate and Linux release gate remain open.
 - The repository was public at audit time. Treat changing visibility to private as an explicit owner-operated launch-preparation task.
 - The website, account system, payments and dashboards are not present in the current app implementation based on the reviewed root files; this pack plans them as new work.
 - The current production site at `soravo.xyz` is served from the **historical** repository's commit via the Cloudflare Pages project `soravo`, which is deployed by direct upload rather than by Cloudflare's Git integration. This is recorded as planning context only; it is not a dependency of the new project, and the production site must remain untouched until cutover.
 
 ## Decisions recorded from the owner
 
-Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is part of this pack and is the highest authority in it.
+Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is part of this pack and is the highest authority in it, and in later accepted ADRs recorded in `15_ADR_INDEX.md`.
 
 - **Website strategy:** rebuild the replacement website fresh in the active repository, following this pack. The historical `soravo` repository is a behavioral and content reference only for approved website pages, pricing presentation and dashboard behaviors; its implementation, schema, migrations, Edge Functions, workflows and Handy-derived desktop code are not ported. The current production site stays live and untouched until cutover (ADR-0008).
 - **Repository rename order:** establish baseline CI and release-packaging checks first, then prepare the rename checklist, then rename, then verify integrations (ADR-0009).
 - **Production domain:** `soravo.xyz` and its DNS and email configuration are preserved through the migration. Cutover happens only after the replacement passes its launch checklist, with a documented rollback path (`27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`).
-- Windows and Linux are the intended launch targets, but **Linux is BLOCKED** pending a Linux engine artifact; Windows is the only platform with an engine today.
+- Windows and Linux are the intended launch targets. Windows and Linux CrispASR engines are now tracked and bundled, but Linux publication remains blocked pending clean-machine runtime verification; Windows is the only platform currently released.
 - $12/month recurring subscription.
 - $50 lifetime license.
 - Enterprise is deferred; a "Contact us / coming later" placeholder may exist but must not imply purchasable entitlements.
@@ -52,6 +52,9 @@ Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is par
 - Cloudflare Pages for website hosting.
 - Supabase Auth/database; Resend as Supabase custom SMTP.
 - Razorpay for payments.
+- **Backend function placement** (ADR-0003): ACCEPTED. Supabase Edge Functions handle privileged APIs; Cloudflare Pages hosts the static website. Task P2-08 is decided.
+- **Binary distribution host** (ADR-0005): ACCEPTED. The separate public `soravo-releases` repository hosts artifacts only. Remaining publication gates: clean-machine verification, the Linux release gate when publishing Linux artifacts, and owner approval of each release.
+- **CrispASR bundled layout** (ADR-0010): ACCEPTED (2026-10-22, task P0-01). Use Tauri `bundle.resources` map form with bundled VC++ runtime; see the ADR for tracked source paths, resource destinations and rationale. Redistribution checks and clean-machine release verification remain required.
 - Admin dashboard guarded by Supabase Auth plus a server-verified role.
 - Cloudflare Web Analytics as the first visitor analytics source.
 - Subscription expiry: grace period then disable paid features while retaining/exporting user data.
@@ -62,9 +65,7 @@ Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is par
 
 ## Decisions still open (do not implement as settled)
 
-- **Backend function placement** (ADR-0003): Cloudflare Pages Functions/Workers versus Supabase Edge Functions. Must be chosen and recorded before implementation depends on it. Task P2-08.
-- **Binary distribution host** (ADR-0005): the separate public `soravo-releases` repository is the preferred candidate but the ADR is PROPOSED. Needs a no-card check and an anonymous-download proof. Task P8-00.
-- **CrispASR bundled layout** (ADR-0010): Tauri `bundle.resources` mapping, `externalBin` sidecar, or a deliberate rename of the tracked staging directory. Must be chosen and recorded before packaging work begins. Task P1-03.
+None for the ADRs listed above. Accepted decisions retain their implementation and release gates.
 
 ## Mandatory policies
 

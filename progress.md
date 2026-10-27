@@ -945,6 +945,27 @@ Added SECURITY DEFINER RPCs finalize_webhook_payment_atomic (plus alias finalize
 - Added Playwright smoke tests and reduced-motion/focus accessibility styles.
 - Tests: npm test (46 pass), typecheck/build pass. Playwright Chromium smoke passed (13/13) on 2026-10-26.
 
+## Preview and release infrastructure (2026-10-27)
+
+- Worktree: .worktrees/feature-preview-and-release-pipeline, branch feature/preview-and-release-pipeline, base e1c7337.
+- Added website/public/_redirects for Cloudflare Pages SPA fallback and e2e/navigation.spec.ts.
+- Created Cloudflare Pages project soravo-web-preview (build root website, output dist, public Vite env vars pointed at Soravo_Fresh Supabase).
+- Created public artifacts-only repository eySRbS4zgHuW3gMFZB2/soravo-releases and verified anonymous release-asset download (HTTP 200) using a temporary prerelease (deleted afterward).
+- Added .github/workflows/release.yml: manual approved dispatch, Windows-only draft-first publishing, artifact/checksum validation, least-privilege secret SORAVO_RELEASES_PAT requirement, rollback guard.
+- Updated ADR-0005 to ACCEPTED after anonymous download proof.
+- Website checks: typecheck pass, 42 unit tests pass, production build pass, 20 Playwright tests pass.
+- Linux remains blocked pending clean-machine runtime verification; no Linux artifact published.
+
+
+## Release gates and Pages routing follow-up (2026-10-27)
+
+- Follow-up on the preview/release infrastructure entry above; see `docs/engineering/STATE_AUDIT.md` for the full bounded audit.
+- `release.yml`: every NSIS installer now has a required CrispASR content extraction gate before staging or upload; resolved release version must exactly match `src-tauri/tauri.conf.json`; artifact filenames must match `<productName>_<fullVersion>_...`; SHA-256 checksums use LF line endings and are revalidated; source tag must resolve to the built SHA before draft creation.
+- Cross-repo publication: release tags in `soravo-releases` target that repository's default branch, while the built SHA and verified source tag are recorded in release notes. Existing releases are never overwritten.
+- Cloudflare Pages routing: added `website/public/_redirects` SPA fallback and Playwright navigation coverage against Vite and the built site served by Wrangler Pages (29 browser tests).
+- Website CI now installs Chromium and runs the Vite plus Pages Playwright step; `website/.gitignore` covers Wrangler output, test results and runtime reports.
+- Added a pinned `wrangler@4.153.0` development dependency for Pages-mode testing. The project dependencies were installed with `npm ci`, and the local Playwright run passed 29 browser tests.
+- Linux remains blocked for publication pending its clean-machine runtime and dictation gate; no Linux artifact was published.
 ## 2026-10-27 — Auth mock CORS
 
 Shared CORS headers and successful OPTIONS responses across Supabase auth/REST test mocks. Auth browser tests passed 7/7; direct route checks passed 12/12; website typecheck/build passed. Existing npm test script expands an unquoted glob; reran Vitest with the glob quoted: 48/48 passed.

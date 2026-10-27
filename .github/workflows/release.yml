@@ -1,0 +1,308 @@
+# Manual, approved release publishing for the Soravo desktop app.
+#
+# This workflow does NOT run on every push. It is manually dispatched (or
+# triggered by a maintainer-created version tag after approval) and binds
+# to the GitHub Actions "release" environment so a protected environment
+# approval can gate publishing.
+#
+# Windows is the only currently supported release platform. Linux has a
+# packaging verification workflow, but its clean-machine runtime gate is
+# still open, so Linux artifacts are deliberately not published here.
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without the leading v, e.g. 0.1.0"
+        required: true
+        type: string
+      releases_repo:
+        description: "Public artifacts-only destination repository"
+        required: false
+        default: "eySRbS4zgHuW3gMFZB2/soravo-releases"
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    name: Build and package Windows (approved release)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    environment: release
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Resolve release version
+        shell: pwsh
+        env:
+          RELEASE_EVENT: ${{ github.event_name }}
+          RELEASE_REF: ${{ github.ref_name }}
+          RELEASE_INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:RELEASE_EVENT -eq "push") {
+            $version = $env:RELEASE_REF.TrimStart("v")
+          } else {
+            $version = $env:RELEASE_INPUT_VERSION
+          }
+          $version = $version.Trim()
+          if ($version -notmatch "^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$") {
+            throw "Invalid version: $version"
+          }
+          $config = Get-Content "src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json
+          if ($version -cne $config.version) {
+            throw "Release version $version does not exactly match configured app version $($config.version)."
+          }
+          "SORAVO_RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SORAVO_RELEASE_TAG=v$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Building release $version"
+
+      - name: Check required release secret exists
+        shell: pwsh
+        env:
+          SORAVO_RELEASES_TOKEN: ${{ secrets.SORAVO_RELEASES_PAT }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SORAVO_RELEASES_TOKEN)) {
+            throw "Missing repository secret SORAVO_RELEASES_PAT (least-privilege token scoped to the releases repository)."
+          }
+          Write-Host "Release credential present."
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: 1.90.0
+
+      - name: Cache Rust target
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          key: rust-target-windows-release-${{ runner.os }}-1.90.0-${{ hashFiles('src-tauri/Cargo.lock') }}-${{ hashFiles('src-tauri/Cargo.toml') }}-${{ hashFiles('src-tauri/tauri.conf.json') }}
+          path: |
+            src-tauri/target/
+            ~/.cargo/registry
+            ~/.cargo/git
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri:build
+
+      - name: Verify bundle configuration
+        run: node scripts/verify-packaging.mjs
+
+      - name: Verify bundle contents (MSI)
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem "src-tauri/target/release/bundle/msi/*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($msi) {
+            $extractDir = "$env:TEMP\msi_extract"
+            Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
+            New-Item -ItemType Directory -Path $extractDir | Out-Null
+            Start-Process msiexec -ArgumentList "/a `"$($msi.FullName)`" /qn TARGETDIR=`"$extractDir`"" -Wait
+            node scripts/verify-packaging.mjs --bundle "$extractDir\PFiles\Soravo"
+          } else {
+            Write-Host "No MSI produced. NSIS contents are checked separately."
+          }
+
+      - name: Verify bundle contents (every NSIS installer)
+        shell: pwsh
+        run: |
+          $required = @(
+            "crispasr.exe", "openblas.dll", "LICENSE", "THIRD_PARTY_NOTICES.txt",
+            "vcruntime140.dll", "vcruntime140_1.dll", "vcomp140.dll",
+            "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "concrt140.dll", "vccorlib140.dll"
+          )
+          $installers = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" -ErrorAction SilentlyContinue
+          foreach ($installer in $installers) {
+            $extractDir = Join-Path $env:RUNNER_TEMP "nsis-$($installer.BaseName)"
+            Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
+            & 7z x $installer.FullName "-o$extractDir" -y
+            if ($LASTEXITCODE -ne 0) { throw "NSIS extraction failed: $($installer.Name)" }
+            foreach ($name in $required) {
+              $path = Join-Path $extractDir "crispasr/$name"
+              if (-not (Test-Path $path -PathType Leaf)) {
+                throw "Missing from NSIS installer $($installer.Name): crispasr/$name"
+              }
+            }
+          }
+
+      - name: Validate and stage Windows artifacts
+        shell: pwsh
+        run: |
+          $version = $env:SORAVO_RELEASE_VERSION
+          $config = Get-Content "src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json
+          $filenamePrefix = "^$([regex]::Escape($config.productName))_$([regex]::Escape($version))_"
+          $stage = "$env:RUNNER_TEMP\soravo-release-$version"
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+
+          $installers = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe","src-tauri/target/release/bundle/msi/*.msi" -ErrorAction SilentlyContinue
+          if (-not $installers -or $installers.Count -eq 0) {
+            throw "No Windows installer artifacts found after build."
+          }
+
+          foreach ($file in $installers) {
+            if ($file.Length -eq 0) { throw "Empty artifact: $($file.Name)" }
+            if ($file.Length -lt 1048576) { Write-Warning "Suspiciously small artifact: $($file.Name) ($($file.Length) bytes)" }
+            if ($file.Name -cnotmatch $filenamePrefix) {
+              throw "Artifact filename version does not match $version`: $($file.Name)"
+            }
+            Copy-Item $file.FullName $stage -Force
+          }
+
+          Push-Location $stage
+          try {
+            $lines = @()
+            Get-ChildItem -File | Sort-Object Name | ForEach-Object {
+              $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower()
+              $lines += "$hash  $($_.Name)"
+            }
+            [System.IO.File]::WriteAllText((Join-Path $stage "SHA256SUMS"), (($lines -join "`n") + "`n"), [System.Text.Encoding]::ASCII)
+            if (-not (Test-Path (Join-Path $stage "SHA256SUMS"))) { throw "SHA256SUMS was not created." }
+          } finally {
+            Pop-Location
+          }
+
+          Push-Location $stage
+          try {
+            Get-Content SHA256SUMS | ForEach-Object {
+              $parts = $_ -split "\s+"
+              if ($parts.Count -lt 2) { throw "Malformed checksum line: $_" }
+              $expected = $parts[0]
+              $name = $parts[1]
+              if (-not (Test-Path $name)) { throw "Checksum references missing file: $name" }
+              $actual = (Get-FileHash -Algorithm SHA256 $name).Hash.ToLower()
+              if ($actual -ne $expected) { throw "Checksum mismatch for $name" }
+            }
+          } finally {
+            Pop-Location
+          }
+
+          "SORAVO_RELEASE_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Staged release artifacts:"
+          Get-ChildItem $stage | ForEach-Object { Write-Host "  $($_.Name) - $($_.Length) bytes" }
+
+      - name: Upload checked release artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-windows-${{ env.SORAVO_RELEASE_VERSION }}
+          path: ${{ env.SORAVO_RELEASE_STAGE }}
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish to public releases repository
+    needs: build-windows
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    steps:
+      - name: Check out source tags for release verification
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+
+      - name: Download checked release artifacts
+        uses: actions/download-artifact@95815c38cbc50441f13faff803f751948462d5f9 # v4.2.1
+        with:
+          pattern: release-windows-*
+          path: release-staging
+          merge-multiple: true
+
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.SORAVO_RELEASES_PAT }}
+          RELEASES_REPO: ${{ inputs.releases_repo || 'eySRbS4zgHuW3gMFZB2/soravo-releases' }}
+          RELEASE_EVENT: ${{ github.event_name }}
+          RELEASE_REF: ${{ github.ref_name }}
+          RELEASE_INPUT_VERSION: ${{ inputs.version }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          version=""
+          if [[ "$RELEASE_EVENT" == "push" ]]; then
+            version="$RELEASE_REF"
+          else
+            version="v$RELEASE_INPUT_VERSION"
+          fi
+          version="${version#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version: $version" >&2
+            exit 1
+          fi
+
+          tag="v${version}"
+          tag_commit=$(git -C source rev-parse --verify "refs/tags/${tag}^{commit}") || {
+            echo "Source tag $tag is missing or does not resolve to a commit." >&2
+            exit 1
+          }
+          if [[ "$tag_commit" != "$SOURCE_SHA" ]]; then
+            echo "Source tag $tag does not point to the built commit $SOURCE_SHA." >&2
+            exit 1
+          fi
+
+          if [[ ! "$RELEASES_REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]]; then
+            echo "Invalid releases repository: $RELEASES_REPO" >&2
+            exit 1
+          fi
+
+          RELEASE_TARGET="$(gh repo view "$RELEASES_REPO" --json defaultBranchRef -q '.defaultBranchRef.name')"
+          if [[ -z "$RELEASE_TARGET" ]]; then
+            echo "Could not resolve a default branch in $RELEASES_REPO." >&2
+            exit 1
+          fi
+          staging="release-staging"
+          if [[ ! -f "$staging/SHA256SUMS" ]]; then
+            found=$(find "$staging" -name SHA256SUMS | head -1)
+            if [[ -z "$found" ]]; then
+              echo "SHA256SUMS not found in downloaded artifact." >&2
+              exit 1
+            fi
+            staging=$(dirname "$found")
+          fi
+
+          cd "$staging"
+
+          if [[ ! -f SHA256SUMS ]]; then echo "SHA256SUMS missing." >&2; exit 1; fi
+          if [[ $(find . -maxdepth 1 -type f ! -name SHA256SUMS | wc -l) -eq 0 ]]; then
+            echo "No release installers found." >&2
+            exit 1
+          fi
+          sha256sum -c SHA256SUMS
+
+          if gh release view "$tag" --repo "$RELEASES_REPO" >/dev/null 2>&1; then
+            echo "Release $tag already exists in $RELEASES_REPO. Aborting to avoid overwriting published bytes." >&2
+            exit 1
+          fi
+
+          gh release create "$tag" ./* \
+            --repo "$RELEASES_REPO" \
+            --target "$RELEASE_TARGET" \
+            --title "Soravo ${version}" \
+             --notes "Soravo ${version} desktop release. Source tag ${tag} verified at commit ${SOURCE_SHA}. Installer files and SHA256SUMS are attached. Verify the installer hash before running it. Windows installers may trigger SmartScreen; checksums only detect accidental corruption." \
+            --draft
+
+          echo "Created draft release $tag in $RELEASES_REPO."
+          echo "Publish it manually after clean-machine verification, or remove --draft after that gate is automated."
+          gh release view "$tag" --repo "$RELEASES_REPO" --json url
