@@ -57,3 +57,15 @@ Never replace unknown with an assumption. Update this audit after repo rename, C
 Report every worktree found, including ones created by earlier sessions. For each: path, branch (or detached HEAD), base SHA, uncommitted files, upstream tracking and build-output size. Clean up `prunable` registrations, and record any worktree holding uncommitted work — it exists nowhere else and must not be removed casually.
 
 Dated audit records are preserved in `docs/engineering/STATE_AUDIT.md`.
+
+Subscription checkout/event-ordering audit recorded in `docs/engineering/STATE_AUDIT.md` on 2026-10-27 for task branch `coderabbit/api-subscription-hardening/8b15d30d` (base `74ec17e`).
+
+Delivery merge against remote `147fd33` was audited on 2026-10-27 in `docs/engineering/STATE_AUDIT.md`; atomic subscription migration is now 005.
+
+Subscription insert error follow-up checked at `f45731b86f01481601426ed7c12f85feedfa4907` on 2026-10-27 in the isolated `coderabbit/fix-subscription-insert-errors/969be6a5` checkout. Finding dispositions, unchanged reservation/RPC contracts and validation are recorded in `18_PROGRESS_AND_HANDOFF.md` and the workspace validation record. No external provider or production state was accessed.
+
+Checkout lookup/locking review audit (2026-10-27): isolated branch `coderabbit/harden-checkout-error-handling-locking/c935e5b0`, base `f45731b86f01481601426ed7c12f85feedfa4907`; initial tree clean. Scoped handler/migration/tests changes passed website checks, all database CI SQL tests and overlapping-session advisory-lock checks. No integration or production changes. Evidence: external `workspace-context/validation-record.md`; handoff above.
+
+Delivery merge audit (2026-10-27): merged remote `b645e8246c4089c9ca6f73bdc9a25b0d577e884f` with local `d8d7ec4a8d49b05d575e22976d66a76f4d182867` on runtime delivery branch `feature/razorpay-recurring-sandbox`. Both parent handoff/audit additions retained; combined source/tests verified. Fresh 30 checkout tests and 88 PostgreSQL assertions passed; unchanged 64 tests/typecheck/build results reused. Merge committed locally for delivery, without pushing; details in the latest handoff and external validation record.
+
+Cancellation deadline/guideline audit follow-up (2026-10-27): isolated runtime branch `coderabbit/bound-cancellation-and-update-audit/8e133da2`, base `10da4424140e30beb80ed5361a81f904c4d4da52`, initially clean. Confirmed root `AGENTS.md` and engineering-pack reading gate apply; corrected the earlier audit statement. Cancellation now aborts after five seconds while preserving HTTP 500 and the reconciliation reservation. Fresh 31 checkout tests, all 95 website tests and website typecheck/build passed. Manual diff/security and whitespace checks passed; live provider/Deno deployment unverified. Detailed evidence: external workspace validation record and latest handoff.

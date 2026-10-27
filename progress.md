@@ -944,3 +944,19 @@ Added SECURITY DEFINER RPCs finalize_webhook_payment_atomic (plus alias finalize
 - Account page: device list + revoke, entitlement status/period, monthly/lifetime behavior.
 - Added Playwright smoke tests and reduced-motion/focus accessibility styles.
 - Tests: npm test (46 pass), typecheck/build pass. Playwright Chromium smoke passed (13/13) on 2026-10-26.
+
+## 2026-10-27 — Subscription ordering review fixes (P2-12 follow-up)
+
+Verified and fixed all six supplied findings: isolate PricingPage tests, fail closed on monthly checkout guard errors, include pending/resumed in both checkout guards and the unique index, atomically order status/grant metadata writes, and cover missing period ends/stale events/late grants. Added migration 004 to upgrade an already installed index and wired its SQL tests into database CI. Website typecheck/build and 72 tests passed; disposable PostgreSQL 17.11 passed 46 assertions and 7 more after replaying the original index then upgrading. See the session handoff and external validation record for exact inputs/commands and runtime limits.
+
+## 2026-10-27 — Subscription delivery conflict resolution
+
+Merged remote `147fd33` with task commit `96a7866`, preserving atomic checkout/event guards and remote billable-status, paid-period, diagnostic and test fixes. Renumbered the atomic migration to 005 after the remote index upgrade. Website typecheck/build, 85 Vitest tests, 87 pgTAP assertions on fresh and upgrade paths, and concurrent SQL checks passed. Merge prepared locally; no push.
+
+## 2026-10-27 — Subscription insert error review follow-up
+
+Added immediate provider cancellation on non-23505 checkout persistence failures; HTTP 500, reservation retention and 23505 race recovery are preserved. Skipped the webhook finding because migration 005's atomic provider-ID upsert replaced the cited duplicate fallback. Website typecheck/build, all 88 tests and 87 PostgreSQL 16 assertions passed; see the engineering-pack handoff and external validation record for details.
+
+## 2026-10-27 — Delivery merge for subscription insert compensation
+
+Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit records, remote plan lookup/logging/advisory locking changes and local provider cancellation compensation. Fresh 30 checkout tests and 88 PostgreSQL assertions passed; reused 64 unchanged tests and website typecheck/build. Merge committed locally for delivery; no push.
