@@ -54,7 +54,7 @@ When a task has independent, well-scoped parts, delegate them to subagents rathe
 - Do not redesign the desktop UI or replace CrispASR under this commercial-release scope.
 - Never run destructive commands, reset/clean a repo, delete branches, rotate secrets, change repo visibility, rename repos or deploy production without explicit owner approval. The one exception is the task branch cleanup that `28_GIT_WORKTREE_POLICY.md` requires: **deleting a merged task branch and its worktree is expected work, not a destructive action.** The prohibition still applies to unmerged branches, to branches belonging to another task, and to any branch whose work is not yet merged and pushed.
 - **Never retire, redirect or repoint `soravo.xyz`, change DNS, or alter Cloudflare production settings without explicit owner approval.** The production site stays as it is until the replacement passes its launch checklist; cutover is a separate approved step (`27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`).
-- **Do not implement against a `PROPOSED` ADR.** ADR-0003 (backend placement), ADR-0005 (binary host) and ADR-0010 (engine bundled layout) are open; each must be made ACCEPTED with a rationale first.
+- **Do not implement against a `PROPOSED` ADR.** ADR-0003 (backend placement) and ADR-0010 (engine bundled layout) remain open; each must be made ACCEPTED with a rationale first. ADR-0005 (binary host) is accepted, with clean-machine and Linux-gate conditions still recorded on it.
 - Preserve user edits. Never overwrite unknown uncommitted changes.
 - Use feature branches and small PRs; avoid direct commits to protected main once protection is enabled.
 - Keep tasks small enough to survive a context/usage cutoff.

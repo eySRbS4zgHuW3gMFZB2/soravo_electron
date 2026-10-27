@@ -90,7 +90,7 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - P7-07: Test direct API calls as ordinary user.
 
 ## P8 — Release
-- P8-00: **Finalise ADR-0005 (binary host) before publishing.** Blocking: it is PROPOSED, and the no-card check plus an anonymous-download proof must be settled first.
+- P8-00: **ADR-0005 accepted.** Remaining blocking items: clean-machine verification, the Linux release gate, and owner approval before publishing.
 - P8-01: Create public `soravo-releases` repo or approve another host, per the ADR-0005 that P8-00 settles.
 - P8-02: Configure artifact upload and release notes workflow.
 - P8-03: Generate SHA256SUMS and verify it.

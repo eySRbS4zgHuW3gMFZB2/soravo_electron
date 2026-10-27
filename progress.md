@@ -944,3 +944,15 @@ Added SECURITY DEFINER RPCs finalize_webhook_payment_atomic (plus alias finalize
 - Account page: device list + revoke, entitlement status/period, monthly/lifetime behavior.
 - Added Playwright smoke tests and reduced-motion/focus accessibility styles.
 - Tests: npm test (46 pass), typecheck/build pass. Playwright Chromium smoke passed (13/13) on 2026-10-26.
+
+## Preview and release infrastructure (2026-10-27)
+
+- Worktree: .worktrees/feature-preview-and-release-pipeline, branch feature/preview-and-release-pipeline, base e1c7337.
+- Added website/public/_redirects for Cloudflare Pages SPA fallback and e2e/navigation.spec.ts.
+- Created Cloudflare Pages project soravo-web-preview (build root website, output dist, public Vite env vars pointed at Soravo_Fresh Supabase).
+- Created public artifacts-only repository eySRbS4zgHuW3gMFZB2/soravo-releases and verified anonymous release-asset download (HTTP 200) using a temporary prerelease (deleted afterward).
+- Added .github/workflows/release.yml: manual approved dispatch, Windows-only draft-first publishing, artifact/checksum validation, least-privilege secret SORAVO_RELEASES_PAT requirement, rollback guard.
+- Updated ADR-0005 to ACCEPTED after anonymous download proof.
+- Website checks: typecheck pass, 42 unit tests pass, production build pass, 20 Playwright tests pass.
+- Linux remains blocked pending clean-machine runtime verification; no Linux artifact published.
+

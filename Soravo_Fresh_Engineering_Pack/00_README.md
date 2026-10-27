@@ -63,7 +63,7 @@ Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is par
 ## Decisions still open (do not implement as settled)
 
 - **Backend function placement** (ADR-0003): Cloudflare Pages Functions/Workers versus Supabase Edge Functions. Must be chosen and recorded before implementation depends on it. Task P2-08.
-- **Binary distribution host** (ADR-0005): the separate public `soravo-releases` repository is the preferred candidate but the ADR is PROPOSED. Needs a no-card check and an anonymous-download proof. Task P8-00.
+- **Binary distribution host** (ADR-0005): ACCEPTED. The separate public `soravo-releases` repository hosts artifacts only. Remaining gates: clean-machine verification, the Linux release gate, and owner approval of each release.
 - **CrispASR bundled layout** (ADR-0010): Tauri `bundle.resources` mapping, `externalBin` sidecar, or a deliberate rename of the tracked staging directory. Must be chosen and recorded before packaging work begins. Task P1-03.
 
 ## Mandatory policies

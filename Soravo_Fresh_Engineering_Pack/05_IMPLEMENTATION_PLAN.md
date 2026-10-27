@@ -103,7 +103,7 @@ Gate: end-to-end sandbox suite passes and a manual owner test is recorded before
 Gate: normal users cannot access admin API even by direct request; admin changes audited.
 
 ## Phase 8 — Distribution, production cutover and launch
-- **Finalise ADR-0005 (binary distribution host) before publishing anything.** It is currently PROPOSED; the host, the no-card check and an anonymous-download proof must be settled first.
+- **Apply ADR-0005's remaining gates before publishing.** Windows publication requires the Windows clean-machine gate; the Linux release gate is required only when publishing Linux artifacts. Owner approval is always required.
 - Publish artifacts to the selected public binary host.
 - SHA256SUMS and optional minisign signatures. Verify a clean download and checksum from a second machine and network.
 - Windows installer warning copy and Linux installation guide.

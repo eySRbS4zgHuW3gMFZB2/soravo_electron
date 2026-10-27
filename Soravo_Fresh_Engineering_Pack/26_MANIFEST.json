@@ -87,7 +87,7 @@
                                       "crispasr_packaging_authorization":  "ADR-0010 (PROPOSED - bundled layout not yet decided)"
                                   },
     "open_decisions":  {
-                           "binary_distribution_host":  "PROPOSED - separate public soravo-releases repository is the preferred candidate but not settled; task P8-00; ADR-0005",
+                           "binary_distribution_host":  "ACCEPTED - separate public soravo-releases repository hosts artifacts only; task P8-00; ADR-0005; remaining gates: clean-machine verification, Linux release gate, owner approval",
                            "crispasr_bundled_layout":  "PROPOSED - bundle.resources mapping vs externalBin sidecar vs renamed tracked staging directory; task P1-03; ADR-0010"
                        },
     "mandatory_policies":  {
