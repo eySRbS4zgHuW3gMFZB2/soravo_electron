@@ -13,6 +13,7 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  passwordRecoveryUserId: string | null;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -38,6 +39,14 @@ function recoveryRedirectUrl(): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecoveryUserId, setPasswordRecoveryUserId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return window.sessionStorage.getItem("soravo:password-recovery-user");
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -52,8 +61,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
+      if (event === "PASSWORD_RECOVERY" && nextSession?.user?.id) {
+        setPasswordRecoveryUserId(nextSession.user.id);
+        try {
+          window.sessionStorage.setItem("soravo:password-recovery-user", nextSession.user.id);
+        } catch {
+          // Ignore storage failures.
+        }
+      }
+      if (event === "SIGNED_OUT") {
+        setPasswordRecoveryUserId(null);
+        try {
+          window.sessionStorage.removeItem("soravo:password-recovery-user");
+        } catch {
+          // Ignore storage failures.
+        }
+      }
       // Stop the loading gate once Supabase reports any auth state.
       setLoading(false);
     });
@@ -121,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     user: session?.user ?? null,
     loading,
+    passwordRecoveryUserId,
     signIn,
     signUp,
     signOut,

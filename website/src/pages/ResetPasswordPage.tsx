@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabase";
 
 /** Update the recovery password with clear loading/success/error states. */
 export function ResetPasswordPage() {
-  const { updatePassword, session, loading: authLoading } = useAuth();
+  const { updatePassword, session, loading: authLoading, passwordRecoveryUserId } = useAuth();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -94,6 +94,12 @@ export function ResetPasswordPage() {
     setRecoveryReady(sameUser && isRecovery);
   }, [authLoading, session, isRecovery]);
 
+  const verifiedRecovery = session?.user
+    ? session.user.id
+      ? passwordRecoveryUserId === session.user.id
+      : Boolean(passwordRecoveryUserId)
+    : false;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -140,7 +146,7 @@ export function ResetPasswordPage() {
           <div role="status" className="mt-8 rounded-lg bg-green-50 p-4 text-sm text-green-700">
             Password updated. Redirecting to login...
           </div>
-        ) : (!authLoading && (!session?.user || !isRecovery)) ? (
+        ) : (!authLoading && !verifiedRecovery) ? (
           <div role="alert" className="mt-8 rounded-lg bg-red-50 p-4 text-sm text-red-600">
             This recovery link is invalid or has expired. Request a new password reset link.
           </div>

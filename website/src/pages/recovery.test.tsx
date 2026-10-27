@@ -26,7 +26,7 @@ describe("ForgotPasswordPage", () => {
     vi.resetAllMocks();
     mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
     mockAuth.onAuthStateChange.mockImplementation((cb?: (event: string, session: unknown) => void) => {
-      if (cb) cb("PASSWORD_RECOVERY", { user: { email: "a@example.com" } });
+      if (cb) cb("SIGNED_OUT", null);
       return { data: { subscription: { unsubscribe: vi.fn() } } };
     });
   });
@@ -66,9 +66,9 @@ describe("ForgotPasswordPage", () => {
 describe("ResetPasswordPage", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    mockAuth.getSession.mockResolvedValue({ data: { session: { user: { email: "a@example.com" } } }, error: null });
+    mockAuth.getSession.mockResolvedValue({ data: { session: { user: { id: "user-1", email: "a@example.com" } } }, error: null });
     mockAuth.onAuthStateChange.mockImplementation((cb?: (event: string, session: unknown) => void) => {
-      if (cb) cb("PASSWORD_RECOVERY", { user: { email: "a@example.com" } });
+      if (cb) cb("PASSWORD_RECOVERY", { user: { id: "user-1", email: "a@example.com" } });
       return { data: { subscription: { unsubscribe: vi.fn() } } };
     });
   });
