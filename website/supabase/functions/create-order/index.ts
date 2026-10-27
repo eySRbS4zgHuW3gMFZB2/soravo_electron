@@ -200,6 +200,9 @@ Deno.serve(async (req: Request) => {
           interval: 1,
           provider_plan_id: monthlyPlanId,
         });
+        if (insertError && insertError.code !== "23505") {
+          console.error("create-order: razorpay_plans insert failed", insertError.code);
+        }
         if (insertError) {
           // A concurrent request may have created it; reuse that row.
           const { data: retryPlan } = await admin
