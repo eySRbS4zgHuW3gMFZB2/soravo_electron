@@ -139,6 +139,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: CONFIG_ERROR };
     }
     const { error } = await supabase.auth.updateUser({ password });
+    if (!error) {
+      setPasswordRecoveryUserId(null);
+      try {
+        window.sessionStorage.removeItem("soravo:password-recovery-user");
+      } catch {
+        // Ignore storage failures.
+      }
+    }
     return { error: error?.message ?? null };
   };
 
