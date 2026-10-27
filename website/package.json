@@ -10,6 +10,7 @@
     "build": "tsc --noEmit -p tsconfig.json && vite build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "preview": "vite preview",
+    "test": "vitest run --exclude \"e2e/**\"",
     "test:playwright": "playwright test",
     "test:watch": "vitest",
     "preview:pages": "wrangler pages dev dist --ip 127.0.0.1 --port 8788 --compatibility-date 2026-10-23"
