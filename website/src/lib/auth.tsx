@@ -81,7 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        data: { display_name: displayName },
+        emailRedirectTo:
+          typeof window === "undefined" ? undefined : `${window.location.origin}/account`,
+      },
     });
     return { error: error?.message ?? null };
   };
@@ -176,11 +180,23 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 export function sanitizeReturnTo(value: string | null | undefined, fallback = "/account"): string {
   if (!value) return fallback;
   const trimmed = value.trim();
-  if (!trimmed.startsWith("/") || /[\\]/.test(trimmed)) return fallback;
+  // Reject empty, non-relative, backslash, control character, and newline payloads.
+  if (
+    !trimmed.startsWith("/") ||
+    /[\\]/.test(trimmed) ||
+    /[\u0000-\u001f\u007f]/.test(trimmed)
+  ) {
+    return fallback;
+  }
   try {
     const base = "http://sanitize.invalid";
     const url = new URL(trimmed, base);
+    // Reject cross-origin or protocol-relative redirects.
     if (url.origin !== base) return fallback;
+    // Reject any path that still contains a backslash after parsing.
+    if (url.pathname.includes("\\") || url.search.includes("\\") || url.hash.includes("\\")) {
+      return fallback;
+    }
     return url.pathname + url.search + url.hash;
   } catch {
     return fallback;

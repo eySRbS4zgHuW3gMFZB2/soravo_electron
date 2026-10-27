@@ -12,8 +12,12 @@ export default defineConfig({
   webServer: {
     command: "npm run dev",
     url: "http://localhost:5173",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120000,
+    env: {
+      VITE_SUPABASE_URL: "https://placeholder.supabase.co",
+      VITE_SUPABASE_ANON_KEY: "placeholder-anon-key",
+    },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });
