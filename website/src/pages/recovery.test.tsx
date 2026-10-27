@@ -25,7 +25,10 @@ describe("ForgotPasswordPage", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
-    mockAuth.onAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } });
+    mockAuth.onAuthStateChange.mockImplementation((cb?: (event: string, session: unknown) => void) => {
+      if (cb) cb("PASSWORD_RECOVERY", { user: { email: "a@example.com" } });
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
   });
 
   it("requests a reset email and shows success", async () => {
@@ -64,7 +67,10 @@ describe("ResetPasswordPage", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockAuth.getSession.mockResolvedValue({ data: { session: { user: { email: "a@example.com" } } }, error: null });
-    mockAuth.onAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } });
+    mockAuth.onAuthStateChange.mockImplementation((cb?: (event: string, session: unknown) => void) => {
+      if (cb) cb("PASSWORD_RECOVERY", { user: { email: "a@example.com" } });
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
   });
 
   it("updates the password when valid", async () => {

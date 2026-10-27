@@ -61,3 +61,7 @@ Dated audit records are preserved in `docs/engineering/STATE_AUDIT.md`.
 ## 2026-10-27 — Auth mock CORS validation
 
 Runtime-isolated checkout on `coderabbit/auth-test-cors-preflight/73226cf9`, base `15dff3c59e870f797705ff7142c7495482e102ea`; one named worktree, initially clean. Scoped test-only CORS repair; validation and environment evidence in `workspace-context/validation-record.md`. No integration or remote changes.
+
+### 2026-10-27 — Delivery conflict resolution
+
+Merged remote head `5c34e97bf0d04c4716c9b4af9c6e49a18c6bd433` into task commit `9e48ed2` on `feature/supabase-resend-auth-e2e`. Retained remote JSON mock helper, CORS methods, unit-test script and password recovery changes; retained typed Route handling and Supabase API version header allowance. Fresh checks passed: auth browser 7/7, route harness 12/12, unit tests 48/48, website/spec typecheck and build. No push performed.

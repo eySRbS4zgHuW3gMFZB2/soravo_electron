@@ -1,35 +1,44 @@
 import { test, expect, type Route } from "@playwright/test";
 
 const SUPABASE = "https://placeholder.supabase.co";
+const ORIGIN = "http://localhost:5173";
+
 const CORS_HEADERS = {
-  "access-control-allow-origin": "http://localhost:5173",
-  "access-control-allow-methods": "GET, POST, OPTIONS",
-  "access-control-allow-headers": "authorization, apikey, content-type, x-client-info, x-supabase-api-version",
+  "access-control-allow-origin": ORIGIN,
+  "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, x-supabase-api-version",
 };
 
-function mockSupabase(response: Parameters<Route["fulfill"]>[0]) {
-  return async (route: Route) => {
-    if (route.request().method() === "OPTIONS") {
-      await route.fulfill({ status: 204, headers: CORS_HEADERS });
-      return;
-    }
-    await route.fulfill({ ...response, headers: CORS_HEADERS });
-  };
+async function fulfillJson(route: Route, status: number, body: unknown) {
+  if (route.request().method() === "OPTIONS") {
+    await route.fulfill({ status: 204, headers: CORS_HEADERS });
+    return;
+  }
+  await route.fulfill({
+    status,
+    headers: { ...CORS_HEADERS, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 test.describe("auth flows (mocked Supabase)", () => {
   test.beforeEach(async ({ page }) => {
-    // Default: not configured-ish backend returns success for session restore.
-    await page.route(`${SUPABASE}/auth/v1/user*`, mockSupabase({ status: 401, body: JSON.stringify({ error: "no session" }) }));
-    await page.route(`${SUPABASE}/rest/v1/**`, mockSupabase({ status: 200, contentType: "application/json", body: "[]" }));
+    await page.route(`${SUPABASE}/auth/v1/user*`, async (route) => {
+      await fulfillJson(route, 401, { error: "no session" });
+    });
+    await page.route(`${SUPABASE}/rest/v1/**`, async (route) => {
+      await fulfillJson(route, 200, []);
+    });
   });
 
   test("signup shows confirmation message on success", async ({ page }) => {
-    await page.route(`${SUPABASE}/auth/v1/signup*`, mockSupabase({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ id: "u1", email: "a@example.com", confirmation_sent_at: new Date().toISOString() }),
-    }));
+    await page.route(`${SUPABASE}/auth/v1/signup*`, async (route) => {
+      await fulfillJson(route, 200, {
+        id: "u1",
+        email: "a@example.com",
+        confirmation_sent_at: new Date().toISOString(),
+      });
+    });
     await page.goto("/signup");
     await page.getByLabel("Email").fill("a@example.com");
     await page.getByLabel("Password").fill("password123");
@@ -38,11 +47,9 @@ test.describe("auth flows (mocked Supabase)", () => {
   });
 
   test("signup surfaces duplicate-email errors", async ({ page }) => {
-    await page.route(`${SUPABASE}/auth/v1/signup*`, mockSupabase({
-      status: 400,
-      contentType: "application/json",
-      body: JSON.stringify({ error: "User already registered", error_code: "user_already_exists" }),
-    }));
+    await page.route(`${SUPABASE}/auth/v1/signup*`, async (route) => {
+      await fulfillJson(route, 400, { error: "User already registered", error_code: "user_already_exists" });
+    });
     await page.goto("/signup");
     await page.getByLabel("Email").fill("a@example.com");
     await page.getByLabel("Password").fill("password123");
@@ -51,11 +58,9 @@ test.describe("auth flows (mocked Supabase)", () => {
   });
 
   test("login failure shows an error", async ({ page }) => {
-    await page.route(`${SUPABASE}/auth/v1/token*`, mockSupabase({
-      status: 400,
-      contentType: "application/json",
-      body: JSON.stringify({ error: "invalid_grant", error_description: "Invalid login credentials" }),
-    }));
+    await page.route(`${SUPABASE}/auth/v1/token*`, async (route) => {
+      await fulfillJson(route, 400, { error: "invalid_grant", error_description: "Invalid login credentials" });
+    });
     await page.goto("/login");
     await page.getByLabel("Email").fill("a@example.com");
     await page.getByLabel("Password").fill("wrong-password");
@@ -64,7 +69,9 @@ test.describe("auth flows (mocked Supabase)", () => {
   });
 
   test("forgot password shows success message", async ({ page }) => {
-    await page.route(`${SUPABASE}/auth/v1/recover*`, mockSupabase({ status: 200, contentType: "application/json", body: "{}" }));
+    await page.route(`${SUPABASE}/auth/v1/recover*`, async (route) => {
+      await fulfillJson(route, 200, {});
+    });
     await page.goto("/forgot-password");
     await page.getByLabel("Email").fill("a@example.com");
     await page.getByRole("button", { name: /send reset link/i }).click();
