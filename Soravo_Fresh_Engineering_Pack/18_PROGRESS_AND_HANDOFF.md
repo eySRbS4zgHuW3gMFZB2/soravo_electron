@@ -5,7 +5,7 @@
 
 ## Owner-approved decisions
 
-- Launch Windows + Linux. **Linux is BLOCKED** pending a Linux engine artifact (task P1-05); Windows is the only platform with an engine today.
+- Launch Windows + Linux. Windows and Linux CrispASR engines are now tracked and bundled; Linux publication and supported-platform claims remain **BLOCKED** pending clean-machine runtime and dictation verification.
 - Preserve current Tauri app and CrispASR.
 - Website under `website/`, independent package/lockfile.
 - Cloudflare Pages; Supabase Auth/Postgres; Resend custom SMTP; Razorpay.
@@ -51,7 +51,7 @@
 - Current README/progress have inconsistent historical descriptions around Whisper/CrispASR; current owner decision is preserve CrispASR.
 - `src-tauri/tauri.conf.json` shows `resources: []`, `externalBin: []`; packaging must be repaired. The tracked engine path is `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`, not `third-party/bin/`.
 - Current Tauri config showed CSP `null`; must establish restrictive CSP before commercial network/auth flows.
-- Windows is most clearly documented and is the only platform with a tracked engine. **Linux is BLOCKED**: no Linux CrispASR executable or shared-library set is tracked, so a Linux build would install and then fail to transcribe. Linux becomes a launch platform only after task P1-05 and a clean-machine Linux install.
+- Windows is the only platform with verified clean-machine launch today. **Linux is BLOCKED for publication**: Linux CrispASR artifacts are tracked and bundled, but no clean-machine Linux install, launch or dictation verification has yet been completed. Linux becomes a release platform only after that gate passes.
 - The source repo was public at the time of inspection.
 - Website/auth/payment/dashboard are new work in this active repo.
 
