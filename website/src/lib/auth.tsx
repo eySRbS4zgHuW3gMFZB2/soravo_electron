@@ -50,16 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (!error && mounted) setSession(data.session);
-      } catch {
-        // Preserve the current session if restoration fails.
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
@@ -82,6 +72,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Stop the loading gate once Supabase reports any auth state.
       setLoading(false);
     });
+
+    (async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!error && mounted) setSession(data.session);
+      } catch {
+        // Preserve the current session if restoration fails.
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
 
     return () => {
       mounted = false;
