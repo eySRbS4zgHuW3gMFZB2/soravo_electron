@@ -960,7 +960,7 @@ Added SECURITY DEFINER RPCs finalize_webhook_payment_atomic (plus alias finalize
 ## Release gates and Pages routing follow-up (2026-10-27)
 
 - Follow-up on the preview/release infrastructure entry above; see `docs/engineering/STATE_AUDIT.md` for the full bounded audit.
-- `release.yml`: every NSIS installer now has a required CrispASR content extraction gate before staging or upload; resolved release version must exactly match `src-tauri/tauri.conf.json`; artifact filenames must begin with the full version segment; SHA-256 checksums use LF line endings and are revalidated; source tag must resolve to the built SHA before draft creation.
+- `release.yml`: every NSIS installer now has a required CrispASR content extraction gate before staging or upload; resolved release version must exactly match `src-tauri/tauri.conf.json`; artifact filenames must match `<productName>_<fullVersion>_...`; SHA-256 checksums use LF line endings and are revalidated; source tag must resolve to the built SHA before draft creation.
 - Cross-repo publication: release tags in `soravo-releases` target that repository's default branch, while the built SHA and verified source tag are recorded in release notes. Existing releases are never overwritten.
 - Cloudflare Pages routing: added `website/public/_redirects` SPA fallback and Playwright navigation coverage against Vite and the built site served by Wrangler Pages (29 browser tests).
 - Website CI now installs Chromium and runs the Vite plus Pages Playwright step; `website/.gitignore` covers Wrangler output, test results and runtime reports.

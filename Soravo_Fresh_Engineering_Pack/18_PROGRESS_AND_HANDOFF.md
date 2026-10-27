@@ -51,7 +51,7 @@
 - Current README/progress have inconsistent historical descriptions around Whisper/CrispASR; current owner decision is preserve CrispASR.
 - `src-tauri/tauri.conf.json` shows `resources: []`, `externalBin: []`; packaging must be repaired. The tracked engine path is `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/`, not `third-party/bin/`.
 - Current Tauri config showed CSP `null`; must establish restrictive CSP before commercial network/auth flows.
-- Windows is the only platform with verified clean-machine launch today. **Linux is BLOCKED for publication**: Linux CrispASR artifacts are tracked and bundled, but no clean-machine Linux install, launch or dictation verification has yet been completed. Linux becomes a release platform only after that gate passes.
+- Windows packaging is implemented, while clean-machine launch and dictation remain unverified. **Linux is BLOCKED for publication**: Linux CrispASR artifacts are tracked and bundled, but no clean-machine Linux install, launch or dictation verification has yet been completed. Linux becomes a release platform only after that gate passes.
 - The source repo was public at the time of inspection.
 - Website/auth/payment/dashboard are new work in this active repo.
 
