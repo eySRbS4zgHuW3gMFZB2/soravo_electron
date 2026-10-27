@@ -342,9 +342,12 @@ Deno.serve(async (req: Request) => {
       }, { onConflict: "provider_subscription_id", ignoreDuplicates: true });
       if (subSaveError) {
         if (subSaveError.code !== "23505") {
+          const cancelController = new AbortController();
+          const cancelTimeout = setTimeout(() => cancelController.abort(), 5_000);
           try {
             const cancelRes = await fetch(`https://api.razorpay.com/v1/subscriptions/${encodeURIComponent(String(subscriptionData.id))}/cancel`, {
               method: "POST",
+              signal: cancelController.signal,
               headers: {
                 Authorization: `Basic ${basicAuth}`,
                 "Content-Type": "application/json",
@@ -354,6 +357,8 @@ Deno.serve(async (req: Request) => {
             if (!cancelRes.ok) console.error("create-order: subscription cancellation failed", cancelRes.status, requestId);
           } catch {
             console.error("create-order: subscription cancellation failed", requestId);
+          } finally {
+            clearTimeout(cancelTimeout);
           }
           // Keep the reservation until the failed save/provider state is reconciled.
           throw subSaveError;

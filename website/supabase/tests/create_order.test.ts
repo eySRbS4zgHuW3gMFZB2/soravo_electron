@@ -10,6 +10,9 @@ let providerCalls: number;
 let cancelCalls: number;
 let cancelStatus: number;
 let cancelThrows: boolean;
+let cancelStalls: boolean;
+let cancelSignal: AbortSignal | null | undefined;
+let cancelEntered: () => void;
 let cancelRequest: { method: string | undefined; authorization: string | null; body: unknown } | null;
 let claimError: string | null;
 let openStatus: string | null;
@@ -75,6 +78,13 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
   if (url.hostname === "api.razorpay.com" && url.pathname === "/v1/subscriptions/sub_test/cancel") {
     cancelCalls++;
     cancelRequest = { method: init?.method, authorization: new Headers(init?.headers).get("Authorization"), body };
+    cancelSignal = init?.signal;
+    cancelEntered();
+    if (cancelStalls) {
+      return new Promise<Response>((_resolve, reject) => {
+        cancelSignal?.addEventListener("abort", () => reject(cancelSignal?.reason), { once: true });
+      });
+    }
     if (cancelThrows) throw new Error("Synthetic cancellation timeout");
     return Response.json({ status: cancelStatus === 200 ? "cancelled" : "error" }, { status: cancelStatus });
   }
@@ -126,6 +136,9 @@ beforeEach(() => {
   cancelCalls = 0;
   cancelStatus = 200;
   cancelThrows = false;
+  cancelStalls = false;
+  cancelSignal = null;
+  cancelEntered = () => {};
   cancelRequest = null;
   claimError = null;
   openStatus = raceStatus = null;
@@ -209,6 +222,32 @@ describe("monthly checkout reservation", () => {
     expect((await checkout()).status).toBe(409);
     expect(providerCalls).toBe(1);
     expect(cancelCalls).toBe(1);
+  });
+  it("aborts a stalled cancellation and returns 500 while retaining the reservation", async () => {
+    vi.useFakeTimers();
+    try {
+      saveError = cancelStalls = true;
+      const entered = new Promise<void>((resolve) => { cancelEntered = resolve; });
+      let settled = false;
+      const pending = checkout().then((response) => { settled = true; return response; });
+      await entered;
+      expect(cancelSignal).toBeInstanceOf(AbortSignal);
+      expect(cancelSignal?.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(4_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      const response = await pending;
+      expect(cancelSignal?.aborted).toBe(true);
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: "Internal server error" });
+      expect(saved).toBeNull();
+      expect(reserved).toBe(true);
+      expect((await checkout()).status).toBe(409);
+      expect(providerCalls).toBe(1);
+      expect(cancelCalls).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it("releases a reservation if plan creation fails before subscription creation", async () => {
     planExists = false;
