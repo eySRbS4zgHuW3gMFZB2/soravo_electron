@@ -944,3 +944,7 @@ Added SECURITY DEFINER RPCs finalize_webhook_payment_atomic (plus alias finalize
 - Account page: device list + revoke, entitlement status/period, monthly/lifetime behavior.
 - Added Playwright smoke tests and reduced-motion/focus accessibility styles.
 - Tests: npm test (46 pass), typecheck/build pass. Playwright Chromium smoke passed (13/13) on 2026-10-26.
+
+## 2026-10-27 — Auth mock CORS
+
+Shared CORS headers and successful OPTIONS responses across Supabase auth/REST test mocks. Auth browser tests passed 7/7; direct route checks passed 12/12; website typecheck/build passed. Existing npm test script expands an unquoted glob; reran Vitest with the glob quoted: 48/48 passed.

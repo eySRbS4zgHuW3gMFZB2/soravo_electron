@@ -57,3 +57,7 @@ Never replace unknown with an assumption. Update this audit after repo rename, C
 Report every worktree found, including ones created by earlier sessions. For each: path, branch (or detached HEAD), base SHA, uncommitted files, upstream tracking and build-output size. Clean up `prunable` registrations, and record any worktree holding uncommitted work — it exists nowhere else and must not be removed casually.
 
 Dated audit records are preserved in `docs/engineering/STATE_AUDIT.md`.
+
+## 2026-10-27 — Auth mock CORS validation
+
+Runtime-isolated checkout on `coderabbit/auth-test-cors-preflight/73226cf9`, base `15dff3c59e870f797705ff7142c7495482e102ea`; one named worktree, initially clean. Scoped test-only CORS repair; validation and environment evidence in `workspace-context/validation-record.md`. No integration or remote changes.
