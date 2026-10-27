@@ -26,7 +26,7 @@ export function ResetPasswordPage() {
       return true;
     }
     try {
-      return window.sessionStorage.getItem("soravo:password-recovery") === "1";
+      return Boolean(window.sessionStorage.getItem("soravo:password-recovery-user"));
     } catch {
       return false;
     }
@@ -35,13 +35,24 @@ export function ResetPasswordPage() {
   // A recovery link establishes a session and emits PASSWORD_RECOVERY. Without
   // that recovery state, a normal signed-in session is not a valid reset flow.
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((event) => {
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
         try {
-          window.sessionStorage.setItem("soravo:password-recovery", "1");
+          window.sessionStorage.setItem(
+            "soravo:password-recovery-user",
+            nextSession?.user?.id ?? "1"
+          );
         } catch {
           // Ignore storage failures; URL/session state still drives the flow.
+        }
+      }
+      if (event === "SIGNED_OUT") {
+        setIsRecovery(false);
+        try {
+          window.sessionStorage.removeItem("soravo:password-recovery-user");
+        } catch {
+          // Ignore storage failures.
         }
       }
     });
@@ -52,7 +63,35 @@ export function ResetPasswordPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    setRecoveryReady(Boolean(session?.user) && isRecovery);
+    let storedUserId: string | null = null;
+    try {
+      storedUserId = window.sessionStorage.getItem("soravo:password-recovery-user");
+    } catch {
+      storedUserId = null;
+    }
+    const sameUser = session?.user
+      ? session.user.id
+        ? storedUserId === session.user.id
+        : Boolean(storedUserId)
+      : false;
+    if (storedUserId && !sameUser) {
+      try {
+        window.sessionStorage.removeItem("soravo:password-recovery-user");
+      } catch {
+        // Ignore storage failures.
+      }
+      setIsRecovery(false);
+      setRecoveryReady(false);
+      return;
+    }
+    if (!session?.user) {
+      try {
+        window.sessionStorage.removeItem("soravo:password-recovery-user");
+      } catch {
+        // Ignore storage failures.
+      }
+    }
+    setRecoveryReady(sameUser && isRecovery);
   }, [authLoading, session, isRecovery]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +114,7 @@ export function ResetPasswordPage() {
         setError(error);
       } else {
         try {
-          window.sessionStorage.removeItem("soravo:password-recovery");
+          window.sessionStorage.removeItem("soravo:password-recovery-user");
         } catch {
           // Ignore storage failures.
         }
