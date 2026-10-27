@@ -1,7 +1,7 @@
 # Progress and Handoff — Mandatory Living Record
 
-**Last updated:** 2026-10-22 (pack published to branch `docs/engineering-pack`; pull request open, awaiting owner approval to merge)  
-**Current status:** The pack is committed and pushed on `docs/engineering-pack`, with a pull request open into `main`. `main` is untouched. No repository rename, DNS change, production change, deployment, Supabase data change or secret operation has been performed. Implementation has not started.
+**Last updated:** 2026-10-27 (pack published to branch `docs/engineering-pack`; pull request open, awaiting owner approval to merge)\
+**Current status:** The pack is committed and pushed on `docs/engineering-pack`, with a pull request open into `main`. `main` is untouched. No repository rename, DNS change, production change, deployment, Supabase data change or secret operation has been performed. Implementation has started; completed tasks are recorded in the dated entries below.
 
 ## Owner-approved decisions
 
@@ -649,3 +649,11 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/align-adr-0010-status/ca3e3e92`; base `3029944856e698ede53154bc243d9ebfc0d867c6`. The isolated cloud checkout is the sole registered worktree, initially clean, and is retained for review; no integration performed.
 - Skills: loaded `code-review` for diff review. Rust/Tauri, security and deployment skills were considered unnecessary for this documentation-only status correction. No knowledge-base directory is present. The task is small and sequential, so no subagent was needed.
 - Validation: engineering-pack CI validator passed (35 documents); bounded ADR/status, manifest, configuration-agreement and gate-preservation assertions passed; `git diff --check` and manual diff inspection passed. Results and input identities are recorded in `workspace-context/validation-record.md` outside Git. No provider, production, credential or repository setting changes. Rollback: revert this documentation patch.
+
+## Bundle/release documentation status alignment — 2026-10-27
+
+- Verified all four supplied review comments against current configuration, `find_crispasr_binary`, tracked Linux artifacts and accepted ADR-0003/0005/0010. Marked P0-01 Findings 1 and 3 historical, recorded Phases A–C complete and Phase D next, updated the living-record header, and aligned manifest Linux availability and 1.4.0 revision metadata. Existing revision history and release gates are preserved.
+- Release readiness remains unverified: redistribution checks, clean-machine engine launch/dictation verification, the Linux gate before Linux publication, and owner release approval remain required.
+- Task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/align-bundle-release-docs/70beb3d0`; base `23ab4e964325c5175944cfcea97286e2fe69a3a9`. The isolated cloud checkout is the sole registered worktree, initially clean, and is retained for review; no integration performed.
+- Skills: loaded `code-review` for diff review. Rust/Tauri, security and deployment skills were considered unnecessary for this documentation-only correction. No knowledge-base directory is present. The task is small and sequential, so no subagent was needed.
+- Validation: engineering-pack CI validator passed (35 documents); targeted status/history-preservation, configuration-agreement and release-gate assertions passed; whitespace checks and manual diff inspection passed. Results and input identities are recorded in `workspace-context/validation-record.md` outside Git. No application, provider, production, credential or repository setting changes. Rollback: revert this documentation patch.

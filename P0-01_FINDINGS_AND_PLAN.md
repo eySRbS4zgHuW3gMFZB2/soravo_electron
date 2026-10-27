@@ -27,7 +27,11 @@ MCP/CLI tools used:
 
 ## Audit Findings
 
-### Finding 1: Engine not bundled (CONFIRMED)
+### Finding 1: Engine not bundled (HISTORICAL — resolved)
+
+**Status alignment (2026-10-27):** This finding records the initial audit. Current `src-tauri/tauri.conf.json` maps the tracked Windows and Linux engine directories to `crispasr/` and `crispasr-linux/` via `bundle.resources`, and enables `bundle.windows.bundleVCRuntime`. Phase B is complete; installer contents and clean-machine behavior still require verification.
+
+**Historical evidence:**
 
 **Source:** `src-tauri/tauri.conf.json`, lines 40-48
 
@@ -63,7 +67,11 @@ Also tracked: `third-party/crispasr/crispasr.zip` (8,700,000+ bytes) — the sou
 
 `third-party/bin/` is git-ignored and contains 0 tracked files (40 files exist only on developer machines, produced by `npm run fetch:asr`).
 
-### Finding 3: Runtime lookup fails on installed machine (CONFIRMED)
+### Finding 3: Runtime lookup fails on installed machine (HISTORICAL — resolved)
+
+**Status alignment (2026-10-27):** This finding records the initial audit. Current `find_crispasr_binary` checks bundled resource paths before developer fallbacks, including `resource_dir/crispasr-linux/crispasr` on Linux. The missing-engine message now directs customers to reinstall or contact support. Phase C is complete; clean-machine engine launch and dictation remain release gates.
+
+**Historical evidence:**
 
 **Source:** `src-tauri/src/lib.rs`, `find_crispasr_binary()` (lines 476-496)
 
@@ -187,6 +195,8 @@ Recommended approach:
 
 ## Minimal Implementation Plan
 
+**Phase status (2026-10-27):** Phases A–C are complete. Proceed to Phase D packaging verification. Redistribution rights/notices checks, clean-machine engine launch and dictation verification, the Linux release gate before publishing Linux artifacts, and owner release approval remain required under ADR-0010.
+
 ### Phase A: ADR-0010 Decision (P1-03 prerequisite)
 
 **Completed decision:** ADR-0010 records `bundle.resources` (map form) as ACCEPTED (2026-10-22, task P0-01). The rationale is preserved below; Phase A no longer blocks implementation.
@@ -198,19 +208,18 @@ Recommended approach:
 - No binary renaming required (unlike externalBin sidecar)
 - Tracked files in git ensure reproducible builds
 
-### Phase B: Bundle Configuration (P1-03 implementation)
+### Phase B: Bundle Configuration (P1-03 implementation) — COMPLETED
 
-**Changes to `src-tauri/tauri.conf.json`:**
-1. Set `bundle.resources` to map the engine directory to `crispasr/`
-2. Set `bundle.windows.bundleVCRuntime` to `true`
-3. Optionally set `build.windows.staticVCRuntime` to `true`
+**Implemented in `src-tauri/tauri.conf.json`:**
+1. `bundle.resources` maps the tracked Windows engine directory to `crispasr/` and the tracked Linux engine directory to `crispasr-linux/`
+2. `bundle.windows.bundleVCRuntime` is `true`
 
-### Phase C: Runtime Lookup Update (P1-03 implementation)
+### Phase C: Runtime Lookup Update (P1-03 implementation) — COMPLETED
 
-**Changes to `src-tauri/src/lib.rs`:**
-1. Add `resource_dir/crispasr/crispasr.exe` (and companions) to `find_crispasr_binary` search paths
-2. Keep existing dev-mode fallbacks (`third-party/bin/`, `third-party/crispasr/extracted/`)
-3. Update the "not installed" error message to be customer-friendly
+**Implemented in `src-tauri/src/lib.rs`:**
+1. `find_crispasr_binary` checks bundled resource paths first, including the Linux-specific `crispasr-linux/crispasr` path
+2. Existing dev-mode fallbacks (`third-party/bin/`, `third-party/crispasr/extracted/`) are preserved
+3. The missing-engine error directs customers to reinstall Soravo or contact support
 
 ### Phase D: Packaging Verification (P1-04)
 
@@ -276,7 +285,7 @@ Linux remains blocked until P1-05 delivers a tracked, licensed Linux engine. No 
 ## Next Steps
 
 1. **Owner reviews this findings/plan.**
-2. Phase A (ADR-0010) is ACCEPTED; use that decision for Phase B (bundle config), then Phase C (runtime lookup), subject to the remaining plan approval and verification gates.
+2. Phases A–C are complete: ADR-0010 is ACCEPTED, bundle configuration is present, and bundled-resource lookup is implemented. Proceed to Phase D, retaining redistribution checks, clean-machine verification, the Linux release gate before Linux publication, and owner release approval.
 3. Build and verify (Phase D).
 4. Add CI check (Phase E).
 5. Document clean-machine procedure (Phase F).
