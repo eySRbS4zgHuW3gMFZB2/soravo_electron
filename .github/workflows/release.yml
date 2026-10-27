@@ -1,0 +1,244 @@
+# Release workflow for Soravo desktop installers.
+#
+# Publication is never automatic on every push. Run this workflow by hand
+# (workflow_dispatch) and opt in with publish=true, or push a version tag
+# (v*) after an approved release decision. Every real publication also
+# requires the "release" GitHub Environment approval.
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 0.1.0). Defaults to tauri.conf.json version."
+        required: false
+        type: string
+      publish:
+        description: "Publish the draft release to the public release repository."
+        required: false
+        type: boolean
+        default: false
+      allow_linux:
+        description: "Include Linux artifacts. Only enable after the Linux release gate passes."
+        required: false
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TARGET_REPO: eySRbS4zgHuW3gMFZB2/soravo-releases
+
+jobs:
+  build-windows:
+    name: Build Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: 1.90.0
+
+      - name: Cache Rust target
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          key: rust-target-windows-${{ runner.os }}-1.90.0-${{ hashFiles('src-tauri/Cargo.lock') }}-${{ hashFiles('src-tauri/Cargo.toml') }}-${{ hashFiles('src-tauri/tauri.conf.json') }}
+          path: |
+            src-tauri/target/
+            ~/.cargo/registry
+            ~/.cargo/git
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri:build
+
+      - name: Verify packaging
+        run: node scripts/verify-packaging.mjs
+
+      - name: Verify bundle contents (MSI)
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem "src-tauri/target/release/bundle/msi/*.msi" | Select-Object -First 1
+          if (-not $msi) { throw "No MSI installer found" }
+          $extractDir = "$env:TEMP\msi_extract"
+          New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+          Start-Process msiexec -ArgumentList "/a `"$($msi.FullName)`" /qn TARGETDIR=`"$extractDir`"" -Wait
+          node scripts/verify-packaging.mjs --bundle "$extractDir\PFiles\Soravo"
+
+      - name: Collect artifacts
+        shell: pwsh
+        run: |
+          $out = "release-artifacts"
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          Copy-Item "src-tauri/target/release/bundle/msi/*.msi" $out
+          Copy-Item "src-tauri/target/release/bundle/nsis/*-setup.exe" $out
+          Get-ChildItem $out | Format-Table Name, Length
+
+      - name: Generate SHA256SUMS
+        shell: pwsh
+        working-directory: release-artifacts
+        run: |
+          Get-ChildItem -File | Where-Object { $_.Name -notlike "SHA256SUMS" } | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower()
+            "$hash  $($_.Name)"
+          } | Set-Content -Path SHA256SUMS -Encoding ascii
+          Get-Content SHA256SUMS
+
+      - name: Verify release assets
+        run: node scripts/verify-release-assets.mjs --dir release-artifacts
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-artifacts-windows
+          path: release-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish draft release to soravo-releases
+    needs: build-windows
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ inputs.publish == true || startsWith(github.ref, 'refs/tags/v') }}
+    environment: release
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Download build artifact
+        uses: actions/download-artifact@95815c38dbc0635276f7d61894006cff5e924319 # v4.3.0
+        with:
+          name: release-artifacts-windows
+          path: release-artifacts
+
+      - name: Verify release assets
+        run: node scripts/verify-release-assets.mjs --dir release-artifacts
+
+      - name: Require release token
+        env:
+          GH_TOKEN: ${{ secrets.SORAVO_RELEASES_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "SORAVO_RELEASES_TOKEN is not configured. Add it as a repository secret before publishing." >&2
+            exit 1
+          fi
+          gh auth status
+
+      - name: Resolve version
+        id: version
+        run: |
+          set -euo pipefail
+          config_version=$(node -e "console.log(require('./src-tauri/tauri.conf.json').version)")
+          if [ -n "${{ inputs.version }}" ]; then
+            if [ "${{ inputs.version }}" != "$config_version" ]; then
+              echo "Requested version ${{ inputs.version }} does not match the built version $config_version." >&2
+              exit 1
+            fi
+            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            tag_version="${GITHUB_REF_NAME#v}"
+            if [ "$tag_version" != "$config_version" ]; then
+              echo "Tag version $tag_version does not match the built version $config_version." >&2
+              exit 1
+            fi
+            echo "value=$tag_version" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=$config_version" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Capture source commit
+        id: source
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if git describe --tags --exact-match HEAD >/dev/null 2>&1; then
+            echo "tag=$(git describe --tags --exact-match HEAD)" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=none (manually dispatched)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare release notes
+        run: |
+          cat > /tmp/RELEASE_NOTES.md <<'EOF'
+          # Soravo ${{ steps.version.outputs.value }}
+
+          ## Source
+
+          - Source repository: eySRbS4zgHuW3gMFZB2/soravo_electron
+          - Source ref: ${{ steps.source.outputs.tag }}
+          - Source commit: ${{ steps.source.outputs.sha }}
+
+          ## Installation
+          - Windows: run the published installer (.msi or -setup.exe).
+          - Verify the SHA-256 checksum before installing:
+            `sha256sum -c SHA256SUMS` (Linux/macOS) or compare
+            `Get-FileHash -Algorithm SHA256 <file>` (Windows).
+
+          ## Verification
+          - Every installer listed above has a matching entry in SHA256SUMS.
+          - Checksums detect accidental corruption or transfer damage only.
+
+          ## Trust
+          - Installers are currently unsigned. Windows SmartScreen may warn.
+          - SHA-256 checksums do not prove publisher identity.
+          - Linux is not published until the Linux release gate passes.
+
+          ## Rollback
+          - Prior releases remain available. Withdraw a broken release instead
+            of replacing its bytes.
+          EOF
+          cat /tmp/RELEASE_NOTES.md
+
+      - name: Create draft release in target repository
+        env:
+          GH_TOKEN: ${{ secrets.SORAVO_RELEASES_TOKEN }}
+        run: |
+          cd release-artifacts
+          gh release create "v${{ steps.version.outputs.value }}" \
+            --repo "$RELEASE_TARGET_REPO" \
+            --title "Soravo ${{ steps.version.outputs.value }}" \
+            --notes-file /tmp/RELEASE_NOTES.md \
+            --draft \
+            SHA256SUMS \
+            *.msi \
+            *-setup.exe
+
+      - name: Verify hosted draft
+        env:
+          GH_TOKEN: ${{ secrets.SORAVO_RELEASES_TOKEN }}
+        run: |
+          mkdir -p hosted-check
+          cd hosted-check
+          gh release download "v${{ steps.version.outputs.value }}" --repo "$RELEASE_TARGET_REPO" --pattern "SHA256SUMS" --pattern "*.msi" --pattern "*-setup.exe"
+          cd ..
+          node scripts/verify-release-assets.mjs --dir hosted-check
+
+      - name: Final readiness notice
+        run: |
+          echo "Draft release created and verified. Publish the draft manually after clean-machine install testing."

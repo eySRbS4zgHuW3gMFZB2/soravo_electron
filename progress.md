@@ -944,3 +944,20 @@ Added SECURITY DEFINER RPCs finalize_webhook_payment_atomic (plus alias finalize
 - Account page: device list + revoke, entitlement status/period, monthly/lifetime behavior.
 - Added Playwright smoke tests and reduced-motion/focus accessibility styles.
 - Tests: npm test (46 pass), typecheck/build pass. Playwright Chromium smoke passed (13/13) on 2026-10-26.
+## Session — 2026-10-27 (preview hosting and release pipeline)
+
+Worktree: .worktrees/P8-01-preview-release
+Branch: feature/P8-01-preview-release
+Base SHA: e1c7337 (origin/main)
+
+- Cloudflare Pages preview project soravo-web-preview already exists with root_dir=website, build_command=npm run build, destination_dir=dist and the public Vite variables for the Soravo_fresh Supabase project. No custom domain or production DNS change. Preview URL: https://soravo-web-preview.pages.dev.
+- Added website/public/_redirects for SPA deep links on Cloudflare Pages.
+- Added Playwright tests for direct deep links, reloads, unknown-route safety and unverified download links.
+- Updated .github/workflows/website.yml to run on every pull request, add Playwright, and scan generated static assets for secrets.
+- Verified eySRbS4zgHuW3gMFZB2/soravo-releases exists, is public, and contains only README.md; no release has been published.
+- Added scripts/verify-release-assets.mjs and .github/workflows/release.yml for verified, checksummed Windows publication and hosted-draft verification.
+- Accepted ADR-0005 to record the separate release repository host choice.
+- Documented the least-privilege cross-repository release token setup.
+- Website verification: typecheck pass, 42 unit tests pass, production build succeeds, 27 Playwright tests pass.
+
+Known blockers: publication requires SORAVO_RELEASES_TOKEN, a clean CI build and owner approval. Linux remains blocked until its clean-machine release gate is verified.

@@ -11,6 +11,21 @@
 - The binary host is governed by **ADR-0005**, which is currently PROPOSED. Publishing before that ADR is ACCEPTED is not permitted.
 - The live production site at `soravo.xyz` is not touched by a desktop release. Website deployment and desktop release are separate concerns with separate rollback paths.
 
+## Cross-repository publication secret
+
+Publication to `eySRbS4zgHuW3gMFZB2/soravo-releases` uses the repository secret
+`SORAVO_RELEASES_TOKEN` in the source repository:
+
+1. Create a fine-grained personal access token scoped to **only**
+   `eySRbS4zgHuW3gMFZB2/soravo-releases` with permission
+   `Contents: Read and write`.
+2. In the source repository, open `Settings -> Secrets and variables -> Actions`
+   and create the secret `SORAVO_RELEASES_TOKEN` with that token value.
+3. Never commit the token, paste it in chat, or widen its scope to the source
+   repository. Rotate it immediately if exposure is suspected.
+4. The token can create and update draft releases only; publication remains
+   a separate manual step after the clean-machine install gate passes.
+
 ## Proposed release repository
 
 Preferred candidate: `eySRbS4zgHuW3gMFZB2/soravo-releases`, public, contains only:

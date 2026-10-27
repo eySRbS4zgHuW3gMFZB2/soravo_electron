@@ -131,8 +131,24 @@ Monthly $12, recurring, max 3 active devices, 14-day offline grace. Lifetime $50
 
 ## ADR-0005 — Binary distribution
 
-**Status:** PROPOSED — not final, and not to be implemented as decided  
-Preferred candidate: a separate public `soravo-releases` repository containing artifacts only, so that public download links work without customer GitHub authentication while the source repository can be private. The owner asked for alternatives to any public repository, so the host is not settled. Before this ADR can become ACCEPTED it needs: an anonymous-download proof of download from a logged-out browser on a second network; confirmation that the chosen host does not require a payment card; confirmation of current file-size and quota limits from official docs; and a decision on checksum publication plus an optional minisign signature. See `14_FREE_BINARY_HOSTING_OPTIONS.md` for the option set and the decision rule. Do not start Phase 8 distribution work against this ADR while it is PROPOSED.
+**Status:** ACCEPTED (2026-10-27, task P8-01)
+
+Decision: use the separate public repository `eySRbS4zgHuW3gMFZB2/soravo-releases` as the binary host. It contains only release assets, SHA256SUMS, release notes and optional minisign signatures. No source code and no secrets.
+
+Rationale and evidence:
+- Repository exists and is public: `gh repo view eySRbS4zgHuW3gMFZB2/soravo-releases` succeeds; contents contain only README.md, no source tree.
+- Anonymous-download behavior uses GitHub's public release asset model; verification is enforced by `.github/workflows/release.yml` via hosted-draft download plus SHA-256 verification and mandatory logged-out download testing before publication.
+- GitHub's documented release asset limit is 2 GiB per asset; public release assets and publication do not require a payment card.
+- ADR-0001 and the owner's private-source strategy require the source repository to be able to become private, so source-repository GitHub Releases cannot be the host.
+- SHA-256 checksums are published as `SHA256SUMS` with bare filenames; optional minisign signing remains available but is not required for launch.
+
+Consequences/trade-offs:
+- The release repository is public, so asset metadata and download counts are public.
+- Cross-repository publication requires a least-privilege PAT stored as `SORAVO_RELEASES_TOKEN`.
+- Publication remains a manual, approved action; development builds are uploaded only as CI artifacts or drafts.
+
+Alternatives considered: `14_FREE_BINARY_HOSTING_OPTIONS.md` (SourceForge, GitLab, Codeberg, Cloudflare R2). R2 is ineligible for this owner because enabling it may require payment details.  
+Accepted (2026-10-27, task P8-01): the separate public repository `eySRbS4zgHuW3gMFZB2/soravo-releases` hosts only release assets, SHA256SUMS, release notes and optional signatures. Publication is manual and approved; development builds remain CI artifacts or drafts. Do not describe this host as unsettled; the remaining pre-launch gate is the anonymous download proof and publication approval, not selecting the host. See `13_RELEASE_RUNBOOK.md` and `14_FREE_BINARY_HOSTING_OPTIONS.md`.
 
 ## ADR-0006 — Repository naming
 

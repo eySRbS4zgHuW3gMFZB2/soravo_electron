@@ -1,19 +1,15 @@
 # CI for the Soravo website (website/ directory).
 #
-# Separate from desktop packaging CI because the website has its own
-# package manifest and build toolchain.
+# The job runs on every pull request rather than only website paths so a
+# required check is never left pending on unrelated pull requests.
 
 name: Website CI
 
 on:
   pull_request:
-    paths:
-      - "website/**"
   push:
     branches:
       - main
-    paths:
-      - "website/**"
   workflow_dispatch:
 
 permissions:
@@ -27,7 +23,7 @@ jobs:
   website-build-and-test:
     name: Build and test website
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: website
@@ -50,8 +46,23 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Unit tests
+        run: npm run test
+
       - name: Build
         run: npm run build
 
-      - name: Test
-        run: npm test
+      - name: Secret scan generated static assets
+        run: |
+          set -euo pipefail
+          if grep -RInE "sk_live_|sk_test_|whsec_|rzp_live_|rzp_test_|github_pat_|ghp_|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}" dist; then
+            echo "Possible secret found in generated website assets" >&2
+            exit 1
+          fi
+          echo "No secrets found in generated static assets."
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright E2E
+        run: npm run test:playwright
