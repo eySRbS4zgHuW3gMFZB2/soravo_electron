@@ -93,7 +93,8 @@ export type PlanCode = "monthly" | "lifetime";
 
 export interface CreateOrderResult {
   key_id: string;
-  order_id: string;
+  order_id?: string;
+  subscription_id?: string;
   amount: number;
   currency: string;
   plan_code: PlanCode;
@@ -149,4 +150,3 @@ export async function listEntitlements(): Promise<
   if (error) throw error;
   return data ?? [];
 }
-

@@ -52,3 +52,12 @@ Legal placeholder pages: `/privacy`, `/terms`, `/refunds`, `/support`, `/license
 
 Legal pages are clearly marked as owner/legal-review placeholders and contain no approved policy text yet.
 Entitlements are server-authoritative; browser checkout callbacks only refresh UI state.
+
+## Monthly checkout and subscription reconciliation
+
+Apply migrations through `005_atomic_subscription_checkout_and_events.sql` before deploying the updated Edge Functions.
+Monthly checkout reserves the user in the database before contacting Razorpay. Active entitlements or authenticated/active/pending/resumed subscriptions return 409; an existing created subscription returns its provider ID. Another request during creation returns 409.
+
+A provider timeout, ambiguous server error, or failure to save a successful provider response keeps the reservation in `monthly_checkout_reservations`. It deliberately has no automatic expiry. Before releasing a stuck reservation, an operator must reconcile Razorpay subscriptions using the `user_id` and `checkout_request_id` notes: persist any created subscription locally and confirm that no request remains in flight. Release only the matching `user_id`/`request_id` reservation after the outcome is known. Do not retry creation by deleting an unresolved reservation.
+
+Both lifecycle events and payment-triggered active updates use the provider webhook's `created_at` through one conditional database upsert. Older events cannot overwrite newer state; terminal statuses win equal-time ties. The subscription entity's creation time is not a transition timestamp. Undated events cannot replace dated state; an undated terminal event may close an undated checkout and requires provider reconciliation before reactivation. A stale verified capture can extend the recorded paid period without changing subscription status or its event timestamp. Captured-payment provisioning remains authoritative for paid entitlement periods.

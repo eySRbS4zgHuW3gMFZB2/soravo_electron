@@ -19,7 +19,7 @@ export const supabase = createClient(
   supabaseUrl || "https://placeholder.supabase.co",
   supabaseAnonKey || "placeholder-anon-key",
   {
-    auth: { persistSession: true, autoRefreshToken: true },
+    auth: { persistSession: true, autoRefreshToken: true, skipAutoInitialize: true },
     realtime: { params: { eventsPerSecond: 2 } },
   }
 );

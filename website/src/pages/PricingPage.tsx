@@ -45,16 +45,16 @@ export function PricingPage() {
 
     try {
       const order = await createOrder(plan);
-      if (!order?.key_id || !order?.order_id) {
+      const checkoutId = order?.subscription_id ?? order?.order_id;
+      if (!order?.key_id || !checkoutId) {
         throw new Error("Razorpay checkout configuration is missing.");
       }
 
       const RazorpayConstructor = await loadRazorpay();
-      const rzp = new RazorpayConstructor({
+      const options: Record<string, unknown> = {
         key: order.key_id,
         amount: order.amount,
         currency: order.currency,
-        order_id: order.order_id,
         name: "Soravo",
         description: `${plan} plan`,
         handler: () => {
@@ -69,7 +69,13 @@ export function PricingPage() {
             setCheckoutPlan(null);
           },
         },
-      });
+      };
+      if (order.subscription_id) {
+        options.subscription_id = order.subscription_id;
+      } else {
+        options.order_id = order.order_id;
+      }
+      const rzp = new RazorpayConstructor(options);
 
       rzp.on("payment.failed", (response: unknown) => {
         setCheckoutState("failed");

@@ -4,17 +4,26 @@ import { useAuth } from "../lib/auth";
 
 /** Update the recovery password with clear loading/success/error states. */
 export function ResetPasswordPage() {
-  const { updatePassword } = useAuth();
+  const { updatePassword, session, loading: authLoading, passwordRecoveryUserId } = useAuth();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // AuthProvider retains PASSWORD_RECOVERY identities in memory even when
+  // session storage is unavailable, and restores saved identities on reload.
+  const verifiedRecovery = Boolean(
+    session?.user.id && passwordRecoveryUserId === session.user.id
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (authLoading || !verifiedRecovery) {
+      setError("This recovery link is invalid or has expired.");
+      return;
+    }
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
@@ -31,6 +40,11 @@ export function ResetPasswordPage() {
       if (error) {
         setError(error);
       } else {
+        try {
+          window.sessionStorage.removeItem("soravo:password-recovery-user");
+        } catch {
+          // Ignore storage failures.
+        }
         setSuccess(true);
         setTimeout(() => navigate("/login"), 1500);
       }
@@ -52,6 +66,14 @@ export function ResetPasswordPage() {
         {success ? (
           <div role="status" className="mt-8 rounded-lg bg-green-50 p-4 text-sm text-green-700">
             Password updated. Redirecting to login...
+          </div>
+        ) : authLoading ? (
+          <div role="status" className="mt-8 text-sm text-muted">
+            Verifying recovery link...
+          </div>
+        ) : !verifiedRecovery ? (
+          <div role="alert" className="mt-8 rounded-lg bg-red-50 p-4 text-sm text-red-600">
+            This recovery link is invalid or has expired. Request a new password reset link.
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">

@@ -15,6 +15,10 @@ export default defineConfig({
       url: "http://localhost:5173",
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
+      env: {
+        VITE_SUPABASE_URL: "https://placeholder.supabase.co",
+        VITE_SUPABASE_ANON_KEY: "placeholder-anon-key",
+      },
     },
     {
       command: "npm run build && npm run preview:pages",
