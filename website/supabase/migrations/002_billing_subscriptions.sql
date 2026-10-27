@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
 
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can read own subscriptions" ON public.subscriptions;
 CREATE POLICY "Users can read own subscriptions"
   ON public.subscriptions FOR SELECT
   USING (auth.uid() = user_id);

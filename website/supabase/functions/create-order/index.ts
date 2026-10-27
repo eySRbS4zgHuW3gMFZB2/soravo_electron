@@ -259,8 +259,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    try {
-      await admin.from("subscriptions").insert({
+    {
+      const { error: subInsertError } = await admin.from("subscriptions").insert({
         user_id: user.id,
         provider: "razorpay",
         provider_subscription_id: String(subscriptionData.id),
@@ -271,8 +271,9 @@ Deno.serve(async (req: Request) => {
         charge_at: subscriptionData.charge_at ? new Date(Number(subscriptionData.charge_at) * 1000).toISOString() : null,
         current_period_end: subscriptionData.current_end ? new Date(Number(subscriptionData.current_end) * 1000).toISOString() : null,
       });
-    } catch {
-      // Subscription already recorded is acceptable for retry paths.
+      if (subInsertError && subInsertError.code !== "23505") {
+        console.error("create-order: subscription row insert failed", subInsertError.code);
+      }
     }
 
     return new Response(JSON.stringify({

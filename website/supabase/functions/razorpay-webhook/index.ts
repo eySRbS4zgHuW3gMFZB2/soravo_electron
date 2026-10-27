@@ -284,25 +284,30 @@ Deno.serve(async (req: Request) => {
             else if (eventTypeLower.includes("completed")) subscriptionStatus = "completed";
           }
           if (subscriptionStatus) {
-            await admin.from("subscriptions").update({
+            const { error: subscriptionStatusError } = await admin.from("subscriptions").update({
               status: subscriptionStatus,
               updated_at: new Date().toISOString(),
             }).eq("provider", "razorpay").eq("provider_subscription_id", providerSubscriptionId);
+            if (subscriptionStatusError) console.error("razorpay-webhook: subscription status update failed", subscriptionStatusError.code);
           }
         }
         if (eventTypeLower === "payment.failed" && entity?.id) {
           const failedUserId = userId || null;
-          if (failedUserId) {
-            await admin.from("payments").insert({
+          const failedAmount = Number(entity?.amount ?? amountMinor ?? 0);
+          if (failedUserId && failedAmount > 0) {
+            const { error: failedInsertError } = await admin.from("payments").insert({
               user_id: failedUserId,
               provider: "razorpay",
               provider_payment_id: String(entity.id),
               provider_order_id: entity?.order_id ? String(entity.order_id) : null,
               provider_subscription_id: providerSubscriptionId || null,
-              amount_minor: amountMinor || 1200,
+              amount_minor: failedAmount,
               currency: currency || "USD",
               status: "failed",
-            } as any);
+            } as Record<string, unknown>);
+            if (failedInsertError && failedInsertError.code !== "23505") {
+              console.error("razorpay-webhook: failed-payment insert failed", failedInsertError.code);
+            }
           }
         }
       } catch {
@@ -430,21 +435,23 @@ Deno.serve(async (req: Request) => {
 
     // Reconcile recurring subscription metadata after a successful grant.
     try {
-      if (providerSubscriptionId) {
-        await admin.from("subscriptions").upsert({
+      if (providerSubscriptionId && plan === "monthly") {
+        const { error: subscriptionUpsertError } = await admin.from("subscriptions").upsert({
           user_id: userId,
           provider: "razorpay",
           provider_subscription_id: providerSubscriptionId,
           plan_code: "monthly",
-          status: plan === "monthly" ? "active" : "active",
+          status: "active",
           current_period_end: periodEnd,
           updated_at: new Date().toISOString(),
-        }, { onConflict: "provider_subscription_id" }).select("id");
+        }, { onConflict: "provider_subscription_id" });
+        if (subscriptionUpsertError) console.error("razorpay-webhook: subscription upsert failed", subscriptionUpsertError.code);
       }
       if (entity?.id) {
-        await admin.from("payments").update({
+        const { error: paymentUpdateError } = await admin.from("payments").update({
           provider_subscription_id: providerSubscriptionId || null,
         }).eq("provider", "razorpay").eq("provider_payment_id", String(entity.id));
+        if (paymentUpdateError) console.error("razorpay-webhook: payment subscription link update failed", paymentUpdateError.code);
       }
     } catch {
       // Metadata reconciliation is secondary to the authoritative grant.
