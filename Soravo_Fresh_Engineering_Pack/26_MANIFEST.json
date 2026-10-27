@@ -74,7 +74,8 @@
                             "visitor_analytics":  "Cloudflare Web Analytics",
                             "admin_auth":  "Supabase Auth plus server-verified role",
                             "transcription_engine":  "preserve current CrispASR",
-                            "backend_function_placement":  "DECIDED - Supabase Edge Functions (ADR-0003, 2026-10-23). Cloudflare Pages hosts static website only."
+                            "backend_function_placement":  "ACCEPTED - Supabase Edge Functions (ADR-0003, 2026-10-23). Cloudflare Pages hosts static website only.",
+                            "binary_distribution_host":  "ACCEPTED - separate public soravo-releases repository hosts artifacts only; task P8-00; ADR-0005; remaining publication gates: clean-machine verification, Linux release gate when publishing Linux artifacts, owner approval of each release"
                         },
     "memo_decisions_2026_10_22":  {
                                       "website_strategy":  "rebuild fresh; historical repository is behavioral/content reference only; implementation, schema, migrations and Edge Functions are not ported",
@@ -87,7 +88,6 @@
                                       "crispasr_packaging_authorization":  "ADR-0010 (PROPOSED - bundled layout not yet decided)"
                                   },
     "open_decisions":  {
-                           "binary_distribution_host":  "ACCEPTED - separate public soravo-releases repository hosts artifacts only; task P8-00; ADR-0005; remaining gates: clean-machine verification, Linux release gate, owner approval",
                            "crispasr_bundled_layout":  "PROPOSED - bundle.resources mapping vs externalBin sidecar vs renamed tracked staging directory; task P1-03; ADR-0010"
                        },
     "mandatory_policies":  {

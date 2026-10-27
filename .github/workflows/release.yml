@@ -62,6 +62,10 @@ jobs:
           if ($version -notmatch "^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$") {
             throw "Invalid version: $version"
           }
+          $config = Get-Content "src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json
+          if ($version -cne $config.version) {
+            throw "Release version $version does not exactly match configured app version $($config.version)."
+          }
           "SORAVO_RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "SORAVO_RELEASE_TAG=v$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Building release $version"
@@ -116,13 +120,37 @@ jobs:
             Start-Process msiexec -ArgumentList "/a `"$($msi.FullName)`" /qn TARGETDIR=`"$extractDir`"" -Wait
             node scripts/verify-packaging.mjs --bundle "$extractDir\PFiles\Soravo"
           } else {
-            Write-Host "No MSI produced; NSIS installer will be verified by configuration and size checks."
+            Write-Host "No MSI produced. NSIS contents are checked separately."
+          }
+
+      - name: Verify bundle contents (every NSIS installer)
+        shell: pwsh
+        run: |
+          $required = @(
+            "crispasr.exe", "openblas.dll", "LICENSE", "THIRD_PARTY_NOTICES.txt",
+            "vcruntime140.dll", "vcruntime140_1.dll", "vcomp140.dll",
+            "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "concrt140.dll", "vccorlib140.dll"
+          )
+          $installers = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" -ErrorAction SilentlyContinue
+          foreach ($installer in $installers) {
+            $extractDir = Join-Path $env:RUNNER_TEMP "nsis-$($installer.BaseName)"
+            Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
+            & 7z x $installer.FullName "-o$extractDir" -y
+            if ($LASTEXITCODE -ne 0) { throw "NSIS extraction failed: $($installer.Name)" }
+            foreach ($name in $required) {
+              $path = Join-Path $extractDir "crispasr/$name"
+              if (-not (Test-Path $path -PathType Leaf)) {
+                throw "Missing from NSIS installer $($installer.Name): crispasr/$name"
+              }
+            }
           }
 
       - name: Validate and stage Windows artifacts
         shell: pwsh
         run: |
           $version = $env:SORAVO_RELEASE_VERSION
+          $config = Get-Content "src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json
+          $filenamePrefix = "^$([regex]::Escape($config.productName))_$([regex]::Escape($version))_"
           $stage = "$env:RUNNER_TEMP\soravo-release-$version"
           New-Item -ItemType Directory -Path $stage -Force | Out-Null
 
@@ -134,8 +162,8 @@ jobs:
           foreach ($file in $installers) {
             if ($file.Length -eq 0) { throw "Empty artifact: $($file.Name)" }
             if ($file.Length -lt 1048576) { Write-Warning "Suspiciously small artifact: $($file.Name) ($($file.Length) bytes)" }
-            if ($file.Name -notmatch [regex]::Escape($version)) {
-              throw "Artifact name does not contain version metadata: $($file.Name)"
+            if ($file.Name -cnotmatch $filenamePrefix) {
+              throw "Artifact filename version does not match $version`: $($file.Name)"
             }
             Copy-Item $file.FullName $stage -Force
           }
@@ -186,6 +214,13 @@ jobs:
     timeout-minutes: 20
     environment: release
     steps:
+      - name: Check out source tags for release verification
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+
       - name: Download checked release artifacts
         uses: actions/download-artifact@95815c38cbc50441f13faff803f751948462d5f9 # v4.2.1
         with:
@@ -201,6 +236,7 @@ jobs:
           RELEASE_EVENT: ${{ github.event_name }}
           RELEASE_REF: ${{ github.ref_name }}
           RELEASE_INPUT_VERSION: ${{ inputs.version }}
+          SOURCE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
 
@@ -217,6 +253,14 @@ jobs:
           fi
 
           tag="v${version}"
+          tag_commit=$(git -C source rev-parse --verify "refs/tags/${tag}^{commit}") || {
+            echo "Source tag $tag is missing or does not resolve to a commit." >&2
+            exit 1
+          }
+          if [[ "$tag_commit" != "$SOURCE_SHA" ]]; then
+            echo "Source tag $tag does not point to the built commit $SOURCE_SHA." >&2
+            exit 1
+          fi
           staging="release-staging"
           if [[ ! -f "$staging/SHA256SUMS" ]]; then
             found=$(find "$staging" -name SHA256SUMS | head -1)
@@ -243,6 +287,7 @@ jobs:
 
           gh release create "$tag" ./* \
             --repo "$RELEASES_REPO" \
+            --target "$SOURCE_SHA" \
             --title "Soravo ${version}" \
             --notes "Soravo ${version} desktop release. Installer files and SHA256SUMS are attached. Verify the installer hash before running it. Windows installers may trigger SmartScreen; checksums only detect accidental corruption." \
             --draft

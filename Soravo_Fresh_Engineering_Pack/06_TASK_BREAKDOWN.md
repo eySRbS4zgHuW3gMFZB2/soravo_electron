@@ -36,7 +36,7 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - P2-05: Configure Resend sender domain, SPF/DKIM/DMARC as supported by current dashboard.
 - P2-06: Test sign-up, sign-in, magic link, expired link, replay, sign-out, recovery and email rate limits.
 - P2-07: Add migration reset/replay test in CI.
-- P2-08: **Choose the privileged backend (Cloudflare Pages Functions/Workers vs Supabase Edge Functions) and record the decision and rationale in ADR-0003.** Blocking for every server-side task below.
+- P2-08: **Completed: Supabase Edge Functions chosen for the privileged backend; decision and rationale recorded in ACCEPTED ADR-0003.** Cloudflare Pages hosts the static website.
 - P2-09: Record the existing DNS, MX, SPF, DKIM and DMARC configuration so business email survives any future DNS move.
 - P2-10: Isolated Supabase setup and database-backed tests for device registration, entitlements, and webhook idempotency/claim semantics.
 - P2-11: Reconcile WP-004 USD pricing and P2-10 DB tests with PR #22.
@@ -90,8 +90,8 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - P7-07: Test direct API calls as ordinary user.
 
 ## P8 — Release
-- P8-00: **ADR-0005 accepted.** Remaining blocking items: clean-machine verification, the Linux release gate, and owner approval before publishing.
-- P8-01: Create public `soravo-releases` repo or approve another host, per the ADR-0005 that P8-00 settles.
+- P8-00: **ADR-0005 accepted.** Remaining publication gates: clean-machine verification, the Linux release gate when publishing Linux artifacts, and owner approval of each release.
+- P8-01: Public `eySRbS4zgHuW3gMFZB2/soravo-releases` artifacts-only repository created; use the host accepted in ADR-0005.
 - P8-02: Configure artifact upload and release notes workflow.
 - P8-03: Generate SHA256SUMS and verify it.
 - P8-04: Optional minisign signing with private key outside CI/repo.

@@ -8,19 +8,19 @@
 - No release if clean-install packaging fails. A clean-machine install with no developer tools and no source tree must prove the app locates and launches the bundled engine (`ADR-0010`).
 - Windows must have a verified artifact and checksum. Linux must as well **once a Linux engine exists** (task P1-05); until then Linux is BLOCKED and no Linux artifact may be published.
 - Public release assets must not expose source code unless the owner deliberately chooses that.
-- The binary host is governed by **ADR-0005**, which is ACCEPTED for the public `soravo-releases` artifacts-only repository. Publishing still requires clean-machine verification, the Linux release gate and owner approval.
+- The binary host is governed by **ADR-0005**, which is ACCEPTED for the public `soravo-releases` artifacts-only repository. Publishing still requires clean-machine verification and owner approval; the Linux release gate applies when publishing Linux artifacts.
 - The live production site at `soravo.xyz` is not touched by a desktop release. Website deployment and desktop release are separate concerns with separate rollback paths.
 
-## Proposed release repository
+## Accepted release repository
 
-Preferred candidate: `eySRbS4zgHuW3gMFZB2/soravo-releases`, public, contains only:
+ADR-0005 selects `eySRbS4zgHuW3gMFZB2/soravo-releases`, public, contains only:
 - release assets;
 - SHA256SUMS;
 - release notes;
 - optional minisign signature/public key;
 - no source tree, secrets, environment files, internal docs or debug symbols unless deliberately scrubbed.
 
-The active source repo can become private before commercial launch. Release repository is separate so public download links work without customer GitHub authentication. This is a candidate, not a settled choice — see `14_FREE_BINARY_HOSTING_OPTIONS.md` and the ADR-0005 acceptance criteria.
+The active source repo can become private before commercial launch. Release repository is separate so public download links work without customer GitHub authentication. The host decision is accepted in ADR-0005; `14_FREE_BINARY_HOSTING_OPTIONS.md` records the alternatives considered.
 
 ## Version process
 

@@ -17,7 +17,7 @@
 - Admin via Supabase Auth plus server-side role checks.
 - Subscription lapse: grace then paid features disabled; local data retained/exportable.
 - Prefer GitHub Actions extensively while repo is public.
-- Need free binary-hosting options; separate public releases repo is default recommendation, not final if owner rejects public repo hosting.
+- Binary distribution host accepted in ADR-0005: separate public `soravo-releases` artifacts-only repository. Publication still requires clean-machine verification, the Linux release gate when publishing Linux artifacts, and owner approval of each release.
 - Rename old repo `soravo` to `soravo_deprecated`; active repo `soravo_electron` to `soravo`; local folder to `soravo`.
 - Do not copy code/schema/spec implementation from old repo.
 
@@ -27,7 +27,7 @@
 - **Repository rename: CI first.** Order is backup/audit → baseline CI and release-packaging checks → rename checklist → rename → post-rename verification. Recorded as ADR-0009, and in `05_IMPLEMENTATION_PLAN.md` Phase 0, `06_TASK_BREAKDOWN.md` P0 and `21_RENAME_AND_MIGRATION_RUNBOOK.md`.
 - **Production domain: preserved through the migration.** Cutover is a separate, explicitly approved, reversible step with a URL inventory, tested redirects and a rehearsed rollback. Recorded in `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`, Phase 8 and tasks P3-09/P8-09/P8-10.
 - **CrispASR packaging finding corrected** in `23_SOURCE_AUDIT_NOTES.md`; the bundled layout is now ADR-0010 (PROPOSED) and a clean-machine install proving engine launch is an explicit release blocker.
-- **ADR/TDD consistency:** ADR-0003 and ADR-0010 are explicitly PROPOSED and must not be implemented as settled; ADR-0005 is accepted for the public `soravo-releases` artifacts-only host.
+- **ADR/TDD consistency:** ADR-0003 is ACCEPTED for Supabase Edge Functions (2026-10-23). ADR-0010 remains PROPOSED in this operating restriction and must not be implemented as settled; ADR-0005 is accepted for the public `soravo-releases` artifacts-only host.
 - **Git worktree policy is mandatory** (owner instruction, 2026-10-22): every new feature and every independent task runs in its own dedicated worktree and named branch; one task, one worktree, one branch; tasks never touch another worktree's files, branch, index or stash; tests and review happen in the worktree before integration; after merging, the worktree, its registration and its build output are removed. Recorded as `28_GIT_WORKTREE_POLICY.md`.
 
 ## Verified in the 2026-10-22 worktree-policy session
@@ -342,7 +342,7 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 6. Run a deep VM/toolchain/state audit and update `19_STATE_AUDIT_PROTOCOL.md` / `docs/engineering/STATE_AUDIT.md`.
 7. Decide the CrispASR bundled layout and record ADR-0010 (P1-03).
 8. Fix packaging and establish the Windows CI baseline before commercial code. Linux CI stays behind task P1-05 and the Linux release gate; it is not part of the pre-commercial baseline.
-9. Choose the binary host and finalise ADR-0005 (P8-00). Backend placement is decided: Supabase Edge Functions (ADR-0003, accepted 2026-10-23).
+9. Apply ADR-0005's remaining publication gates: clean-machine verification, the Linux release gate when publishing Linux artifacts, and owner approval. The binary host is accepted as public `soravo-releases`; backend placement is Supabase Edge Functions (ADR-0003, accepted 2026-10-23).
 10. Create website shell and Supabase staging schema.
 11. Configure Resend SMTP; test email delivery.
 12. Implement account and device flows.
@@ -628,3 +628,15 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Skills: loaded `code-review`. Supabase/Postgres and security skills considered but unavailable in the local/session catalog; applied the existing design/ADR contract and standard conditional-update checks. A read-only subagent independently verified task history and claim requirements; the primary agent performed all edits and executable checks.
 - Validation: `npm run typecheck`, `npm run build`, `npm test` passed (29 tests); final targeted handler rerun passed (10 tests). Applied the unchanged migration to disposable PostgreSQL 17.11 with synthetic Auth fixtures and pgTAP; webhook 9/9 and device 8/8 assertions passed. Exact commands/input identities are in `workspace-context/validation-record.md` outside the repository.
 - Security/limits: repairs ledger claim fencing only. Payment/entitlement writes remain separate transactions without the broader side-effect fencing required by ADR-0003; this pre-existing gap remains open. No provider credentials, configuration, data or production state changed. Deno deployment compatibility was not exercised. Rollback: revert this patch. Changes remain uncommitted.
+
+
+## Release gates and routing review fixes — 2026-10-27
+
+- Task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; branch `coderabbit/release-gates-and-routing/d7d742a1`; base/current HEAD `7202d2b802da2ae0751dbd28b2096f2782b6a17d`. The cloud runtime supplies this isolated task checkout; the documentation subagent edits only this pack, excluding `19_STATE_AUDIT_PROTOCOL.md`. Checkout retained for review; no integration performed.
+- Verified ADR-0003 and ADR-0005 are ACCEPTED. Moved backend placement and binary hosting out of open decisions; aligned the operating rule, runbook, task breakdown, manifest and matching handoff entries. Host publication still requires clean-machine verification and owner approval, with the Linux release gate required when publishing Linux artifacts.
+- Preserved the requested ADR-0010 PROPOSED implementation restriction. Existing conflict: `15_ADR_INDEX.md` records ADR-0010 as ACCEPTED, while the operating rule and planning records mark it PROPOSED. This review does not change that ADR or resolve the conflict.
+- Skills: `code-review` loaded by the primary agent and documentation subagent; integrated review belongs to the primary agent. Cloudflare, Wrangler and Playwright skills are unavailable in this session; documentation edits follow the existing accepted ADRs. No additional domain skill is needed for the status corrections.
+- Release workflow: added a required content gate for every NSIS installer, independently of MSI output; exact configured app version and filename-segment matching; source tag verification against the built SHA before draft creation, with an explicit release target SHA. Existing MSI, configuration, size and checksum checks remain.
+- Website: retained Vite tests and added production-build navigation coverage through pinned Wrangler Pages in local tests and website CI. Actual Wrangler execution exposed an ignored catch-all `/index.html` rewrite; targeting `/` fixes the loop warning while preserving SPA navigation. Added local output ignores. Existing locked dependency versions are preserved.
+- Validation: website typecheck/build and 42 unit tests passed; final Playwright run passed 29 tests (21 Vite, 8 Pages) with no redirect warnings. Release harness passed 63 subprocess assertions using actual synthetic NSIS archives and 7-Zip extraction, PowerShell version/staging checks, real local Git tags and an explicit synthetic gh stub. Configuration/tracked-engine verification, manifest assertions, pack CI validator (35 documents) and whitespace checks passed. Exact commands and input identities are recorded in `workspace-context/validation-record.md` outside the repository. Real Windows build/MSI execution, clean-machine installation and remote release creation remain unverified. Integrated diff manually inspected; no external state changed.
+- No production, provider, repository visibility or secret changes. Rollback: revert this task patch. Changes remain uncommitted in the assigned task checkout.

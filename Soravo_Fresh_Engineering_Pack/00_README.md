@@ -36,7 +36,7 @@ The public GitHub repo was inspected on 2026-10-22. Observed files include `READ
 
 ## Decisions recorded from the owner
 
-Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is part of this pack and is the highest authority in it.
+Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is part of this pack and is the highest authority in it, and in later accepted ADRs recorded in `15_ADR_INDEX.md`.
 
 - **Website strategy:** rebuild the replacement website fresh in the active repository, following this pack. The historical `soravo` repository is a behavioral and content reference only for approved website pages, pricing presentation and dashboard behaviors; its implementation, schema, migrations, Edge Functions, workflows and Handy-derived desktop code are not ported. The current production site stays live and untouched until cutover (ADR-0008).
 - **Repository rename order:** establish baseline CI and release-packaging checks first, then prepare the rename checklist, then rename, then verify integrations (ADR-0009).
@@ -52,6 +52,8 @@ Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is par
 - Cloudflare Pages for website hosting.
 - Supabase Auth/database; Resend as Supabase custom SMTP.
 - Razorpay for payments.
+- **Backend function placement** (ADR-0003): ACCEPTED. Supabase Edge Functions handle privileged APIs; Cloudflare Pages hosts the static website. Task P2-08 is decided.
+- **Binary distribution host** (ADR-0005): ACCEPTED. The separate public `soravo-releases` repository hosts artifacts only. Remaining publication gates: clean-machine verification, the Linux release gate when publishing Linux artifacts, and owner approval of each release.
 - Admin dashboard guarded by Supabase Auth plus a server-verified role.
 - Cloudflare Web Analytics as the first visitor analytics source.
 - Subscription expiry: grace period then disable paid features while retaining/exporting user data.
@@ -62,8 +64,6 @@ Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is par
 
 ## Decisions still open (do not implement as settled)
 
-- **Backend function placement** (ADR-0003): Cloudflare Pages Functions/Workers versus Supabase Edge Functions. Must be chosen and recorded before implementation depends on it. Task P2-08.
-- **Binary distribution host** (ADR-0005): ACCEPTED. The separate public `soravo-releases` repository hosts artifacts only. Remaining gates: clean-machine verification, the Linux release gate, and owner approval of each release.
 - **CrispASR bundled layout** (ADR-0010): Tauri `bundle.resources` mapping, `externalBin` sidecar, or a deliberate rename of the tracked staging directory. Must be chosen and recorded before packaging work begins. Task P1-03.
 
 ## Mandatory policies

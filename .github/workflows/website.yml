@@ -55,3 +55,9 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Install Chromium for routing tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Test Vite and Pages routing
+        run: npm run test:playwright
