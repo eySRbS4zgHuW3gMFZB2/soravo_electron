@@ -21,7 +21,7 @@ The installed application must be able to find and launch the transcription engi
 - The runtime lookup `find_crispasr_binary` in `src-tauri/src/lib.rs` searches `<root>/third-party/bin/`, then the children of `<root>/third-party/crispasr/extracted/`, over the roots `current_dir`, `project_root` and the Tauri `resource_dir`. On an installed machine the first two do not exist and the third holds no engine.
 
 Design requirements:
-- The bundled layout is a decision to be recorded in **ADR-0010** before packaging work begins: a Tauri `bundle.resources` mapping, an `externalBin` sidecar, or a deliberate rename of the tracked staging directory. Do not begin packaging against an undecided layout.
+- **ADR-0010 is ACCEPTED** (2026-10-22, task P0-01): use Tauri `bundle.resources` map form from the tracked engine directories to `resource_dir()/crispasr/` (Windows) and `resource_dir()/crispasr-linux/` (Linux), with `bundle.windows.bundleVCRuntime: true`. The recorded rationale preserves the engine/DLL directory structure and avoids binary renaming; see `15_ADR_INDEX.md`.
 - Whatever is bundled must be **tracked in git**, so that a clean clone and a clean CI runner produce the same artifact.
 - Confirm redistribution rights and required notices for every bundled binary and DLL before bundling (`22_REVERSE_ENGINEERING_AND_PROVENANCE.md`). Do not bundle files blindly.
 - Models are **not** bundled. They are acquired at runtime through the existing model download flow, with licence and provenance recorded per model (`MODELS.md` is a starting point, not proof).

@@ -54,6 +54,7 @@ Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is par
 - Razorpay for payments.
 - **Backend function placement** (ADR-0003): ACCEPTED. Supabase Edge Functions handle privileged APIs; Cloudflare Pages hosts the static website. Task P2-08 is decided.
 - **Binary distribution host** (ADR-0005): ACCEPTED. The separate public `soravo-releases` repository hosts artifacts only. Remaining publication gates: clean-machine verification, the Linux release gate when publishing Linux artifacts, and owner approval of each release.
+- **CrispASR bundled layout** (ADR-0010): ACCEPTED (2026-10-22, task P0-01). Use Tauri `bundle.resources` map form with bundled VC++ runtime; see the ADR for tracked source paths, resource destinations and rationale. Redistribution checks and clean-machine release verification remain required.
 - Admin dashboard guarded by Supabase Auth plus a server-verified role.
 - Cloudflare Web Analytics as the first visitor analytics source.
 - Subscription expiry: grace period then disable paid features while retaining/exporting user data.
@@ -64,7 +65,7 @@ Approved in the decision memo `SORAVO_DECISION_MEMO_2026-10-22.md`, which is par
 
 ## Decisions still open (do not implement as settled)
 
-- **CrispASR bundled layout** (ADR-0010): Tauri `bundle.resources` mapping, `externalBin` sidecar, or a deliberate rename of the tracked staging directory. Must be chosen and recorded before packaging work begins. Task P1-03.
+None for the ADRs listed above. Accepted decisions retain their implementation and release gates.
 
 ## Mandatory policies
 

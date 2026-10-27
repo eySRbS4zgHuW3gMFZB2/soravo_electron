@@ -75,6 +75,7 @@
                             "admin_auth":  "Supabase Auth plus server-verified role",
                             "transcription_engine":  "preserve current CrispASR",
                             "backend_function_placement":  "ACCEPTED - Supabase Edge Functions (ADR-0003, 2026-10-23). Cloudflare Pages hosts static website only.",
+                            "crispasr_bundled_layout":  "ACCEPTED - Tauri bundle.resources map form from tracked engine directories to crispasr/ (Windows) and crispasr-linux/ (Linux), with bundle.windows.bundleVCRuntime enabled; task P1-03; ADR-0010; clean-machine verification, Linux release gate when publishing Linux artifacts, and owner release approval remain required",
                             "binary_distribution_host":  "ACCEPTED - separate public soravo-releases repository hosts artifacts only; task P8-00; ADR-0005; remaining publication gates: clean-machine verification, Linux release gate when publishing Linux artifacts, owner approval of each release"
                         },
     "memo_decisions_2026_10_22":  {
@@ -85,11 +86,9 @@
                                       "production_domain":  "soravo.xyz and its DNS and email configuration preserved until cutover; cutover is separately approved and reversible",
                                       "production_cutover_document":  "27_PRODUCTION_CUTOVER_AND_ROLLBACK.md",
                                       "crispasr_packaging_finding":  "third-party/bin is git-ignored with no tracked files; the engine is committed at third-party/crispasr/extracted/crispasr-windows-x86_64-cpu; bundle.resources and bundle.externalBin are empty; a clean-machine install proving engine launch is a release blocker",
-                                      "crispasr_packaging_authorization":  "ADR-0010 (PROPOSED - bundled layout not yet decided)"
+                                      "crispasr_packaging_authorization":  "ADR-0010 (ACCEPTED 2026-10-22, task P0-01; rationale recorded in ADR index); redistribution checks and clean-machine release verification remain required"
                                   },
-    "open_decisions":  {
-                           "crispasr_bundled_layout":  "PROPOSED - bundle.resources mapping vs externalBin sidecar vs renamed tracked staging directory; task P1-03; ADR-0010"
-                       },
+    "open_decisions":  {},
     "mandatory_policies":  {
                                "git_worktrees":  {
                                                      "document":  "28_GIT_WORKTREE_POLICY.md",

@@ -116,16 +116,16 @@ The developer machine has VC++ x64 Redistributable v14.51.36247.00 installed. Th
 
 Redistribution rights confirmed. The LICENSE and THIRD_PARTY_NOTICES.txt must be included in the bundle.
 
-### Finding 7: ADR-0010 is PROPOSED (CONFIRMED)
+### Finding 7: ADR-0010 was PROPOSED at initial audit (superseded)
 
 **Source:** `15_ADR_INDEX.md`
 
-ADR-0010 (CrispASR engine packaging source) is PROPOSED, not ACCEPTED. The bundled layout is not yet decided. The three options are:
+Historical finding: ADR-0010 was PROPOSED before the P0-01 decision. It is now **ACCEPTED** (2026-10-22, task P0-01) in `Soravo_Fresh_Engineering_Pack/15_ADR_INDEX.md`, with the Phase A rationale below. The original options were:
 1. Tauri `bundle.resources` mapping
 2. `externalBin` sidecar
 3. Deliberate rename of the tracked staging directory
 
-Must be chosen and recorded before packaging work begins (task P1-03).
+The decision prerequisite for P1-03 is satisfied. Redistribution checks, clean-machine verification and owner release approval remain required, including the Linux release gate before publishing Linux artifacts.
 
 ### Finding 8: Linux is BLOCKED (CONFIRMED)
 
@@ -189,7 +189,7 @@ Recommended approach:
 
 ### Phase A: ADR-0010 Decision (P1-03 prerequisite)
 
-**Action:** Choose `bundle.resources` (map form) as the bundled layout. Record in ADR-0010 as ACCEPTED.
+**Completed decision:** ADR-0010 records `bundle.resources` (map form) as ACCEPTED (2026-10-22, task P0-01). The rationale is preserved below; Phase A no longer blocks implementation.
 
 **Rationale:**
 - Simplest Tauri-native approach
@@ -276,7 +276,7 @@ Linux remains blocked until P1-05 delivers a tracked, licensed Linux engine. No 
 ## Next Steps
 
 1. **Owner reviews this findings/plan.**
-2. If approved, implement Phase A (ADR-0010) first, then Phase B (bundle config), then Phase C (runtime lookup).
+2. Phase A (ADR-0010) is ACCEPTED; use that decision for Phase B (bundle config), then Phase C (runtime lookup), subject to the remaining plan approval and verification gates.
 3. Build and verify (Phase D).
 4. Add CI check (Phase E).
 5. Document clean-machine procedure (Phase F).

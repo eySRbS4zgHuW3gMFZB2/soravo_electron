@@ -26,8 +26,8 @@
 - **Website: rebuild fresh; preserve the current site until cutover.** The historical repository is a behavioral/content reference only for approved website content and behavior; its implementation, schema, migrations, Edge Functions and Handy-derived desktop code are not ported. `soravo.xyz` and its DNS/email configuration stay untouched until the replacement passes its launch checklist. Recorded as ADR-0008 and `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`.
 - **Repository rename: CI first.** Order is backup/audit → baseline CI and release-packaging checks → rename checklist → rename → post-rename verification. Recorded as ADR-0009, and in `05_IMPLEMENTATION_PLAN.md` Phase 0, `06_TASK_BREAKDOWN.md` P0 and `21_RENAME_AND_MIGRATION_RUNBOOK.md`.
 - **Production domain: preserved through the migration.** Cutover is a separate, explicitly approved, reversible step with a URL inventory, tested redirects and a rehearsed rollback. Recorded in `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`, Phase 8 and tasks P3-09/P8-09/P8-10.
-- **CrispASR packaging finding corrected** in `23_SOURCE_AUDIT_NOTES.md`; the bundled layout is now ADR-0010 (PROPOSED) and a clean-machine install proving engine launch is an explicit release blocker.
-- **ADR/TDD consistency:** ADR-0003 is ACCEPTED for Supabase Edge Functions (2026-10-23). ADR-0010 remains PROPOSED in this operating restriction and must not be implemented as settled; ADR-0005 is accepted for the public `soravo-releases` artifacts-only host.
+- **CrispASR packaging finding corrected** in `23_SOURCE_AUDIT_NOTES.md`; the bundled layout is ACCEPTED in ADR-0010 (2026-10-22, task P0-01) and a clean-machine install proving engine launch is an explicit release blocker.
+- **ADR/TDD consistency:** ADR-0003 is ACCEPTED for Supabase Edge Functions (2026-10-23). ADR-0010 is ACCEPTED for Tauri `bundle.resources` map form with bundled VC++ runtime; its recorded rationale, redistribution checks and clean-machine release gates remain binding; ADR-0005 is accepted for the public `soravo-releases` artifacts-only host.
 - **Git worktree policy is mandatory** (owner instruction, 2026-10-22): every new feature and every independent task runs in its own dedicated worktree and named branch; one task, one worktree, one branch; tasks never touch another worktree's files, branch, index or stash; tests and review happen in the worktree before integration; after merging, the worktree, its registration and its build output are removed. Recorded as `28_GIT_WORKTREE_POLICY.md`.
 
 ## Verified in the 2026-10-22 worktree-policy session
@@ -340,7 +340,7 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 4. Establish baseline CI and the release-packaging check in `soravo_electron` (P0-02).
 5. Prepare and review the rename checklist (P0-03).
 6. Run a deep VM/toolchain/state audit and update `19_STATE_AUDIT_PROTOCOL.md` / `docs/engineering/STATE_AUDIT.md`.
-7. Decide the CrispASR bundled layout and record ADR-0010 (P1-03).
+7. Follow the accepted ADR-0010 bundled layout for P1-03; the decision prerequisite is satisfied.
 8. Fix packaging and establish the Windows CI baseline before commercial code. Linux CI stays behind task P1-05 and the Linux release gate; it is not part of the pre-commercial baseline.
 9. Apply ADR-0005's remaining publication gates: clean-machine verification, the Linux release gate when publishing Linux artifacts, and owner approval. The binary host is accepted as public `soravo-releases`; backend placement is Supabase Edge Functions (ADR-0003, accepted 2026-10-23).
 10. Create website shell and Supabase staging schema.
@@ -379,7 +379,7 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 esource_dir (no engine because  undle.resources is empty).
 4. **VC++ Redistributable dependency (NEW):** crispasr.exe depends on MSVCP140.dll, VCRUNTIME140.dll, VCRUNTIME140_1.dll, VCOMP140.DLL — none tracked, none on a clean Windows install. openblas.dll also depends on VCRUNTIME140.dll.
 5. **Licensing:** MIT (Copyright 2023-2026 The ggml authors). Redistribution permitted. LICENSE and THIRD_PARTY_NOTICES.txt must be included in bundle.
-6. **ADR-0010 is PROPOSED:** Bundled layout not yet decided. Must be resolved before packaging work begins.
+6. **Historical ADR-0010 finding (superseded):** the initial audit found the layout PROPOSED; ADR-0010 was subsequently ACCEPTED (2026-10-22, task P0-01), as recorded in the implementation outcome below.
 7. **Linux BLOCKED:** No Linux engine artifact. Confirmed.
 
 ### Skill Selection Gate
@@ -396,7 +396,7 @@ esource_dir()/crispasr/crispasr.exe. Works identically in dev and production. ex
 
 ### Minimal implementation plan
 
-Phase A: ADR-0010 decision — choose bundle.resources (map form). Record as ACCEPTED.
+Phase A: ADR-0010 decision — completed as ACCEPTED (2026-10-22, task P0-01): bundle.resources (map form).
 Phase B: Bundle config — set bundle.resources, bundle.windows.bundleVCRuntime: true.
 Phase C: Runtime lookup — add resource_dir/crispasr/ to find_crispasr_binary.
 Phase D: Build and verify — inspect installer for engine + DLLs + notices.
@@ -634,9 +634,18 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 
 - Task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; branch `coderabbit/release-gates-and-routing/d7d742a1`; base/current HEAD `7202d2b802da2ae0751dbd28b2096f2782b6a17d`. The cloud runtime supplies this isolated task checkout; the documentation subagent edits only this pack, excluding `19_STATE_AUDIT_PROTOCOL.md`. Checkout retained for review; no integration performed.
 - Verified ADR-0003 and ADR-0005 are ACCEPTED. Moved backend placement and binary hosting out of open decisions; aligned the operating rule, runbook, task breakdown, manifest and matching handoff entries. Host publication still requires clean-machine verification and owner approval, with the Linux release gate required when publishing Linux artifacts.
-- Preserved the requested ADR-0010 PROPOSED implementation restriction. Existing conflict: `15_ADR_INDEX.md` records ADR-0010 as ACCEPTED, while the operating rule and planning records mark it PROPOSED. This review does not change that ADR or resolve the conflict.
+- Historical review outcome (superseded by the ADR-0010 status alignment below): preserved the then-requested ADR-0010 PROPOSED implementation restriction. Existing conflict: `15_ADR_INDEX.md` records ADR-0010 as ACCEPTED, while the operating rule and planning records mark it PROPOSED. This review does not change that ADR or resolve the conflict.
 - Skills: `code-review` loaded by the primary agent and documentation subagent; integrated review belongs to the primary agent. Cloudflare, Wrangler and Playwright skills are unavailable in this session; documentation edits follow the existing accepted ADRs. No additional domain skill is needed for the status corrections.
 - Release workflow: added a required content gate for every NSIS installer, independently of MSI output; exact configured app version and filename-segment matching; source tag verification against the built SHA before draft creation, with an explicit release target SHA. Existing MSI, configuration, size and checksum checks remain.
 - Website: retained Vite tests and added production-build navigation coverage through pinned Wrangler Pages in local tests and website CI. Actual Wrangler execution exposed an ignored catch-all `/index.html` rewrite; targeting `/` fixes the loop warning while preserving SPA navigation. Added local output ignores. Existing locked dependency versions are preserved.
 - Validation: website typecheck/build and 42 unit tests passed; final Playwright run passed 29 tests (21 Vite, 8 Pages) with no redirect warnings. Release harness passed 63 subprocess assertions using actual synthetic NSIS archives and 7-Zip extraction, PowerShell version/staging checks, real local Git tags and an explicit synthetic gh stub. Configuration/tracked-engine verification, manifest assertions, pack CI validator (35 documents) and whitespace checks passed. Exact commands and input identities are recorded in `workspace-context/validation-record.md` outside the repository. Real Windows build/MSI execution, clean-machine installation and remote release creation remain unverified. Integrated diff manually inspected; no external state changed.
 - No production, provider, repository visibility or secret changes. Rollback: revert this task patch. Changes remain uncommitted in the assigned task checkout.
+
+## ADR-0010 status alignment — 2026-10-27
+
+- Verified the supplied finding: `15_ADR_INDEX.md` records ADR-0010 as ACCEPTED (2026-10-22, task P0-01), with a rationale for Tauri `bundle.resources` map form and bundled VC++ runtime. Current `tauri.conf.json` agrees. The stale PROPOSED restriction conflicted with that accepted decision; this task resolves the documentation conflict without changing the ADR or application behavior.
+- Aligned the operating rule, README, technical design, implementation plan, task breakdown, manifest and source-audit follow-up. Moved the layout out of open decisions. Marked the initial P0-01 finding and prior conflict reports as superseded while preserving the decision rationale and historical evidence.
+- Redistribution rights/notices, clean-machine engine launch/dictation verification, the Linux gate before Linux publication, and owner release approval remain required. Acceptance alone does not establish release readiness.
+- Task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/align-adr-0010-status/ca3e3e92`; base `3029944856e698ede53154bc243d9ebfc0d867c6`. The isolated cloud checkout is the sole registered worktree, initially clean, and is retained for review; no integration performed.
+- Skills: loaded `code-review` for diff review. Rust/Tauri, security and deployment skills were considered unnecessary for this documentation-only status correction. No knowledge-base directory is present. The task is small and sequential, so no subagent was needed.
+- Validation: engineering-pack CI validator passed (35 documents); bounded ADR/status, manifest, configuration-agreement and gate-preservation assertions passed; `git diff --check` and manual diff inspection passed. Results and input identities are recorded in `workspace-context/validation-record.md` outside Git. No provider, production, credential or repository setting changes. Rollback: revert this documentation patch.
