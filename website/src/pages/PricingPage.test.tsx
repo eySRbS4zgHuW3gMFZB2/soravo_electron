@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -19,6 +19,7 @@ vi.mock("../lib/api", () => ({
 describe("PricingPage monthly checkout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    constructorOptions = undefined;
     mockCreateOrder.mockResolvedValue({
       key_id: "rzp_test",
       subscription_id: "sub_123",
@@ -40,6 +41,8 @@ describe("PricingPage monthly checkout", () => {
     }
     (window as any).Razorpay = RazorpayMock;
   });
+
+  afterEach(cleanup);
 
   let constructorOptions: any;
 

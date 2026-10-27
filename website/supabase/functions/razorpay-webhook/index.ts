@@ -285,21 +285,45 @@ Deno.serve(async (req: Request) => {
           }
           const eventCreatedAtUnix = Number(event?.created_at ?? entity?.created_at ?? 0);
           if (subscriptionStatus) {
-            const { data: currentSub } = await admin
+            const { data: currentSub, error: currentSubError } = await admin
               .from("subscriptions")
               .select("last_event_created_at")
               .eq("provider", "razorpay")
               .eq("provider_subscription_id", providerSubscriptionId)
               .maybeSingle();
-            const lastUnix = currentSub?.last_event_created_at
-              ? Math.floor(new Date(currentSub.last_event_created_at).getTime() / 1000)
-              : 0;
-            if (lastUnix && eventCreatedAtUnix && eventCreatedAtUnix < lastUnix) {
-              const { data: staleRows } = await admin.from("webhook_events").update({
+            if (currentSubError) throw currentSubError;
+            const eventCreatedAt = eventCreatedAtUnix > 0
+              ? new Date(eventCreatedAtUnix * 1000).toISOString()
+              : null;
+            const updatePayload: Record<string, unknown> = {
+              status: subscriptionStatus,
+              updated_at: new Date().toISOString(),
+            };
+            if (eventCreatedAt) updatePayload.last_event_created_at = eventCreatedAt;
+
+            // The read is only a fast stale-event check. The UPDATE must also
+            // enforce ordering against a newer event committed after the read.
+            let updatedSubscriptions = null;
+            if (!currentSub?.last_event_created_at ||
+                (eventCreatedAt && eventCreatedAtUnix * 1000 >= new Date(currentSub.last_event_created_at).getTime())) {
+              let statusUpdate = admin.from("subscriptions")
+                .update(updatePayload)
+                .eq("provider", "razorpay")
+                .eq("provider_subscription_id", providerSubscriptionId);
+              statusUpdate = eventCreatedAt
+                ? statusUpdate.or(`last_event_created_at.is.null,last_event_created_at.lte.${eventCreatedAt}`)
+                : statusUpdate.is("last_event_created_at", null);
+              const { data, error: subscriptionStatusError } = await statusUpdate.select("id");
+              if (subscriptionStatusError) throw subscriptionStatusError;
+              updatedSubscriptions = data;
+            }
+            if (!updatedSubscriptions?.length) {
+              const { data: staleRows, error: staleError } = await admin.from("webhook_events").update({
                 processing_status: "processed",
                 processed_at: new Date().toISOString(),
                 error_code: "stale_event",
               }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).eq("claim_token", claimToken).eq("processing_status", "processing").select("id");
+              if (staleError) throw staleError;
               if (!staleRows?.length) {
                 return new Response(JSON.stringify({ status: "processing" }), {
                   status: 503,
@@ -311,20 +335,6 @@ Deno.serve(async (req: Request) => {
                 headers: { "Content-Type": "application/json" },
               });
             }
-
-            const updatePayload: Record<string, unknown> = {
-              status: subscriptionStatus,
-              updated_at: new Date().toISOString(),
-            };
-            if (eventCreatedAtUnix > 0) {
-              updatePayload.last_event_created_at = new Date(eventCreatedAtUnix * 1000).toISOString();
-            }
-            const { error: subscriptionStatusError } = await admin
-              .from("subscriptions")
-              .update(updatePayload)
-              .eq("provider", "razorpay")
-              .eq("provider_subscription_id", providerSubscriptionId);
-            if (subscriptionStatusError) throw subscriptionStatusError;
           }
         }
         if (eventTypeLower === "payment.failed" && entity?.id) {
@@ -498,11 +508,32 @@ Deno.serve(async (req: Request) => {
         if (grantEventCreatedAtUnix > 0) {
           subscriptionUpsertPayload.last_event_created_at = new Date(grantEventCreatedAtUnix * 1000).toISOString();
         }
-        const { error: subscriptionUpsertError } = await admin.from("subscriptions").upsert(
-          subscriptionUpsertPayload,
-          { onConflict: "provider_subscription_id" }
-        );
-        if (subscriptionUpsertError) console.error("razorpay-webhook: subscription upsert failed", subscriptionUpsertError.code);
+        // Insert missing metadata without overwriting an existing subscription.
+        const { error: subscriptionInsertError } = await admin.from("subscriptions")
+          .insert(subscriptionUpsertPayload);
+        if (subscriptionInsertError && subscriptionInsertError.code !== "23505") throw subscriptionInsertError;
+        if (subscriptionInsertError) {
+          let grantUpdate = admin.from("subscriptions")
+            .update(subscriptionUpsertPayload)
+            .eq("provider", "razorpay")
+            .eq("provider_subscription_id", providerSubscriptionId);
+          const grantEventCreatedAt = subscriptionUpsertPayload.last_event_created_at;
+          grantUpdate = grantEventCreatedAt
+            ? grantUpdate.or(`last_event_created_at.is.null,last_event_created_at.lte.${grantEventCreatedAt}`)
+            : grantUpdate.is("last_event_created_at", null);
+          const { data: updatedSubscriptions, error: grantUpdateError } = await grantUpdate.select("id");
+          if (grantUpdateError) throw grantUpdateError;
+          if (!updatedSubscriptions?.length) {
+            // A late captured payment may extend the paid period, but cannot
+            // reactivate a newer cancellation or move its watermark backward.
+            const { error: periodUpdateError } = await admin.from("subscriptions")
+              .update({ current_period_end: periodEnd })
+              .eq("provider", "razorpay")
+              .eq("provider_subscription_id", providerSubscriptionId)
+              .or(`current_period_end.is.null,current_period_end.lt.${periodEnd}`);
+            if (periodUpdateError) throw periodUpdateError;
+          }
+        }
       }
       if (entity?.id) {
         const { error: paymentUpdateError } = await admin.from("payments").update({
@@ -510,7 +541,8 @@ Deno.serve(async (req: Request) => {
         }).eq("provider", "razorpay").eq("provider_payment_id", String(entity.id));
         if (paymentUpdateError) console.error("razorpay-webhook: payment subscription link update failed", paymentUpdateError.code);
       }
-    } catch {
+    } catch (error) {
+      console.error("razorpay-webhook: metadata reconciliation failed", (error as { code?: string })?.code);
       // Metadata reconciliation is secondary to the authoritative grant.
     }
 

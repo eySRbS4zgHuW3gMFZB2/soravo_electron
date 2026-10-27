@@ -150,11 +150,17 @@ Deno.serve(async (req: Request) => {
     const requestId = crypto.randomUUID();
 
     // Do not create another checkout for an existing entitlement or open subscription.
-    const { data: existingEntitlements } = await admin
+    const { data: existingEntitlements, error: entitlementsError } = await admin
       .from("entitlements")
       .select("plan_code, status, lifetime")
       .eq("user_id", user.id)
       .in("plan_code", ["monthly", "lifetime"]);
+    if (entitlementsError) {
+      return new Response(JSON.stringify({ error: "Failed to check existing entitlements" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (existingEntitlements) {
       const lifetime = existingEntitlements.find((e: any) => e.plan_code === "lifetime");
       const monthly = existingEntitlements.find((e: any) => e.plan_code === "monthly");
@@ -172,16 +178,22 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const { data: openSubscription } = await admin
+    const { data: openSubscription, error: subscriptionError } = await admin
       .from("subscriptions")
       .select("provider_subscription_id, status")
       .eq("user_id", user.id)
-      .in("status", ["created", "authenticated", "active"])
+      .in("status", ["created", "authenticated", "active", "pending", "resumed"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (subscriptionError) {
+      return new Response(JSON.stringify({ error: "Failed to check existing subscriptions" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (openSubscription?.provider_subscription_id) {
-      if (openSubscription.status === "active" || openSubscription.status === "authenticated") {
+      if (openSubscription.status !== "created") {
         return new Response(JSON.stringify({ error: "Monthly subscription already active" }), {
           status: 409,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -329,14 +341,26 @@ Deno.serve(async (req: Request) => {
         last_event_created_at: new Date().toISOString(),
       });
       if (subInsertError?.code === "23505") {
-        const { data: existingAfterRace } = await admin
+        const { data: existingAfterRace, error: raceLookupError } = await admin
           .from("subscriptions")
-          .select("provider_subscription_id")
+          .select("provider_subscription_id, status")
           .eq("user_id", user.id)
-          .in("status", ["created", "authenticated", "active"])
+          .in("status", ["created", "authenticated", "active", "pending", "resumed"])
           .limit(1)
           .maybeSingle();
+        if (raceLookupError) {
+          return new Response(JSON.stringify({ error: "Failed to check existing subscriptions" }), {
+            status: 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         if (existingAfterRace?.provider_subscription_id) {
+          if (existingAfterRace.status !== "created") {
+            return new Response(JSON.stringify({ error: "Monthly subscription already active" }), {
+              status: 409,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
           return new Response(JSON.stringify({
             key_id: razorpayKeyId,
             subscription_id: existingAfterRace.provider_subscription_id,

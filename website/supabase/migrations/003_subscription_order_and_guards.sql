@@ -9,7 +9,7 @@ ALTER TABLE public.subscriptions
 -- requests even if an exception escapes the function.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_one_open_monthly_per_user
   ON public.subscriptions (user_id)
-  WHERE status IN ('created', 'authenticated', 'active');
+  WHERE status IN ('created', 'authenticated', 'active', 'pending', 'resumed');
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_last_event_created_at
   ON public.subscriptions (user_id, last_event_created_at);
