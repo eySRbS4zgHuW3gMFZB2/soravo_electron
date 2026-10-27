@@ -28,17 +28,19 @@ export function ResetPasswordPage() {
   // A recovery link establishes a session and emits PASSWORD_RECOVERY. Without
   // that recovery state, a normal signed-in session is not a valid reset flow.
   useEffect(() => {
-    if (authLoading) return;
-    setRecoveryReady(Boolean(session?.user) && isRecovery);
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
-        setRecoveryReady(Boolean(session?.user) || true);
       }
     });
     return () => {
       data.subscription.unsubscribe();
     };
+  }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+    setRecoveryReady(Boolean(session?.user) && isRecovery);
   }, [authLoading, session, isRecovery]);
 
   const handleSubmit = async (e: React.FormEvent) => {
