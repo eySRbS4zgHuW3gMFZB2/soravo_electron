@@ -638,3 +638,8 @@ Skills: loaded `code-review`; Playwright, Supabase and security skills unavailab
 ### 2026-10-27 — Delivery conflict resolution
 
 Merged remote head `5c34e97bf0d04c4716c9b4af9c6e49a18c6bd433` into task commit `9e48ed2` on `feature/supabase-resend-auth-e2e`. Retained remote JSON mock helper, CORS methods, unit-test script and password recovery changes; retained typed Route handling and Supabase API version header allowance. Fresh checks passed: auth browser 7/7, route harness 12/12, unit tests 48/48, website/spec typecheck and build. No push performed.
+
+
+## 2026-10-27 — P3-04/P2-06 recovery visibility review (87c71ff9)
+
+Reused isolated checkout `/home/vercel-sandbox/workspace/repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `coderabbit/verify-password-recovery-state/87c71ff9`, base `260ff874d256694cdd607c0703617cb0b13375ef` (sole named Git worktree, initially clean). The finding was partly addressed: AuthProvider already retains recovery identity in memory and restores saved identity. Fixed remaining loading and missing-ID gaps, removed unused page tracking, and preserved recovery with unavailable storage. Baseline regression run had 3 failures; final website suite 63/63, typecheck/build and recovery browser smoke 1/1 pass. Skill: code-review loaded; repository Supabase/security/React/Playwright skills unavailable; small sequential fix used no subagents. Evidence/input hashes: workspace-context/validation-record.md outside checkout. Uncommitted changes ready for delivery; no integration or remote changes.
