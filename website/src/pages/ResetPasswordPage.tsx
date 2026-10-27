@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
+import { supabase } from "../lib/supabase";
 
 /** Update the recovery password with clear loading/success/error states. */
 export function ResetPasswordPage() {
@@ -12,13 +13,33 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [recoveryReady, setRecoveryReady] = useState<boolean | null>(null);
+  const [isRecovery, setIsRecovery] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const hash = window.location.hash || "";
+    const search = window.location.search || "";
+    return (
+      hash.includes("type=recovery") ||
+      hash.includes("access_token") ||
+      search.includes("type=recovery") ||
+      search.includes("code=")
+    );
+  });
 
-  // A recovery link establishes a session. Without one, the link is invalid,
-  // expired, or already used.
+  // A recovery link establishes a session and emits PASSWORD_RECOVERY. Without
+  // that recovery state, a normal signed-in session is not a valid reset flow.
   useEffect(() => {
     if (authLoading) return;
-    setRecoveryReady(Boolean(session?.user));
-  }, [authLoading, session]);
+    setRecoveryReady(Boolean(session?.user) && isRecovery);
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecovery(true);
+        setRecoveryReady(Boolean(session?.user) || true);
+      }
+    });
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, [authLoading, session, isRecovery]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +82,7 @@ export function ResetPasswordPage() {
           <div role="status" className="mt-8 rounded-lg bg-green-50 p-4 text-sm text-green-700">
             Password updated. Redirecting to login...
           </div>
-        ) : (!authLoading && !session?.user) ? (
+        ) : (!authLoading && (!session?.user || !isRecovery)) ? (
           <div role="alert" className="mt-8 rounded-lg bg-red-50 p-4 text-sm text-red-600">
             This recovery link is invalid or has expired. Request a new password reset link.
           </div>
