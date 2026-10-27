@@ -29,7 +29,7 @@ The active source repo can become private before commercial launch. Release repo
 3. Update version in the app config/package files consistently.
 4. Update changelog/release notes.
 5. Create annotated tag such as `v0.2.0` only after approval.
-6. Build artifacts in CI for every platform that has a supported engine. Windows always. Linux: a **verification build** is permitted once task P1-05 has delivered a Linux engine, because the Linux release gate cannot be satisfied without one; **publishing** a Linux artifact, and describing Linux as supported, stay prohibited until that gate has passed.
+6. Build artifacts in CI for every platform. Windows always. Linux: a **verification build** is permitted now using the tracked and bundled Linux engine, because the Linux release gate cannot be satisfied without one; **publishing** a Linux artifact, and describing Linux as supported, stay prohibited until that gate has passed.
 7. Inspect artifact contents for secrets, test data and missing runtime files.
 8. Generate checksums:
    `sha256sum Soravo_0.2.0_x64-setup.exe Soravo_0.2.0_x64_en-US.msi > SHA256SUMS` (Linux) or an equivalent PowerShell `Get-FileHash -Algorithm SHA256` flow on Windows. Two rules govern the command:

@@ -24,7 +24,7 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - P1-04: Inspect the final installer contents and prove the engine and its dependencies are present.
 - P1-05: **Linux engine verification.** Windows and Linux engine artifacts are now tracked and bundled (see ADR-0010 platform scope). Confirm licensing/redistribution, record SHA-256 and origin, then complete clean-machine Linux engine launch and dictation verification. Until this proof is recorded, **Linux support is BLOCKED**: no Linux build may be published, and Linux may not be named as a supported platform.
 - P1-06: **Clean-machine install on Windows with no developer tools and no source tree:** the app must locate and launch the bundled engine with no `npm run fetch:asr` step, and must dictate. This is a release blocker.
-- P1-07: Build Linux on a clean supported runner; identify system dependencies. Blocked behind P1-05. **Part of the Linux release gate, not the Phase 1 Windows gate** — a verification build is permitted once P1-05 delivers the engine, but nothing may be published or described as supported until the whole gate passes.
+- P1-07: Build Linux on a clean supported runner; identify system dependencies. **Part of the Linux release gate, not the Phase 1 Windows gate** - a verification build is permitted now using the tracked and bundled Linux artifacts, but nothing may be published or described as supported until the whole clean-machine gate passes.
 - P1-08: Test microphone, hotkey hold/release, cancellation, text injection and offline use on Linux. Blocked behind P1-05 and P1-07. **Part of the Linux release gate, not the Phase 1 Windows gate.**
 - P1-09: Produce SHA-256 manifest for test artifacts.
 

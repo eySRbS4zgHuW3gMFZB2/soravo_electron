@@ -56,7 +56,7 @@
                                                     "Linux":  "BLOCKED_CLEAN_MACHINE_RUNTIME_UNVERIFIED",
                                                     "macOS":  "OUT_OF_SCOPE"
                                                 },
-                            "platform_status_note":  "Linux remains an owner-approved launch target but is BLOCKED for publication: Linux CrispASR engine artifacts are now tracked and bundled, but clean-machine runtime and dictation verification remain required before any Linux installer may be published. A Linux VERIFICATION build is permitted once P1-05 delivers the engine, because the Linux release gate cannot be satisfied without one; PUBLISHING a Linux artifact, and describing Linux as supported, stay prohibited until that whole gate passes.",
+                            "platform_status_note":  "Linux remains an owner-approved launch target but is BLOCKED for publication: Linux CrispASR engine artifacts are now tracked and bundled, but clean-machine runtime and dictation verification remain required before any Linux installer may be published. A Linux VERIFICATION build is permitted now, because the tracked and bundled Linux artifacts can be used to satisfy the Linux release gate; PUBLISHING a Linux artifact, and describing Linux as supported, stay prohibited until that whole gate passes.",
                             "monthly_usd":  12,
                             "monthly_recurring":  true,
                             "monthly_device_limit":  3,
