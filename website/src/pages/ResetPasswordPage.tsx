@@ -17,12 +17,19 @@ export function ResetPasswordPage() {
     if (typeof window === "undefined") return false;
     const hash = window.location.hash || "";
     const search = window.location.search || "";
-    return (
+    if (
       hash.includes("type=recovery") ||
       hash.includes("access_token") ||
       search.includes("type=recovery") ||
       search.includes("code=")
-    );
+    ) {
+      return true;
+    }
+    try {
+      return window.sessionStorage.getItem("soravo:password-recovery") === "1";
+    } catch {
+      return false;
+    }
   });
 
   // A recovery link establishes a session and emits PASSWORD_RECOVERY. Without
@@ -31,6 +38,11 @@ export function ResetPasswordPage() {
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
+        try {
+          window.sessionStorage.setItem("soravo:password-recovery", "1");
+        } catch {
+          // Ignore storage failures; URL/session state still drives the flow.
+        }
       }
     });
     return () => {
@@ -62,6 +74,11 @@ export function ResetPasswordPage() {
       if (error) {
         setError(error);
       } else {
+        try {
+          window.sessionStorage.removeItem("soravo:password-recovery");
+        } catch {
+          // Ignore storage failures.
+        }
         setSuccess(true);
         setTimeout(() => navigate("/login"), 1500);
       }
