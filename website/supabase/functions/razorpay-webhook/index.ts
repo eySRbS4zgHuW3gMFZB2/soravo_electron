@@ -285,7 +285,7 @@ Deno.serve(async (req: Request) => {
           }
           if (subscriptionStatus) {
             const eventCreatedAtUnix = Number(event?.created_at);
-            const { error: subscriptionStatusError } = await admin.rpc("apply_subscription_event", {
+            const { data: applied, error: subscriptionStatusError } = await admin.rpc("apply_subscription_event", {
               p_provider_subscription_id: providerSubscriptionId,
               p_status: subscriptionStatus,
               p_event_created_at: Number.isFinite(eventCreatedAtUnix) && eventCreatedAtUnix > 0
@@ -294,6 +294,20 @@ Deno.serve(async (req: Request) => {
               p_period_end: null,
             });
             if (subscriptionStatusError) throw subscriptionStatusError;
+            if (!applied) {
+              const { data: staleRows, error: staleError } = await admin.from("webhook_events").update({
+                processing_status: "processed",
+                processed_at: new Date().toISOString(),
+                error_code: "stale_event",
+              }).eq("provider", "razorpay").eq("provider_event_id", providerEventId)
+                .eq("claim_token", claimToken).eq("processing_status", "processing").select("id");
+              if (staleError) throw staleError;
+              return new Response(JSON.stringify(staleRows?.length
+                ? { status: "ignored", reason: "stale_event" } : { status: "processing" }), {
+                status: staleRows?.length ? 200 : 503,
+                headers: { "Content-Type": "application/json" },
+              });
+            }
           }
         }
         if (eventTypeLower === "payment.failed" && entity?.id) {
@@ -463,7 +477,7 @@ Deno.serve(async (req: Request) => {
           p_user_id: userId,
           p_period_end: periodEnd,
         });
-        if (subscriptionUpsertError) console.error("razorpay-webhook: subscription upsert failed", subscriptionUpsertError.code);
+        if (subscriptionUpsertError) throw subscriptionUpsertError;
       }
       if (entity?.id) {
         const { error: paymentUpdateError } = await admin.from("payments").update({
@@ -471,7 +485,8 @@ Deno.serve(async (req: Request) => {
         }).eq("provider", "razorpay").eq("provider_payment_id", String(entity.id));
         if (paymentUpdateError) console.error("razorpay-webhook: payment subscription link update failed", paymentUpdateError.code);
       }
-    } catch {
+    } catch (error) {
+      console.error("razorpay-webhook: metadata reconciliation failed", (error as { code?: string })?.code);
       // Metadata reconciliation is secondary to the authoritative grant.
     }
 

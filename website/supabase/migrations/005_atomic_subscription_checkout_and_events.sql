@@ -34,9 +34,9 @@ BEGIN
 
   SELECT * INTO v_subscription FROM public.subscriptions
   WHERE user_id = p_user_id AND provider = 'razorpay' AND plan_code = 'monthly'
-    AND status IN ('created', 'authenticated', 'active');
+    AND status IN ('created', 'authenticated', 'active', 'pending', 'resumed');
   IF FOUND THEN
-    IF v_subscription.status IN ('authenticated', 'active') THEN
+    IF v_subscription.status <> 'created' THEN
       RETURN jsonb_build_object('status', 'blocked', 'error', 'Monthly subscription already active');
     END IF;
     RETURN jsonb_build_object('status', 'reuse', 'subscription_id', v_subscription.provider_subscription_id);
@@ -116,6 +116,16 @@ BEGIN
         AND current.status NOT IN ('cancelled', 'completed', 'expired'))
     );
   GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows = 0 AND p_status = 'active' AND p_period_end IS NOT NULL THEN
+    -- A verified late capture may extend its paid period without reactivating a
+    -- newer cancellation or changing the lifecycle watermark. The conflicting
+    -- row remains locked by the upsert for this transaction.
+    UPDATE public.subscriptions
+    SET current_period_end = p_period_end
+    WHERE provider = 'razorpay' AND provider_subscription_id = p_provider_subscription_id
+      AND user_id = v_user_id
+      AND (current_period_end IS NULL OR current_period_end < p_period_end);
+  END IF;
   RETURN v_rows > 0;
 END;
 $$;

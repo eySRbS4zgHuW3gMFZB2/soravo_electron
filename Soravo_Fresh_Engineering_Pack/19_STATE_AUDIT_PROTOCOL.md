@@ -59,3 +59,5 @@ Report every worktree found, including ones created by earlier sessions. For eac
 Dated audit records are preserved in `docs/engineering/STATE_AUDIT.md`.
 
 Subscription checkout/event-ordering audit recorded in `docs/engineering/STATE_AUDIT.md` on 2026-10-27 for task branch `coderabbit/api-subscription-hardening/8b15d30d` (base `74ec17e`).
+
+Delivery merge against remote `147fd33` was audited on 2026-10-27 in `docs/engineering/STATE_AUDIT.md`; atomic subscription migration is now 005.

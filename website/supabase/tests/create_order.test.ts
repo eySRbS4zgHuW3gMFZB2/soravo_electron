@@ -7,7 +7,12 @@ let claimStatus: string;
 let reserved: boolean;
 let saved: Record<string, unknown> | null;
 let providerCalls: number;
-let claimError: boolean;
+let claimError: string | null;
+let openStatus: string | null;
+let raceStatus: string | null;
+let raceLookupError: boolean;
+let raceReads: number;
+const blockingStatuses = ["authenticated", "active", "pending", "resumed"];
 let saveError: boolean;
 let providerStatus: number;
 let providerThrows: boolean;
@@ -24,6 +29,8 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     if (claimError) return Response.json({ message: "Synthetic database error" }, { status: 500 });
     expect(body.p_user_id).toBe("test-user");
     expect(body.p_request_id).toMatch(/^[0-9a-f-]{36}$/);
+    if (openStatus && blockingStatuses.includes(openStatus)) return Response.json({ status: "blocked", error: "Already active" });
+    if (openStatus === "created") return Response.json({ status: "reuse", subscription_id: "sub_existing" });
     if (saved) return Response.json({ status: "reuse", subscription_id: saved.provider_subscription_id });
     if (claimStatus === "blocked") return Response.json({ status: "blocked", error: "Already active" });
     if (reserved) return Response.json({ status: "busy", error: "Checkout in progress" });
@@ -46,6 +53,12 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     return Response.json({ id: "sub_test", status: "created" }, { status: providerStatus });
   }
   if (url.pathname.endsWith("/subscriptions")) {
+    if (init?.method !== "POST") {
+      raceReads++;
+      if (raceLookupError) return Response.json({ message: "Synthetic race lookup error" }, { status: 500 });
+      return Response.json({ provider_subscription_id: "sub_existing", status: raceStatus });
+    }
+    if (raceStatus || raceLookupError) return Response.json({ code: "23505", message: "Concurrent legacy checkout" }, { status: 409 });
     if (saveError) return Response.json({ message: "Synthetic save error" }, { status: 500 });
     // A webhook may already have saved a newer status for the provider ID.
     expect(new Headers(init?.headers).get("Prefer")).toContain("resolution=ignore-duplicates");
@@ -84,7 +97,11 @@ beforeEach(() => {
   reserved = false;
   saved = null;
   providerCalls = 0;
-  claimError = saveError = providerThrows = planFails = false;
+  claimError = null;
+  openStatus = raceStatus = null;
+  raceLookupError = false;
+  raceReads = 0;
+  saveError = providerThrows = planFails = false;
   planExists = true;
   providerStatus = 200;
   providerGate = Promise.resolve();
@@ -99,9 +116,9 @@ describe("monthly checkout reservation", () => {
     expect((await checkout()).status).toBe(409);
     expect(providerCalls).toBe(0);
   });
-  it("fails closed when the atomic check fails", async () => {
-    claimError = true;
-    expect((await checkout()).status).toBe(500);
+  it.each(["entitlements", "subscriptions"])("fails closed when the atomic %s check fails", async (table) => {
+    claimError = table;
+    expect((await checkout()).status).toBe(502);
     expect(providerCalls).toBe(0);
   });
   it("reuses the created provider subscription on subsequent checkout", async () => {
@@ -145,5 +162,42 @@ describe("monthly checkout reservation", () => {
     expect((await checkout()).status).toBe(502);
     expect(reserved).toBe(false);
     expect(providerCalls).toBe(0);
+  });
+});
+
+
+describe("billable checkout guards and legacy race recovery", () => {
+  it.each(blockingStatuses)("blocks a persisted %s subscription before provider calls", async (status) => {
+    openStatus = status;
+    expect((await checkout()).status).toBe(409);
+    expect(providerCalls).toBe(0);
+  });
+  it("reuses a persisted created subscription before provider calls", async () => {
+    openStatus = "created";
+    const response = await checkout();
+    expect(response.status).toBe(200);
+    expect((await response.json()).subscription_id).toBe("sub_existing");
+    expect(providerCalls).toBe(0);
+  });
+  it.each(blockingStatuses)("blocks a %s subscription found during legacy race recovery", async (status) => {
+    raceStatus = status;
+    expect((await checkout()).status).toBe(409);
+    expect(providerCalls).toBe(1);
+    expect(raceReads).toBe(1);
+    expect(reserved).toBe(true);
+  });
+  it("reuses a created subscription found during legacy race recovery", async () => {
+    raceStatus = "created";
+    const response = await checkout();
+    expect(response.status).toBe(200);
+    expect((await response.json()).subscription_id).toBe("sub_existing");
+    expect(providerCalls).toBe(1);
+    // The newly created provider ID still needs reconciliation.
+    expect(reserved).toBe(true);
+  });
+  it("fails closed when legacy race recovery cannot read the subscription", async () => {
+    raceLookupError = true;
+    expect((await checkout()).status).toBe(502);
+    expect(reserved).toBe(true);
   });
 });

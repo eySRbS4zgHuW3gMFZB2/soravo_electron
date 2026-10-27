@@ -1,4 +1,4 @@
--- Run after migrations 001–004 in the disposable database.
+-- Run after migrations 001–005 in the disposable database.
 BEGIN;
 SELECT no_plan();
 INSERT INTO auth.users (id, email) VALUES
@@ -35,6 +35,12 @@ SELECT is(public.claim_monthly_checkout('33333333-1111-4111-8111-111111111111', 
 UPDATE public.subscriptions SET status = 'authenticated';
 SELECT is(public.claim_monthly_checkout('33333333-1111-4111-8111-111111111111', gen_random_uuid())->>'status',
   'blocked', 'authenticated subscription blocks checkout');
+UPDATE public.subscriptions SET status = 'pending';
+SELECT is(public.claim_monthly_checkout('33333333-1111-4111-8111-111111111111', gen_random_uuid())->>'status',
+  'blocked', 'pending billable subscription blocks checkout');
+UPDATE public.subscriptions SET status = 'resumed';
+SELECT is(public.claim_monthly_checkout('33333333-1111-4111-8111-111111111111', gen_random_uuid())->>'status',
+  'blocked', 'resumed billable subscription blocks checkout');
 UPDATE public.subscriptions SET status = 'active';
 SELECT is(public.claim_monthly_checkout('33333333-1111-4111-8111-111111111111', gen_random_uuid())->>'status',
   'blocked', 'active subscription blocks checkout');
@@ -51,7 +57,15 @@ SELECT is((SELECT status FROM public.subscriptions WHERE provider_subscription_i
 SELECT is((SELECT last_event_created_at FROM public.subscriptions WHERE provider_subscription_id = 'sub_guards'),
   '2030-01-02Z'::timestamptz, 'watermark does not move backwards');
 SELECT is((SELECT current_period_end FROM public.subscriptions WHERE provider_subscription_id = 'sub_guards'),
-  NULL::timestamptz, 'stale period end is not written');
+  '2030-02-01Z'::timestamptz, 'late capture extends paid period without changing cancellation');
+SELECT ok(NOT public.apply_subscription_event('sub_guards', 'active', '2030-01-01Z',
+  '33333333-1111-4111-8111-111111111111', '2030-01-20Z'), 'older capture cannot replace cancelled status');
+SELECT is((SELECT current_period_end FROM public.subscriptions WHERE provider_subscription_id = 'sub_guards'),
+  '2030-02-01Z'::timestamptz, 'older capture cannot shorten the recorded paid period');
+SELECT ok(NOT public.apply_subscription_event('sub_guards', 'active', NULL,
+  '33333333-1111-4111-8111-111111111111', '2030-02-02Z'), 'undated capture cannot replace cancelled status');
+SELECT is((SELECT current_period_end FROM public.subscriptions WHERE provider_subscription_id = 'sub_guards'),
+  '2030-02-02Z'::timestamptz, 'undated verified capture may extend only the paid period');
 SELECT ok(public.apply_subscription_event('sub_guards', 'active', '2030-01-03Z',
   '33333333-1111-4111-8111-111111111111', '2030-02-03Z'), 'newer event can advance state');
 SELECT ok(public.apply_subscription_event('sub_guards', 'active', '2030-01-03Z',
@@ -88,5 +102,32 @@ SELECT lives_ok($$DELETE FROM public.monthly_checkout_reservations
   WHERE user_id = '33333333-1111-4111-8111-111111111111' AND request_id IS NOT NULL$$,
   'service role can release a reservation with ownership filters');
 RESET ROLE;
+INSERT INTO auth.users (id, email)
+VALUES ('33333333-2222-3333-4444-555555555555', 'subscription-guards@example.com');
+
+INSERT INTO public.subscriptions (user_id, provider_subscription_id, plan_code, status)
+VALUES ('33333333-2222-3333-4444-555555555555', 'sub_existing', 'monthly', 'created');
+
+SELECT throws_ok(
+  format($sql$
+    INSERT INTO public.subscriptions (user_id, provider_subscription_id, plan_code, status)
+    VALUES ('33333333-2222-3333-4444-555555555555', 'sub_duplicate', 'monthly', %L)
+  $sql$, status),
+  '23505', NULL, 'rejects another billable subscription in status ' || status
+)
+FROM unnest(ARRAY['created', 'authenticated', 'active', 'pending', 'resumed']) AS statuses(status);
+
+SELECT lives_ok($sql$
+  INSERT INTO public.subscriptions (user_id, provider_subscription_id, plan_code, status)
+  VALUES ('33333333-2222-3333-4444-555555555555', 'sub_cancelled', 'monthly', 'cancelled')
+$sql$, 'allows a cancelled historical subscription');
+
+UPDATE public.subscriptions SET status = 'cancelled' WHERE provider_subscription_id = 'sub_existing';
+SELECT lives_ok($sql$
+  INSERT INTO public.subscriptions (user_id, provider_subscription_id, plan_code, status)
+  VALUES ('33333333-2222-3333-4444-555555555555', 'sub_replacement', 'monthly', 'pending')
+$sql$, 'allows a pending subscription after cancellation');
+
+
 SELECT * FROM finish();
 ROLLBACK;

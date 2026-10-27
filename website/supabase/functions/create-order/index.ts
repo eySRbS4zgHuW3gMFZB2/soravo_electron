@@ -155,7 +155,12 @@ Deno.serve(async (req: Request) => {
       p_user_id: user.id,
       p_request_id: requestId,
     });
-    if (checkoutError) throw checkoutError;
+    if (checkoutError) {
+      return new Response(JSON.stringify({ error: "Failed to check monthly checkout" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (checkout?.status === "blocked" || checkout?.status === "busy") {
       return new Response(JSON.stringify({ error: checkout.error }), {
         status: 409,
@@ -302,7 +307,7 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      await admin.from("subscriptions").upsert({
+      const { error: subSaveError } = await admin.from("subscriptions").upsert({
         user_id: user.id,
         provider: "razorpay",
         provider_subscription_id: String(subscriptionData.id),
@@ -313,7 +318,43 @@ Deno.serve(async (req: Request) => {
         charge_at: subscriptionData.charge_at ? new Date(Number(subscriptionData.charge_at) * 1000).toISOString() : null,
         current_period_end: subscriptionData.current_end ? new Date(Number(subscriptionData.current_end) * 1000).toISOString() : null,
         // Provider event time is set only by webhooks, never the local clock.
-      }, { onConflict: "provider_subscription_id", ignoreDuplicates: true }).throwOnError();
+      }, { onConflict: "provider_subscription_id", ignoreDuplicates: true });
+      if (subSaveError) {
+        if (subSaveError.code !== "23505") throw subSaveError;
+        // Also handle overlapping legacy workers that did not reserve first.
+        // The just-created provider outcome remains reserved for reconciliation.
+        const { data: existingAfterRace, error: raceLookupError } = await admin
+          .from("subscriptions")
+          .select("provider_subscription_id, status")
+          .eq("user_id", user.id)
+          .eq("provider", "razorpay")
+          .in("status", ["created", "authenticated", "active", "pending", "resumed"])
+          .limit(1)
+          .maybeSingle();
+        if (raceLookupError) {
+          return new Response(JSON.stringify({ error: "Failed to check existing subscriptions" }), {
+            status: 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (!existingAfterRace) throw subSaveError;
+        if (existingAfterRace.status !== "created") {
+          return new Response(JSON.stringify({ error: "Monthly subscription already active" }), {
+            status: 409,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({
+          key_id: razorpayKeyId,
+          subscription_id: existingAfterRace.provider_subscription_id,
+          amount: plan.amount,
+          currency: plan.currency,
+          plan_code: plan.code,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       providerOutcomeUncertain = false;
 
       return new Response(JSON.stringify({

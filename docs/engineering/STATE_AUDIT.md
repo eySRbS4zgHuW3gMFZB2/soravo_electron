@@ -19,3 +19,16 @@
 - CONFIRMED: minimal alias removal plus migration 004 move checkout checks/reservation and provider event ordering into atomic database operations. Tests cover failure retention, safe release, provider-ID reuse, cancellation before local persistence, stale/equal/undated events and role permissions.
 - CONFIRMED: Ubuntu 26.04.1, Node 24.21.0/npm 11.19.0; website frozen dependency installation succeeded. Disposable PostgreSQL 18.6 with synthetic Auth bootstrap and pgTAP is used locally; CI remains PostgreSQL 16. No external account, credentials, live service or production state changed.
 - LIMITATIONS: Deno deployment, live Razorpay traffic and remote CI for this patch were not exercised. Ambiguous provider creation requires operator reconciliation before a reservation is released. Detailed local validation/review outcomes are kept in the external validation record and session handoff.
+
+## Bounded subscription-ordering review audit — 2026-10-27
+
+- CONFIRMED: initial clean task worktree on `coderabbit/harden-subscription-event-ordering/d316d0d5`, base `74ec17eae3f6dbe0840b2766cdcfb5d08ac4e00a`; sole registered worktree. All six supplied findings were present and repaired.
+- CONFIRMED: database predicates now fence status/watermark updates; stale grant metadata extends only a later paid period. Both checkout guard paths and fresh/upgrade index definitions cover pending/resumed. Pricing tests reset options and clean the DOM.
+- CONFIRMED: website typecheck/build and 72 Vitest tests passed; disposable PostgreSQL 17.11 replay and four pgTAP suites passed 46 assertions; original-index upgrade passed another 7 assertions. CI uses PostgreSQL 16; that version was not run locally. Deno deployment, live provider flow and remote CI remain unverified. No production or shared provider state accessed.
+- Task remains uncommitted in the assigned checkout for user review. Exact validation/input identities and task-local service cleanup are recorded outside Git.
+
+## Subscription delivery merge audit — 2026-10-27
+
+- CONFIRMED: clean task commit `96a7866` and remote head `147fd3377295ff7df7009c088d3d8dea4d52f24a` diverged from `74ec17e`; user requested a merge commit with both changes preserved and no push. Runtime checkout now holds `feature/razorpay-recurring-sandbox`, sole registered worktree.
+- CONFIRMED: resolved all eight conflicting paths; retained both documentation histories and remote PricingPage cleanup. Atomic checkout/event migration is now 005, after remote 004's pending/resumed uniqueness upgrade. Both source and test contracts were integrated, including stale-capture paid-period enrichment without status resurrection.
+- CONFIRMED: merged website typecheck/build and 85 tests passed; fresh-install and original-index upgrade paths passed 87 SQL assertions each. Upgrade rollback on duplicate billable data and overlapping checkout/cancellation transactions were verified with synthetic fixtures. PostgreSQL 18.6 was exercised; CI remains PostgreSQL 16. No live services or secrets used, and no remote CI result is claimed.
