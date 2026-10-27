@@ -175,7 +175,7 @@ jobs:
               $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower()
               $lines += "$hash  $($_.Name)"
             }
-            Set-Content -Path (Join-Path $stage "SHA256SUMS") -Value $lines -Encoding ascii
+            [System.IO.File]::WriteAllText((Join-Path $stage "SHA256SUMS"), (($lines -join "`n") + "`n"), [System.Text.Encoding]::ASCII)
             if (-not (Test-Path (Join-Path $stage "SHA256SUMS"))) { throw "SHA256SUMS was not created." }
           } finally {
             Pop-Location
@@ -261,6 +261,17 @@ jobs:
             echo "Source tag $tag does not point to the built commit $SOURCE_SHA." >&2
             exit 1
           fi
+
+          if [[ ! "$RELEASES_REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]]; then
+            echo "Invalid releases repository: $RELEASES_REPO" >&2
+            exit 1
+          fi
+
+          RELEASE_TARGET="$(gh repo view "$RELEASES_REPO" --json defaultBranchRef -q '.defaultBranchRef.name')"
+          if [[ -z "$RELEASE_TARGET" ]]; then
+            echo "Could not resolve a default branch in $RELEASES_REPO." >&2
+            exit 1
+          fi
           staging="release-staging"
           if [[ ! -f "$staging/SHA256SUMS" ]]; then
             found=$(find "$staging" -name SHA256SUMS | head -1)
@@ -287,9 +298,9 @@ jobs:
 
           gh release create "$tag" ./* \
             --repo "$RELEASES_REPO" \
-            --target "$SOURCE_SHA" \
+            --target "$RELEASE_TARGET" \
             --title "Soravo ${version}" \
-            --notes "Soravo ${version} desktop release. Installer files and SHA256SUMS are attached. Verify the installer hash before running it. Windows installers may trigger SmartScreen; checksums only detect accidental corruption." \
+             --notes "Soravo ${version} desktop release. Source tag ${tag} verified at commit ${SOURCE_SHA}. Installer files and SHA256SUMS are attached. Verify the installer hash before running it. Windows installers may trigger SmartScreen; checksums only detect accidental corruption." \
             --draft
 
           echo "Created draft release $tag in $RELEASES_REPO."

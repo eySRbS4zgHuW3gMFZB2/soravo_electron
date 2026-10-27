@@ -43,7 +43,7 @@ Gate: clean Windows VM install works without dev tools and can dictate using the
 
 **Phase 1 is Windows-only.** It is complete when the Windows gate above is met. Linux is BLOCKED and is **not** implied by a green Phase 1, so a phase cannot appear complete while Linux remains unverified.
 
-Linux has its own gate, which applies only once **P1-05** has delivered a tracked, licensed Linux engine artifact:
+Linux has its own gate, which applies only once **P1-05** has recorded the tracked Linux engine's licensing and clean-machine launch/dictation proof:
 
 - the Linux engine's SHA-256, origin and licence are recorded, and redistribution is confirmed;
 - the Linux bundle contains the engine and its shared libraries;
