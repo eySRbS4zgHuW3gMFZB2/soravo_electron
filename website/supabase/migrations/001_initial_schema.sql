@@ -339,6 +339,27 @@ BEGIN
     RETURN 0;
   END IF;
 
+  -- Check durable payment-level idempotency before promoting any pending row.
+  -- A pending row may be promoted by this same transaction, but a payment
+  -- already captured before this transaction is a duplicate grant attempt.
+  SELECT user_id, amount_minor, currency, status
+    INTO v_existing_user, v_existing_amount, v_existing_currency, v_existing_status
+  FROM public.payments
+  WHERE provider = p_provider
+    AND provider_payment_id = p_provider_payment_id
+  FOR UPDATE;
+
+  IF FOUND THEN
+    IF v_existing_user <> p_user_id
+       OR v_existing_amount <> p_amount_minor
+       OR v_existing_currency <> p_currency THEN
+      RAISE EXCEPTION 'payment identity conflict';
+    END IF;
+    v_payment_already_captured := (v_existing_status = 'captured');
+  ELSE
+    v_payment_already_captured := FALSE;
+  END IF;
+
   -- Bind promotion to the server-created pending record. A mismatched pending
   -- row must abort the transaction rather than be promoted or overwritten.
   IF p_provider_order_id IS NOT NULL AND p_provider_order_id <> '' THEN
@@ -379,7 +400,7 @@ BEGIN
          OR v_existing_currency <> p_currency THEN
         RAISE EXCEPTION 'payment identity conflict';
       END IF;
-      v_payment_already_captured := (v_existing_status = 'captured');
+      -- Preserve the payment-level decision taken before promotion.
       -- Only promote an un-captured payment row. A duplicate event for an
       -- already captured payment must not advance the captured timestamp or be
       -- treated as fresh entitlement evidence.
