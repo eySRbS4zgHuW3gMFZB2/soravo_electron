@@ -25,12 +25,7 @@ export function DownloadPage() {
             Windows support is planned. The installer and SHA-256 checksum have not been published yet,
             so no download is currently available.
           </p>
-          <a
-            href="https://github.com/eySRbS4zgHuW3gMFZB2/soravo/releases"
-            className="mt-4 inline-block rounded-full border border-ink px-6 py-3 font-semibold text-ink"
-          >
-            View release status
-          </a>
+
         </div>
         <div className="mt-6 rounded-xl border border-ink/10 p-6">
           <h2 className="text-xl font-semibold text-ink">Linux</h2>

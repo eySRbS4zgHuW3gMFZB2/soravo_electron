@@ -24,7 +24,11 @@ export function AccountPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null);
-
+  const effectiveStatus = (entitlement: { status: string; lifetime: boolean; subscription_period_end: string | null }) =>
+    !entitlement.lifetime && entitlement.status === "active" && entitlement.subscription_period_end &&
+    new Date(entitlement.subscription_period_end).getTime() <= Date.now()
+      ? "expired"
+      : entitlement.status;
   const refreshEntitlements = async () => {
     if (!user) return;
     setLoading(true);
@@ -196,13 +200,13 @@ export function AccountPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-semibold text-ink capitalize">{e.plan_code}</span>
                     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${e.lifetime ? "bg-lime text-ink" : "bg-ink/10 text-ink"}`}>
-                      {e.lifetime ? "Lifetime" : e.status}
+                      {e.lifetime ? "Lifetime" : effectiveStatus(e)}
                     </span>
                   </div>
                   <dl className="mt-3 space-y-1 text-sm text-muted">
                     <div className="flex gap-2">
                       <dt className="font-medium text-ink">Status:</dt>
-                      <dd>{e.status}</dd>
+                      <dd>{effectiveStatus(e)}</dd>
                     </div>
                     {!e.lifetime && e.subscription_period_end && (
                       <div className="flex gap-2">

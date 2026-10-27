@@ -119,6 +119,17 @@ beforeEach(() => {
 
 afterAll(() => vi.unstubAllGlobals());
 
+describe("webhook signature validation", () => {
+  it("rejects an invalid signature", async () => {
+    const response = await handler(new Request("https://webhook.invalid", {
+      method: "POST",
+      body: '{"event":"payment.captured"}',
+      headers: { "x-razorpay-signature": "00" },
+    }));
+    expect(response.status).toBe(401);
+  });
+});
+
 describe("webhook claim ownership", () => {
   it.each(["received", "failed", "processing"])("rotates the token when claiming %s events and finalizes with it", async (status) => {
     ledger.processing_status = status;

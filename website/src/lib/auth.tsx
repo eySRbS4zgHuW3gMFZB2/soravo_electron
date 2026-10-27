@@ -17,13 +17,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<{ error: string | null }>;
-  resetPassword: (email: string) => Promise<{ error: string | null }>;
-  resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>;
-  sendPasswordResetEmail: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (password: string) => Promise<{ error: string | null }>;
-  updateUserPassword: (password: string) => Promise<{ error: string | null }>;
-  /** Allow loose indexing so callers can use common method aliases. */
-  [key: string]: unknown;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -119,11 +113,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
-  const resetPassword = requestPasswordReset;
-  const resetPasswordForEmail = requestPasswordReset;
-  const sendPasswordResetEmail = requestPasswordReset;
-  const updateUserPassword = updatePassword;
-
   const value: AuthContextValue = {
     session,
     user: session?.user ?? null,
@@ -132,18 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUp,
     signOut,
     requestPasswordReset,
-    resetPassword,
-    resetPasswordForEmail,
-    sendPasswordResetEmail,
     updatePassword,
-    updateUserPassword,
   };
-
-  // Backwards/alias-friendly method names.
-  (value as Record<string, unknown>).forgotPassword = requestPasswordReset;
-  (value as Record<string, unknown>).recoverPassword = requestPasswordReset;
-  (value as Record<string, unknown>).changePassword = updatePassword;
-  (value as Record<string, unknown>).setPassword = updatePassword;
 
   return (
     <AuthContext.Provider value={value}>
@@ -209,6 +188,3 @@ export function sanitizeReturnTo(value: string | null | undefined, fallback = "/
 }
 
 /** Alias names retained for callers/tests that expect different conventions. */
-export const RequireAuth = ProtectedRoute;
-export const AuthGate = ProtectedRoute;
-export const PrivateRoute = ProtectedRoute;

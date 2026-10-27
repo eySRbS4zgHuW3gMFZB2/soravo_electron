@@ -12,7 +12,8 @@ import { describe, it, expect } from "vitest";
  *   - An already-active device always bypasses the limit check (refresh allowed).
  *   - Lifetime users bypass the limit entirely.
  *
- * This pins the expected behavior so changes to the SQL semantics are caught.
+ * This documents the intended decision table only. It does not execute the SQL
+ * function and cannot detect changes to it.
  *
  * Database-backed coverage of the real SQL function lives in
  * website/supabase/tests/register_device_atomic.test.sql (pgTAP) and is wired

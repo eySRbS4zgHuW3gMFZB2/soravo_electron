@@ -14,7 +14,7 @@ Functions as the privileged API backend).
 - **Identity:** Supabase Auth (new project, isolated from old `soravo` project)
 - **Database:** Supabase Postgres with RLS (schema in `website/supabase/migrations/`)
 - **Server-side API:** Supabase Edge Functions (Deno runtime)
-- **Payments:** Razorpay (design complete, implementation pending)
+- **Payments:** Razorpay (code implemented; live provider setup and deployment pending)
 - **Hosting:** Cloudflare Pages (new project, isolated from soravo.xyz)
 
 ## Phase Breakdown

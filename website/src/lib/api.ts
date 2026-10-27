@@ -131,10 +131,6 @@ export async function createOrder(planCode: PlanCode): Promise<CreateOrderResult
   return data;
 }
 
-/** Alias names retained for callers/tests that expect different conventions. */
-export const createCheckoutOrder = createOrder;
-export const createPaymentOrder = createOrder;
-export const beginCheckout = createOrder;
 
 /**
  * Read the signed-in user's entitlements through RLS.
@@ -154,7 +150,3 @@ export async function listEntitlements(): Promise<
   return data ?? [];
 }
 
-/** Alias names retained for callers/tests that expect different conventions. */
-export const getEntitlements = listEntitlements;
-export const fetchEntitlements = listEntitlements;
-export const refreshEntitlements = listEntitlements;

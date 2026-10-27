@@ -547,7 +547,9 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Admin operations
 - All server-side business logic
 
-### What is NOT implemented yet
+### Implemented since this decision
+
+### Still not done
 
 - Device registration Edge Function implemented (register-device)
 - Payment and entitlement Edge Functions implemented as code: create-order, razorpay-webhook, finalize_webhook_payment_atomic

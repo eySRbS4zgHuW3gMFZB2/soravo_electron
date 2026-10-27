@@ -17,7 +17,7 @@ vi.mock("./supabase", () => ({
   isConfigured: true,
 }));
 
-import { createOrder, createCheckoutOrder } from "./api";
+import { createOrder } from "./api";
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch as typeof fetch;
@@ -71,18 +71,4 @@ describe("Checkout order creation", () => {
     await expect(createOrder("monthly")).rejects.toThrow("Razorpay not configured");
   });
 
-  it("keeps createCheckoutOrder as an alias", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        key_id: "rzp_test",
-        order_id: "order_456",
-        amount: 5000,
-        currency: "USD",
-        plan_code: "lifetime",
-      }),
-    });
-    const result = await createCheckoutOrder("lifetime");
-    expect(result.order_id).toBe("order_456");
-  });
 });

@@ -19,7 +19,6 @@ Local development notes.
     - `RAZORPAY_KEY_ID` (test mode only)
     - `RAZORPAY_KEY_SECRET` (server-only, test mode only)
     - `RAZORPAY_WEBHOOK_SECRET` (server-only)
-    - `RAZORPAY_CURRENCY=USD`
 - `website/supabase/.env.local.example` contains placeholders only and is safe to commit.
 
 ## Deployed Edge Function secrets

@@ -270,6 +270,7 @@ Deno.serve(async (req: Request) => {
           headers: { "Content-Type": "application/json" },
         });
       }
+      console.error("razorpay-webhook: invalid payload", providerEventId, eventType);
       return new Response(JSON.stringify({ status: "rejected", error: "Invalid payload" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -297,6 +298,7 @@ Deno.serve(async (req: Request) => {
           headers: { "Content-Type": "application/json" },
         });
       }
+      console.error("razorpay-webhook: unknown user", providerEventId, eventType, userId);
       return new Response(JSON.stringify({ status: "rejected", error: "Unknown user" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -355,11 +357,13 @@ Deno.serve(async (req: Request) => {
       .eq("processing_status", "processing")
       .select("id");
     if (!failedUpdateError && !failedRows?.length) {
+      console.error("razorpay-webhook: processing exception", providerEventId, eventType);
       return new Response(JSON.stringify({ status: "processing" }), {
         status: 503,
         headers: { "Content-Type": "application/json" },
       });
     }
+    console.error("razorpay-webhook: processing failed", providerEventId, eventType);
     return new Response(JSON.stringify({ error: "Processing failed" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

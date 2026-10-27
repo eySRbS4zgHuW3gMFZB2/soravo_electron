@@ -474,32 +474,3 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.finalize_webhook_payment_atomic(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.finalize_webhook_payment_atomic(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN) TO service_role;
-
--- Compatibility alias without the _atomic suffix.
-CREATE OR REPLACE FUNCTION public.finalize_webhook_payment(
-  p_provider TEXT,
-  p_provider_event_id TEXT,
-  p_claim_token UUID,
-  p_user_id UUID,
-  p_plan TEXT,
-  p_provider_payment_id TEXT,
-  p_provider_order_id TEXT,
-  p_amount_minor INTEGER,
-  p_currency TEXT,
-  p_period_end TIMESTAMPTZ,
-  p_lifetime BOOLEAN
-)
-RETURNS INTEGER
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT public.finalize_webhook_payment_atomic(
-    p_provider, p_provider_event_id, p_claim_token, p_user_id, p_plan,
-    p_provider_payment_id, p_provider_order_id, p_amount_minor, p_currency,
-    p_period_end, p_lifetime
-  );
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.finalize_webhook_payment(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.finalize_webhook_payment(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN) TO service_role;
