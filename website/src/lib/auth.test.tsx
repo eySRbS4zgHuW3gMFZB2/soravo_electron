@@ -7,6 +7,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 const mockAuth = vi.hoisted(() => ({
   getSession: vi.fn(),
+  initialize: vi.fn().mockResolvedValue({}),
   onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
   signInWithPassword: vi.fn(),
   signUp: vi.fn(),
