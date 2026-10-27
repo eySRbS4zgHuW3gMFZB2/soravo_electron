@@ -547,13 +547,14 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Admin operations
 - All server-side business logic
 
-### What is NOT implemented yet
+### Implemented since this decision
 
-- No Edge Functions written yet
-- No payment processing
-- No webhook handling
-- No entitlement provisioning
-- Design documents only
+### Still not done
+
+- Device registration Edge Function implemented (register-device)
+- Payment and entitlement Edge Functions implemented as code: create-order, razorpay-webhook, finalize_webhook_payment_atomic
+- Live Razorpay provider setup and Deno deployment remain unverified
+- Design documents exist alongside implementation
 
 ## New Project Isolation (2026-10-23)
 
@@ -578,3 +579,52 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - No Cloudflare Pages project created (requires owner approval)
 - No DNS changes
 - No environment variables configured in production
+
+## Website Foundation (2026-10-23)
+
+### What was implemented
+
+- website/ directory with Vite + React 18 + TypeScript + Tailwind v4
+- shadcn/ui-compatible component structure (radix-nova style)
+- Pages: LandingPage, PricingPage, LoginPage, SignupPage, AccountPage
+- Supabase client integration with auth context
+- Database schema migration (profiles, devices, entitlements, payments, webhook_events, admin_audit_events)
+- RLS policies for all tables
+- Web-desktop auth contract document (29_WEB_DESKTOP_AUTH_CONTRACT.md)
+- Razorpay integration design document (30_RAZORPAY_INTEGRATION_DESIGN.md)
+- .env.example with placeholders
+- Basic test for Supabase client
+
+### What genuinely works
+
+- Website dev server starts and renders all pages
+- Supabase auth client is configured (requires env vars)
+- Database schema is defined with RLS policies
+- Pricing page shows the approved prices: USD 12/month (recurring, max 3 devices, 14-day offline grace) and USD 50 lifetime (unlimited devices, indefinite offline)
+- Device registration Edge Function implemented (register-device) with atomic limit enforcement and JWT validation
+
+### Remaining blockers
+
+- Supabase project not yet created/configured (requires owner approval)
+- Razorpay payment code is implemented (create-order, razorpay-webhook, finalize_webhook_payment_atomic); live provider setup and deployment remain pending
+- Web-desktop auth flow not implemented (contract only)
+- Payment verification is webhook-driven; no browser-only provisioning
+- Clean-machine Linux test still outstanding (P1-08)
+- PR #17 and PR #18 not yet merged
+
+## Auth and device review fixes — 2026-10-24 (P2-06 / P3-04 / P4-04)
+
+- Task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/harden-auth-and-device-registration/c8575ad5`; base `1ae7c4c402d11ee2f9f41dea9c2c5c88299a3aa3`. The cloud runtime supplies this isolated task checkout; retained for review, with no integration performed.
+- Verified all four supplied findings: preserve current session and clear loading on returned/rejected restoration errors; catch sign-out failures with a retry message; describe confirmation as account creation; log entitlement/RPC/unexpected registration errors while retaining existing 500 responses.
+- Skills: loaded `code-review`; Supabase, React and security skills considered but unavailable in the declared local skill directory/session catalog. Used existing contracts and standard error handling. A read-only subagent independently verified the device logging finding; all edits and executable validation performed by the primary agent.
+- Temporary behavioral harness: 11 checks passed, covering real components and handler with synthetic fixtures; no production services or credentials used. Website typecheck, production build, and all 19 existing tests also passed. Validation evidence is kept outside the repository in `workspace-context/validation-record.md`.
+- No architecture/entitlement contract changes. Rollback: revert this patch. Work remains uncommitted for the user's review.
+
+## P2-11 review fixes — 2026-10-24
+
+- Task checkout: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/clarify-task-scopes-webhook-claims/e23753fb`; base `66ac18f2f0275109960f7fd192a43be0214571dc`. The cloud runtime supplies this isolated task checkout; retained for review with no integration performed.
+- All three supplied findings were confirmed. Restored P2-10 ownership of device, entitlement and webhook DB tests (per `df9d608`); P2-11 owns reconciliation. Corrected the Edge Function serve command to run from `website/` using `supabase/.env.local`.
+- Webhook acquisition/reclaim replaces the claim token; all terminal ledger writes require that token and `processing` state. Success paths require one returned row, so stale finalization yields a retryable failure. SQL asserts token replacement and zero/one rows for prior/reclaimed tokens; actual-handler tests cover acquisition, reclaim, duplicate/active leases and all five stale terminal paths.
+- Skills: loaded `code-review`. Supabase/Postgres and security skills considered but unavailable in the local/session catalog; applied the existing design/ADR contract and standard conditional-update checks. A read-only subagent independently verified task history and claim requirements; the primary agent performed all edits and executable checks.
+- Validation: `npm run typecheck`, `npm run build`, `npm test` passed (29 tests); final targeted handler rerun passed (10 tests). Applied the unchanged migration to disposable PostgreSQL 17.11 with synthetic Auth fixtures and pgTAP; webhook 9/9 and device 8/8 assertions passed. Exact commands/input identities are in `workspace-context/validation-record.md` outside the repository.
+- Security/limits: repairs ledger claim fencing only. Payment/entitlement writes remain separate transactions without the broader side-effect fencing required by ADR-0003; this pre-existing gap remains open. No provider credentials, configuration, data or production state changed. Deno deployment compatibility was not exercised. Rollback: revert this patch. Changes remain uncommitted.

@@ -55,3 +55,5 @@ Never replace unknown with an assumption. Update this audit after repo rename, C
 ## Worktree audit
 
 Report every worktree found, including ones created by earlier sessions. For each: path, branch (or detached HEAD), base SHA, uncommitted files, upstream tracking and build-output size. Clean up `prunable` registrations, and record any worktree holding uncommitted work — it exists nowhere else and must not be removed casually.
+
+Dated audit records are preserved in `docs/engineering/STATE_AUDIT.md`.

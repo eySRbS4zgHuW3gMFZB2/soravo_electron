@@ -924,3 +924,23 @@ Soravo is a local-first voice dictation desktop app (rebrand of Wispr Flow), bui
 - **Package Manager**: Chocolatey 2.7.4
 - **MCP Servers**: Supabase (connected), Cloudflare (connected), REA (207 tools)
 - **GitHub Repo**: https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron (main = Tauri v2)
+
+## 2026-10-24 — Auth and device review fixes
+
+Verified and repaired four review findings: preserve the current session and finish loading after session-restore errors, show retryable sign-out failures, correct signup confirmation copy, and add device-registration error diagnostics without changing HTTP responses. The temporary behavioral harness passes 11 checks. Website typecheck, production build, and all 19 existing tests also passed. Device-handler checks used synthetic Node fixtures because Deno is unavailable.
+
+## 2026-10-24 - P2-12 atomic webhook provisioning
+
+Added SECURITY DEFINER RPCs finalize_webhook_payment_atomic (plus alias finalize_webhook_payment) that atomically validate provider/event/claim token/processing status, then promote/record payment, upsert entitlement, and finalize the event in one transaction. Stale token returns 0 with no business writes. Edge function now calls the RPC instead of separate writes; claim fencing and retry semantics preserved. Added pgTAP coverage and updated handler tests. Tests: website vitest 31/31 passed; typecheck and production build passed. SQL/pgTAP not executed (no local Postgres).
+
+## 2026-10-24 — Website account/checkout workstream (worktree P3-10)
+
+- Worktree: .worktrees/P3-10-website-account-checkout
+- Branch: feature/P3-10-website-account-checkout
+- Base: ea9063d (feat/P1-WEB-AUTH-CHECKOUT)
+- Scope: website/src and website auth/client helpers only; no backend edits.
+- Added feature/download/help and legal placeholder pages (privacy, terms, refunds, support, license).
+- Added safe post-login redirect handling (sanitizeReturnTo).
+- Account page: device list + revoke, entitlement status/period, monthly/lifetime behavior.
+- Added Playwright smoke tests and reduced-motion/focus accessibility styles.
+- Tests: npm test (46 pass), typecheck/build pass. Playwright Chromium smoke passed (13/13) on 2026-10-26.
