@@ -945,6 +945,23 @@ Added SECURITY DEFINER RPCs finalize_webhook_payment_atomic (plus alias finalize
 - Added Playwright smoke tests and reduced-motion/focus accessibility styles.
 - Tests: npm test (46 pass), typecheck/build pass. Playwright Chromium smoke passed (13/13) on 2026-10-26.
 
+## 2026-10-27 — Auth mock CORS
+
+Shared CORS headers and successful OPTIONS responses across Supabase auth/REST test mocks. Auth browser tests passed 7/7; direct route checks passed 12/12; website typecheck/build passed. Existing npm test script expands an unquoted glob; reran Vitest with the glob quoted: 48/48 passed.
+
+### 2026-10-27 — Delivery conflict resolution
+
+Merged remote head `5c34e97bf0d04c4716c9b4af9c6e49a18c6bd433` into task commit `9e48ed2` on `feature/supabase-resend-auth-e2e`. Retained remote JSON mock helper, CORS methods, unit-test script and password recovery changes; retained typed Route handling and Supabase API version header allowance. Fresh checks passed: auth browser 7/7, route harness 12/12, unit tests 48/48, website/spec typecheck and build. No push performed.
+
+
+## 2026-10-27 — Password recovery visibility review
+
+Fixed ResetPasswordPage loading and missing-user-ID verification gaps; reused AuthProvider recovery identity for events and saved sessions, including blocked storage. Removed unused duplicate page tracking. Regression tests first reproduced 3 failures; final website suite 63/63, typecheck/build and recovery browser smoke 1/1 pass. Details: engineering pack handoff entry 87c71ff9 and workspace validation record.
+
+
+## 2026-10-27 — Password recovery initialization gate
+
+Verified the deferred Supabase recovery event race. Keep verification pending until recovery identity is recorded; failed initialization/session restoration still completes. Added regression coverage (two baseline failures reproduced); targeted tests 36/36, website suite 68/68, typecheck/build passed. Auth browser suite 7/7 and manual diff/security checks passed. Full evidence: workspace-context/validation-record.md; scope and checkout: handoff entry 7804fa0e.
 ## 2026-10-27 — Subscription ordering review fixes (P2-12 follow-up)
 
 Verified and fixed all six supplied findings: isolate PricingPage tests, fail closed on monthly checkout guard errors, include pending/resumed in both checkout guards and the unique index, atomically order status/grant metadata writes, and cover missing period ends/stale events/late grants. Added migration 004 to upgrade an already installed index and wired its SQL tests into database CI. Website typecheck/build and 72 tests passed; disposable PostgreSQL 17.11 passed 46 assertions and 7 more after replaying the original index then upgrading. See the session handoff and external validation record for exact inputs/commands and runtime limits.

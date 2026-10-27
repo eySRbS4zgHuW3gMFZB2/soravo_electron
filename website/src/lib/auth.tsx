@@ -13,6 +13,7 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  passwordRecoveryUserId: string | null;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -38,25 +39,60 @@ function recoveryRedirectUrl(): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecoveryUserId, setPasswordRecoveryUserId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return window.sessionStorage.getItem("soravo:password-recovery-user");
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     let mounted = true;
+    // URL hints only keep verification pending; the recovery event supplies identity.
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    new URLSearchParams(window.location.search).forEach((value, key) => params.set(key, value));
+    let recoveryPending = params.get("type") === "recovery" && Boolean(params.get("access_token"));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      setSession(nextSession);
+      if (event === "PASSWORD_RECOVERY" && nextSession?.user?.id) {
+        setPasswordRecoveryUserId(nextSession.user.id);
+        recoveryPending = false;
+        try {
+          window.sessionStorage.setItem("soravo:password-recovery-user", nextSession.user.id);
+        } catch {
+          // Ignore storage failures.
+        }
+      }
+      if (event === "SIGNED_OUT") {
+        setPasswordRecoveryUserId(null);
+        recoveryPending = false;
+        try {
+          window.sessionStorage.removeItem("soravo:password-recovery-user");
+        } catch {
+          // Ignore storage failures.
+        }
+      }
+      // INITIAL_SESSION can precede the deferred PASSWORD_RECOVERY notification.
+      if (!recoveryPending) setLoading(false);
+    });
+
     (async () => {
       try {
+        const result = await supabase.auth.initialize();
+        if (result?.error) recoveryPending = false;
         const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session?.user?.id) recoveryPending = false;
         if (!error && mounted) setSession(data.session);
       } catch {
         // Preserve the current session if restoration fails.
+        recoveryPending = false;
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted && !recoveryPending) setLoading(false);
       }
     })();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      // Stop the loading gate once Supabase reports any auth state.
-      setLoading(false);
-    });
 
     return () => {
       mounted = false;
@@ -81,7 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        data: { display_name: displayName },
+        emailRedirectTo:
+          typeof window === "undefined" ? undefined : `${window.location.origin}/account`,
+      },
     });
     return { error: error?.message ?? null };
   };
@@ -110,6 +150,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: CONFIG_ERROR };
     }
     const { error } = await supabase.auth.updateUser({ password });
+    if (!error) {
+      setPasswordRecoveryUserId(null);
+      try {
+        window.sessionStorage.removeItem("soravo:password-recovery-user");
+      } catch {
+        // Ignore storage failures.
+      }
+    }
     return { error: error?.message ?? null };
   };
 
@@ -117,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     user: session?.user ?? null,
     loading,
+    passwordRecoveryUserId,
     signIn,
     signUp,
     signOut,
@@ -176,11 +225,23 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 export function sanitizeReturnTo(value: string | null | undefined, fallback = "/account"): string {
   if (!value) return fallback;
   const trimmed = value.trim();
-  if (!trimmed.startsWith("/") || /[\\]/.test(trimmed)) return fallback;
+  // Reject empty, non-relative, backslash, control character, and newline payloads.
+  if (
+    !trimmed.startsWith("/") ||
+    /[\\]/.test(trimmed) ||
+    /[\u0000-\u001f\u007f]/.test(trimmed)
+  ) {
+    return fallback;
+  }
   try {
     const base = "http://sanitize.invalid";
     const url = new URL(trimmed, base);
+    // Reject cross-origin or protocol-relative redirects.
     if (url.origin !== base) return fallback;
+    // Reject any path that still contains a backslash after parsing.
+    if (url.pathname.includes("\\") || url.search.includes("\\") || url.hash.includes("\\")) {
+      return fallback;
+    }
     return url.pathname + url.search + url.hash;
   } catch {
     return fallback;

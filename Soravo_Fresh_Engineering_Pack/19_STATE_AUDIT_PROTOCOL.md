@@ -58,6 +58,23 @@ Report every worktree found, including ones created by earlier sessions. For eac
 
 Dated audit records are preserved in `docs/engineering/STATE_AUDIT.md`.
 
+## 2026-10-27 — Auth mock CORS validation
+
+Runtime-isolated checkout on `coderabbit/auth-test-cors-preflight/73226cf9`, base `15dff3c59e870f797705ff7142c7495482e102ea`; one named worktree, initially clean. Scoped test-only CORS repair; validation and environment evidence in `workspace-context/validation-record.md`. No integration or remote changes.
+
+### 2026-10-27 — Delivery conflict resolution
+
+Merged remote head `5c34e97bf0d04c4716c9b4af9c6e49a18c6bd433` into task commit `9e48ed2` on `feature/supabase-resend-auth-e2e`. Retained remote JSON mock helper, CORS methods, unit-test script and password recovery changes; retained typed Route handling and Supabase API version header allowance. Fresh checks passed: auth browser 7/7, route harness 12/12, unit tests 48/48, website/spec typecheck and build. No push performed.
+
+
+## 2026-10-27 — Recovery visibility review (87c71ff9)
+
+Confirmed sole isolated worktree on `coderabbit/verify-password-recovery-state/87c71ff9`, base `260ff874d256694cdd607c0703617cb0b13375ef`, initially clean. Fixed loading and missing-ID recovery verification gaps; retained provider in-memory/storage behavior. Website tests 63/63, typecheck/build and recovery browser smoke 1/1 pass. See matching handoff entry and workspace validation record for commands, hashes and browser preparation; no integration or remote changes.
+
+
+## 2026-10-27 — Recovery initialization review (7804fa0e)
+
+Confirmed sole runtime-isolated named worktree on `coderabbit/fix-password-recovery-loading/7804fa0e`, base `cfb565df8ce325c834c79ced3f66ec329fddb30b`, initially clean. Supplied finding reproduced and repaired without changing recovery authorization. Targeted tests 36/36, full website suite 68/68, typecheck/build passed. Base Website CI/CI/Packaging passed; no patch CI or integration. Auth browser suite 7/7 and manual diff/security checks passed. Exact validation outcomes are recorded in workspace-context/validation-record.md outside Git; see matching handoff entry.
 Subscription checkout/event-ordering audit recorded in `docs/engineering/STATE_AUDIT.md` on 2026-10-27 for task branch `coderabbit/api-subscription-hardening/8b15d30d` (base `74ec17e`).
 
 Delivery merge against remote `147fd33` was audited on 2026-10-27 in `docs/engineering/STATE_AUDIT.md`; atomic subscription migration is now 005.

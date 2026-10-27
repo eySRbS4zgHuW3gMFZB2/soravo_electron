@@ -629,6 +629,27 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Validation: `npm run typecheck`, `npm run build`, `npm test` passed (29 tests); final targeted handler rerun passed (10 tests). Applied the unchanged migration to disposable PostgreSQL 17.11 with synthetic Auth fixtures and pgTAP; webhook 9/9 and device 8/8 assertions passed. Exact commands/input identities are in `workspace-context/validation-record.md` outside the repository.
 - Security/limits: repairs ledger claim fencing only. Payment/entitlement writes remain separate transactions without the broader side-effect fencing required by ADR-0003; this pre-existing gap remains open. No provider credentials, configuration, data or production state changed. Deno deployment compatibility was not exercised. Rollback: revert this patch. Changes remain uncommitted.
 
+## 2026-10-27 — Auth test CORS review fix
+
+Confirmed missing CORS handling in `website/e2e/auth.spec.ts`. All six Supabase mocks now share headers for the configured Playwright origin, GET/POST/OPTIONS and SDK request headers; OPTIONS returns 204 before the existing response. Application contracts and auth response fixtures are preserved. Task checkout: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; branch `coderabbit/auth-test-cors-preflight/73226cf9`; base `15dff3c59e870f797705ff7142c7495482e102ea`. Retained the runtime-provided isolated checkout; no integration performed.
+
+Skills: loaded `code-review`; Playwright, Supabase and security skills unavailable in declared directories/catalog. Small sequential task, no delegation. Validation: auth Playwright 7/7, direct route harness 12/12, website typecheck/build passed. The original unit-test command expanded an unquoted shell glob and found no tests; the quoted-glob rerun passed all 48 tests and is recorded in `workspace-context/validation-record.md` outside the repository. No live services, credentials or production changes.
+
+### 2026-10-27 — Delivery conflict resolution
+
+Merged remote head `5c34e97bf0d04c4716c9b4af9c6e49a18c6bd433` into task commit `9e48ed2` on `feature/supabase-resend-auth-e2e`. Retained remote JSON mock helper, CORS methods, unit-test script and password recovery changes; retained typed Route handling and Supabase API version header allowance. Fresh checks passed: auth browser 7/7, route harness 12/12, unit tests 48/48, website/spec typecheck and build. No push performed.
+
+
+## 2026-10-27 — P3-04/P2-06 recovery visibility review (87c71ff9)
+
+Reused isolated checkout `/home/vercel-sandbox/workspace/repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `coderabbit/verify-password-recovery-state/87c71ff9`, base `260ff874d256694cdd607c0703617cb0b13375ef` (sole named Git worktree, initially clean). The finding was partly addressed: AuthProvider already retains recovery identity in memory and restores saved identity. Fixed remaining loading and missing-ID gaps, removed unused page tracking, and preserved recovery with unavailable storage. Baseline regression run had 3 failures; final website suite 63/63, typecheck/build and recovery browser smoke 1/1 pass. Skill: code-review loaded; repository Supabase/security/React/Playwright skills unavailable; small sequential fix used no subagents. Evidence/input hashes: workspace-context/validation-record.md outside checkout. Uncommitted changes ready for delivery; no integration or remote changes.
+
+
+## 2026-10-27 — P2-06/P3-04 recovery initialization gate (7804fa0e)
+
+Confirmed the supplied finding against HEAD and auth-js 2.118.0: initialization schedules PASSWORD_RECOVERY after resolving and returns only an error, so INITIAL_SESSION or the restoration finally block can expose an invalid-link state prematurely. Keep token-bearing recovery callbacks loading until the event records identity; release loading on initialization/session errors, missing identity or sign-out. URL hints never authorize recovery. Five new cases cover deferred hash/query recovery and failure completion; baseline reproduced two failures, final targeted tests 36/36, website suite 68/68, typecheck/build pass. Auth browser suite 7/7 passed; manual diff/security inspection and git diff --check passed. Exact input hashes: workspace-context/validation-record.md outside Git.
+
+Retained the runtime-isolated sole task checkout `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `coderabbit/fix-password-recovery-loading/7804fa0e`, base `cfb565df8ce325c834c79ced3f66ec329fddb30b`; initially clean, no integration performed. Skills: code-review loaded; Supabase/security/React/Playwright skills unavailable in declared directory/catalog. Small sequential task, no delegation. Existing recovery identity, storage and invalid-link contracts preserved. No provider state or credentials used. Base CI was green; patch CI has not run. Rollback: revert this scoped patch.
 ## API and recurring subscription review fixes — 2026-10-27
 
 - Isolated runtime task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/api-subscription-hardening/8b15d30d`; base `74ec17eae3f6dbe0840b2766cdcfb5d08ac4e00a`. Retained for review; no commit, push or integration performed.

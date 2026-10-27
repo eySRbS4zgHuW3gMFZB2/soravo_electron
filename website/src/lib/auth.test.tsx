@@ -7,6 +7,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 const mockAuth = vi.hoisted(() => ({
   getSession: vi.fn(),
+  initialize: vi.fn().mockResolvedValue({}),
   onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
   signInWithPassword: vi.fn(),
   signUp: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock("./supabase", () => ({
   isConfigured: true,
 }));
 
-import { AuthProvider, useAuth, ProtectedRoute } from "./auth";
+import { AuthProvider, useAuth, ProtectedRoute, sanitizeReturnTo } from "./auth";
 
 function Consumer() {
   const { user, loading } = useAuth();
@@ -135,5 +136,32 @@ describe("ProtectedRoute", () => {
       </MemoryRouter>
     );
     await waitFor(() => expect(screen.getByText("Secret"))!== null);
+  });
+});
+
+describe("sanitizeReturnTo", () => {
+  it("accepts a safe relative path", () => {
+    expect(sanitizeReturnTo("/account?tab=devices")).toBe("/account?tab=devices");
+  });
+
+  it("rejects cross-origin absolute URLs", () => {
+    expect(sanitizeReturnTo("https://evil.example/phish")).toBe("/account");
+  });
+
+  it("rejects protocol-relative URLs", () => {
+    expect(sanitizeReturnTo("//evil.example/phish")).toBe("/account");
+  });
+
+  it("rejects backslashes", () => {
+    expect(sanitizeReturnTo("/foo\\bar")).toBe("/account");
+  });
+
+  it("rejects control characters", () => {
+    expect(sanitizeReturnTo("/foo\u0001bar")).toBe("/account");
+  });
+
+  it("falls back for empty input", () => {
+    expect(sanitizeReturnTo(null)).toBe("/account");
+    expect(sanitizeReturnTo("")).toBe("/account");
   });
 });
