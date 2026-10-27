@@ -10,6 +10,7 @@ let loseClaim: boolean;
 let unknownUser: boolean;
 let paymentError: boolean;
 let dbError: boolean;
+let subscriptionCalls: Record<string, unknown>[];
 let statusWrites: { token: string | null; count: number }[];
 const priorToken = "11111111-1111-4111-8111-111111111111";
 const nextToken = "22222222-2222-4222-8222-222222222222";
@@ -20,6 +21,11 @@ async function postgrest(input: string | URL | Request, init?: RequestInit): Pro
   const table = url.pathname.split("/").at(-1) ?? "";
   const body = init?.body ? JSON.parse(String(init.body)) : null;
   let rows: unknown[] = [];
+
+  if (url.pathname.endsWith("/rpc/apply_subscription_event")) {
+    subscriptionCalls.push(body);
+    return Response.json(true);
+  }
 
   // RPC: atomic webhook provisioning. Claim token arrives in the request body.
   if (url.pathname.includes("/rpc/")) {
@@ -73,15 +79,16 @@ async function postgrest(input: string | URL | Request, init?: RequestInit): Pro
   return Response.json(single ? rows[0] : rows);
 }
 
-async function deliver(eventType = "payment.captured", validPayload = true): Promise<Response> {
+async function deliver(eventType = "payment.captured", validPayload = true, eventTime: unknown = 1900000000): Promise<Response> {
   const body = JSON.stringify({
     id: "evt_claim_1",
+    created_at: eventTime,
     event: eventType,
     payload: { payment: { entity: {
       id: "pay_test", order_id: "order_test", status: "captured", currency: "USD",
       amount: validPayload ? 1200 : 1, notes: { user_id: "test-user" },
     } }, subscription: { entity: {
-      id: "sub_test", current_end: 2000000000,
+      id: "sub_test", current_end: 2000000000, created_at: 1800000000,
     } } },
   });
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -116,6 +123,7 @@ beforeEach(() => {
   paymentError = false;
   dbError = false;
   statusWrites = [];
+  subscriptionCalls = [];
   vi.stubGlobal("fetch", vi.fn(postgrest));
 });
 
@@ -203,5 +211,21 @@ describe("webhook claim ownership", () => {
     }));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "ignored" });
+  });
+});
+
+describe("subscription transition ordering", () => {
+  it.each(["payment.captured", "subscription.cancelled"])("sends provider event time through the atomic RPC for %s", async (type) => {
+    expect((await deliver(type)).status).toBe(200);
+    expect(subscriptionCalls).toEqual([expect.objectContaining({
+      p_provider_subscription_id: "sub_test",
+      p_status: type === "payment.captured" ? "active" : "cancelled",
+      p_event_created_at: new Date(1900000000 * 1000).toISOString(),
+      p_user_id: "test-user",
+    })]);
+  });
+  it.each(["payment.captured", "subscription.cancelled"])("does not mistake entity creation time for event time for %s", async (type) => {
+    expect((await deliver(type, true, null)).status).toBe(200);
+    expect(subscriptionCalls[0].p_event_created_at).toBeNull();
   });
 });

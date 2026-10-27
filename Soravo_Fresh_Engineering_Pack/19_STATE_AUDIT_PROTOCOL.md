@@ -57,3 +57,5 @@ Never replace unknown with an assumption. Update this audit after repo rename, C
 Report every worktree found, including ones created by earlier sessions. For each: path, branch (or detached HEAD), base SHA, uncommitted files, upstream tracking and build-output size. Clean up `prunable` registrations, and record any worktree holding uncommitted work — it exists nowhere else and must not be removed casually.
 
 Dated audit records are preserved in `docs/engineering/STATE_AUDIT.md`.
+
+Subscription checkout/event-ordering audit recorded in `docs/engineering/STATE_AUDIT.md` on 2026-10-27 for task branch `coderabbit/api-subscription-hardening/8b15d30d` (base `74ec17e`).

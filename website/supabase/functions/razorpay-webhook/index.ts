@@ -283,47 +283,16 @@ Deno.serve(async (req: Request) => {
             else if (eventTypeLower.includes("resumed") || eventTypeLower.includes("activated")) subscriptionStatus = "active";
             else if (eventTypeLower.includes("completed")) subscriptionStatus = "completed";
           }
-          const eventCreatedAtUnix = Number(event?.created_at ?? entity?.created_at ?? 0);
           if (subscriptionStatus) {
-            const { data: currentSub } = await admin
-              .from("subscriptions")
-              .select("last_event_created_at")
-              .eq("provider", "razorpay")
-              .eq("provider_subscription_id", providerSubscriptionId)
-              .maybeSingle();
-            const lastUnix = currentSub?.last_event_created_at
-              ? Math.floor(new Date(currentSub.last_event_created_at).getTime() / 1000)
-              : 0;
-            if (lastUnix && eventCreatedAtUnix && eventCreatedAtUnix < lastUnix) {
-              const { data: staleRows } = await admin.from("webhook_events").update({
-                processing_status: "processed",
-                processed_at: new Date().toISOString(),
-                error_code: "stale_event",
-              }).eq("provider", "razorpay").eq("provider_event_id", providerEventId).eq("claim_token", claimToken).eq("processing_status", "processing").select("id");
-              if (!staleRows?.length) {
-                return new Response(JSON.stringify({ status: "processing" }), {
-                  status: 503,
-                  headers: { "Content-Type": "application/json", "Retry-After": "60" },
-                });
-              }
-              return new Response(JSON.stringify({ status: "ignored", reason: "stale_event" }), {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
-              });
-            }
-
-            const updatePayload: Record<string, unknown> = {
-              status: subscriptionStatus,
-              updated_at: new Date().toISOString(),
-            };
-            if (eventCreatedAtUnix > 0) {
-              updatePayload.last_event_created_at = new Date(eventCreatedAtUnix * 1000).toISOString();
-            }
-            const { error: subscriptionStatusError } = await admin
-              .from("subscriptions")
-              .update(updatePayload)
-              .eq("provider", "razorpay")
-              .eq("provider_subscription_id", providerSubscriptionId);
+            const eventCreatedAtUnix = Number(event?.created_at);
+            const { error: subscriptionStatusError } = await admin.rpc("apply_subscription_event", {
+              p_provider_subscription_id: providerSubscriptionId,
+              p_status: subscriptionStatus,
+              p_event_created_at: Number.isFinite(eventCreatedAtUnix) && eventCreatedAtUnix > 0
+                ? new Date(eventCreatedAtUnix * 1000).toISOString() : null,
+              p_user_id: userId || null,
+              p_period_end: null,
+            });
             if (subscriptionStatusError) throw subscriptionStatusError;
           }
         }
@@ -485,23 +454,15 @@ Deno.serve(async (req: Request) => {
     // Reconcile recurring subscription metadata after a successful grant.
     try {
       if (providerSubscriptionId && plan === "monthly") {
-        const grantEventCreatedAtUnix = Number(event?.created_at ?? entity?.created_at ?? 0);
-        const subscriptionUpsertPayload: Record<string, unknown> = {
-          user_id: userId,
-          provider: "razorpay",
-          provider_subscription_id: providerSubscriptionId,
-          plan_code: "monthly",
-          status: "active",
-          current_period_end: periodEnd,
-          updated_at: new Date().toISOString(),
-        };
-        if (grantEventCreatedAtUnix > 0) {
-          subscriptionUpsertPayload.last_event_created_at = new Date(grantEventCreatedAtUnix * 1000).toISOString();
-        }
-        const { error: subscriptionUpsertError } = await admin.from("subscriptions").upsert(
-          subscriptionUpsertPayload,
-          { onConflict: "provider_subscription_id" }
-        );
+        const grantEventCreatedAtUnix = Number(event?.created_at);
+        const { error: subscriptionUpsertError } = await admin.rpc("apply_subscription_event", {
+          p_provider_subscription_id: providerSubscriptionId,
+          p_status: "active",
+          p_event_created_at: Number.isFinite(grantEventCreatedAtUnix) && grantEventCreatedAtUnix > 0
+            ? new Date(grantEventCreatedAtUnix * 1000).toISOString() : null,
+          p_user_id: userId,
+          p_period_end: periodEnd,
+        });
         if (subscriptionUpsertError) console.error("razorpay-webhook: subscription upsert failed", subscriptionUpsertError.code);
       }
       if (entity?.id) {

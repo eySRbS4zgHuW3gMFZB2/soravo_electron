@@ -150,13 +150,3 @@ export async function listEntitlements(): Promise<
   if (error) throw error;
   return data ?? [];
 }
-
-/** Alias names retained for callers/tests that expect different conventions. */
-export const createCheckoutOrder = createOrder;
-export const createSubscription = createOrder;
-export const createPaymentOrder = createOrder;
-export const beginCheckout = createOrder;
-export const getEntitlements = listEntitlements;
-export const fetchEntitlements = listEntitlements;
-export const refreshEntitlements = listEntitlements;
-

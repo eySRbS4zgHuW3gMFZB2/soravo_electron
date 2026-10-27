@@ -149,47 +149,23 @@ Deno.serve(async (req: Request) => {
     // Correlation ID for billing diagnostics.
     const requestId = crypto.randomUUID();
 
-    // Do not create another checkout for an existing entitlement or open subscription.
-    const { data: existingEntitlements } = await admin
-      .from("entitlements")
-      .select("plan_code, status, lifetime")
-      .eq("user_id", user.id)
-      .in("plan_code", ["monthly", "lifetime"]);
-    if (existingEntitlements) {
-      const lifetime = existingEntitlements.find((e: any) => e.plan_code === "lifetime");
-      const monthly = existingEntitlements.find((e: any) => e.plan_code === "monthly");
-      if (lifetime?.lifetime || lifetime?.status === "lifetime_active") {
-        return new Response(JSON.stringify({ error: "Lifetime entitlement already active" }), {
-          status: 409,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (monthly?.status === "active" || monthly?.status === "payment_pending") {
-        return new Response(JSON.stringify({ error: "Monthly subscription already active" }), {
-          status: 409,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    // Reserve before any provider call. The database checks entitlements and
+    // open subscriptions while serializing checkout requests for this user.
+    const { data: checkout, error: checkoutError } = await admin.rpc("claim_monthly_checkout", {
+      p_user_id: user.id,
+      p_request_id: requestId,
+    });
+    if (checkoutError) throw checkoutError;
+    if (checkout?.status === "blocked" || checkout?.status === "busy") {
+      return new Response(JSON.stringify({ error: checkout.error }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-
-    const { data: openSubscription } = await admin
-      .from("subscriptions")
-      .select("provider_subscription_id, status")
-      .eq("user_id", user.id)
-      .in("status", ["created", "authenticated", "active"])
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (openSubscription?.provider_subscription_id) {
-      if (openSubscription.status === "active" || openSubscription.status === "authenticated") {
-        return new Response(JSON.stringify({ error: "Monthly subscription already active" }), {
-          status: 409,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (checkout?.status === "reuse") {
       return new Response(JSON.stringify({
         key_id: razorpayKeyId,
-        subscription_id: openSubscription.provider_subscription_id,
+        subscription_id: checkout.subscription_id,
         amount: plan.amount,
         currency: plan.currency,
         plan_code: "monthly",
@@ -198,66 +174,80 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (checkout?.status !== "claimed") throw new Error("Unexpected checkout claim result");
 
-    // Monthly recurring subscription. Reuse or create the trusted plan idempotently.
-    let monthlyPlanId: string | null = null;
-    const { data: existingPlan } = await admin
-      .from("razorpay_plans")
-      .select("provider_plan_id")
-      .eq("provider", "razorpay")
-      .eq("plan_code", "monthly")
-      .eq("amount_minor", plan.amount)
-      .eq("currency", plan.currency)
-      .maybeSingle();
+    let providerOutcomeUncertain = false;
+    try {
+      // Monthly recurring subscription. Reuse or create the trusted plan idempotently.
+      let monthlyPlanId: string | null = null;
+      const { data: existingPlan } = await admin
+        .from("razorpay_plans")
+        .select("provider_plan_id")
+        .eq("provider", "razorpay")
+        .eq("plan_code", "monthly")
+        .eq("amount_minor", plan.amount)
+        .eq("currency", plan.currency)
+        .maybeSingle();
 
-    if (existingPlan?.provider_plan_id) {
-      monthlyPlanId = String(existingPlan.provider_plan_id);
-    } else {
-      const planRes = await fetch("https://api.razorpay.com/v1/plans", {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${basicAuth}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          period: "monthly",
-          interval: 1,
-          item: {
-            name: "Soravo Monthly",
-            amount: plan.amount,
-            currency: plan.currency,
-            description: "Soravo monthly subscription",
+      if (existingPlan?.provider_plan_id) {
+        monthlyPlanId = String(existingPlan.provider_plan_id);
+      } else {
+        const planRes = await fetch("https://api.razorpay.com/v1/plans", {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${basicAuth}`,
+            "Content-Type": "application/json",
           },
-          notes: {
-            plan_code: "monthly",
-          },
-        }),
-      });
-      const planData = await planRes.json().catch(() => null);
-      if (!planRes.ok || !planData?.id) {
-        console.error("create-order: Razorpay plan creation failed", planRes.status, planData?.error?.code);
-        return new Response(JSON.stringify({ error: "Failed to create subscription plan" }), {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            period: "monthly",
+            interval: 1,
+            item: {
+              name: "Soravo Monthly",
+              amount: plan.amount,
+              currency: plan.currency,
+              description: "Soravo monthly subscription",
+            },
+            notes: {
+              plan_code: "monthly",
+            },
+          }),
         });
-      }
-
-      monthlyPlanId = String(planData.id);
-      try {
-        const { error: insertError } = await admin.from("razorpay_plans").insert({
-          provider: "razorpay",
-          plan_code: "monthly",
-          amount_minor: plan.amount,
-          currency: plan.currency,
-          period: "monthly",
-          interval: 1,
-          provider_plan_id: monthlyPlanId,
-        });
-        if (insertError && insertError.code !== "23505") {
-          console.error("create-order: razorpay_plans insert failed", insertError.code, requestId);
+        const planData = await planRes.json().catch(() => null);
+        if (!planRes.ok || !planData?.id) {
+          console.error("create-order: Razorpay plan creation failed", planRes.status, planData?.error?.code);
+          return new Response(JSON.stringify({ error: "Failed to create subscription plan" }), {
+            status: 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
-        if (insertError) {
-          // A concurrent request may have created it; reuse that row.
+
+        monthlyPlanId = String(planData.id);
+        try {
+          const { error: insertError } = await admin.from("razorpay_plans").insert({
+            provider: "razorpay",
+            plan_code: "monthly",
+            amount_minor: plan.amount,
+            currency: plan.currency,
+            period: "monthly",
+            interval: 1,
+            provider_plan_id: monthlyPlanId,
+          });
+          if (insertError && insertError.code !== "23505") {
+            console.error("create-order: razorpay_plans insert failed", insertError.code, requestId);
+          }
+          if (insertError) {
+            // A concurrent request may have created it; reuse that row.
+            const { data: retryPlan } = await admin
+              .from("razorpay_plans")
+              .select("provider_plan_id")
+              .eq("provider", "razorpay")
+              .eq("plan_code", "monthly")
+              .eq("amount_minor", plan.amount)
+              .eq("currency", plan.currency)
+              .maybeSingle();
+            if (retryPlan?.provider_plan_id) monthlyPlanId = String(retryPlan.provider_plan_id);
+          }
+        } catch {
           const { data: retryPlan } = await admin
             .from("razorpay_plans")
             .select("provider_plan_id")
@@ -268,55 +258,51 @@ Deno.serve(async (req: Request) => {
             .maybeSingle();
           if (retryPlan?.provider_plan_id) monthlyPlanId = String(retryPlan.provider_plan_id);
         }
-      } catch {
-        const { data: retryPlan } = await admin
-          .from("razorpay_plans")
-          .select("provider_plan_id")
-          .eq("provider", "razorpay")
-          .eq("plan_code", "monthly")
-          .eq("amount_minor", plan.amount)
-          .eq("currency", plan.currency)
-          .maybeSingle();
-        if (retryPlan?.provider_plan_id) monthlyPlanId = String(retryPlan.provider_plan_id);
       }
-    }
 
-    if (!monthlyPlanId) {
-      return new Response(JSON.stringify({ error: "Failed to resolve subscription plan" }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+      if (!monthlyPlanId) {
+        return new Response(JSON.stringify({ error: "Failed to resolve subscription plan" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-    const subscriptionRes = await fetch("https://api.razorpay.com/v1/subscriptions", {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${basicAuth}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        plan_id: monthlyPlanId,
-        total_count: 120,
-        quantity: 1,
-        customer_notify: true,
-        notes: {
-          user_id: user.id,
-          plan_code: "monthly",
+      // An uncertain provider outcome must retain the reservation: retrying a
+      // timed-out create could produce a second billable subscription.
+      providerOutcomeUncertain = true;
+      const subscriptionRes = await fetch("https://api.razorpay.com/v1/subscriptions", {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+          "Content-Type": "application/json",
         },
-      }),
-    });
-
-    const subscriptionData = await subscriptionRes.json().catch(() => null);
-    if (!subscriptionRes.ok || !subscriptionData?.id) {
-      console.error("create-order: Razorpay subscription creation failed", subscriptionRes.status, subscriptionData?.error?.code);
-      return new Response(JSON.stringify({ error: "Failed to create subscription" }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan_id: monthlyPlanId,
+          total_count: 120,
+          quantity: 1,
+          customer_notify: true,
+          notes: {
+            user_id: user.id,
+            plan_code: "monthly",
+            checkout_request_id: requestId,
+          },
+        }),
       });
-    }
 
-    {
-      const { error: subInsertError } = await admin.from("subscriptions").insert({
+      // A definitive rejection did not create a subscription and can be retried.
+      if (subscriptionRes.status >= 400 && subscriptionRes.status < 500 && subscriptionRes.status !== 408) {
+        providerOutcomeUncertain = false;
+      }
+      const subscriptionData = await subscriptionRes.json().catch(() => null);
+      if (!subscriptionRes.ok || !subscriptionData?.id) {
+        console.error("create-order: Razorpay subscription creation failed", subscriptionRes.status, subscriptionData?.error?.code);
+        return new Response(JSON.stringify({ error: "Failed to create subscription" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      await admin.from("subscriptions").upsert({
         user_id: user.id,
         provider: "razorpay",
         provider_subscription_id: String(subscriptionData.id),
@@ -326,43 +312,27 @@ Deno.serve(async (req: Request) => {
         paid_count: Number(subscriptionData.paid_count ?? 0),
         charge_at: subscriptionData.charge_at ? new Date(Number(subscriptionData.charge_at) * 1000).toISOString() : null,
         current_period_end: subscriptionData.current_end ? new Date(Number(subscriptionData.current_end) * 1000).toISOString() : null,
-        last_event_created_at: new Date().toISOString(),
+        // Provider event time is set only by webhooks, never the local clock.
+      }, { onConflict: "provider_subscription_id", ignoreDuplicates: true }).throwOnError();
+      providerOutcomeUncertain = false;
+
+      return new Response(JSON.stringify({
+        key_id: razorpayKeyId,
+        subscription_id: subscriptionData.id,
+        amount: plan.amount,
+        currency: plan.currency,
+        plan_code: plan.code,
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      if (subInsertError?.code === "23505") {
-        const { data: existingAfterRace } = await admin
-          .from("subscriptions")
-          .select("provider_subscription_id")
-          .eq("user_id", user.id)
-          .in("status", ["created", "authenticated", "active"])
-          .limit(1)
-          .maybeSingle();
-        if (existingAfterRace?.provider_subscription_id) {
-          return new Response(JSON.stringify({
-            key_id: razorpayKeyId,
-            subscription_id: existingAfterRace.provider_subscription_id,
-            amount: plan.amount,
-            currency: plan.currency,
-            plan_code: "monthly",
-          }), {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      } else if (subInsertError) {
-        console.error("create-order: subscription row insert failed", subInsertError.code, requestId);
+    } finally {
+      if (!providerOutcomeUncertain) {
+        const { error: releaseError } = await admin.from("monthly_checkout_reservations")
+          .delete().eq("user_id", user.id).eq("request_id", requestId);
+        if (releaseError) console.error("create-order: checkout reservation release failed", releaseError.code, requestId);
       }
     }
-
-    return new Response(JSON.stringify({
-      key_id: razorpayKeyId,
-      subscription_id: subscriptionData.id,
-      amount: plan.amount,
-      currency: plan.currency,
-      plan_code: plan.code,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (error) {
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
