@@ -103,6 +103,10 @@ export function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (authLoading || !verifiedRecovery) {
+      setError("This recovery link is invalid or has expired.");
+      return;
+    }
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
@@ -146,7 +150,9 @@ export function ResetPasswordPage() {
           <div role="status" className="mt-8 rounded-lg bg-green-50 p-4 text-sm text-green-700">
             Password updated. Redirecting to login...
           </div>
-        ) : (!authLoading && !verifiedRecovery) ? (
+        ) : authLoading ? (
+          <div role="status" className="mt-8 text-muted">Loading...</div>
+        ) : !verifiedRecovery ? (
           <div role="alert" className="mt-8 rounded-lg bg-red-50 p-4 text-sm text-red-600">
             This recovery link is invalid or has expired. Request a new password reset link.
           </div>
