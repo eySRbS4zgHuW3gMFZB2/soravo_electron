@@ -956,3 +956,7 @@ Merged remote `147fd33` with task commit `96a7866`, preserving atomic checkout/e
 ## 2026-10-27 — Subscription insert error review follow-up
 
 Added immediate provider cancellation on non-23505 checkout persistence failures; HTTP 500, reservation retention and 23505 race recovery are preserved. Skipped the webhook finding because migration 005's atomic provider-ID upsert replaced the cited duplicate fallback. Website typecheck/build, all 88 tests and 87 PostgreSQL 16 assertions passed; see the engineering-pack handoff and external validation record for details.
+
+## 2026-10-27 — Delivery merge for subscription insert compensation
+
+Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit records, remote plan lookup/logging/advisory locking changes and local provider cancellation compensation. Fresh 30 checkout tests and 88 PostgreSQL assertions passed; reused 64 unchanged tests and website typecheck/build. Merge committed locally for delivery; no push.

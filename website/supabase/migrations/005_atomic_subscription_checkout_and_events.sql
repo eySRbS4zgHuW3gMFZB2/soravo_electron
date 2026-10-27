@@ -20,7 +20,8 @@ DECLARE
   v_subscription public.subscriptions%ROWTYPE;
 BEGIN
   -- This lock serializes the check-and-reserve transaction for each user.
-  PERFORM 1 FROM auth.users WHERE id = p_user_id FOR UPDATE;
+  PERFORM pg_advisory_xact_lock(hashtext(p_user_id::text));
+  PERFORM 1 FROM auth.users WHERE id = p_user_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'Unknown user'; END IF;
 
   IF EXISTS (SELECT 1 FROM public.entitlements WHERE user_id = p_user_id
