@@ -185,7 +185,7 @@ Deno.serve(async (req: Request) => {
     try {
       // Monthly recurring subscription. Reuse or create the trusted plan idempotently.
       let monthlyPlanId: string | null = null;
-      const { data: existingPlan } = await admin
+      const { data: existingPlan, error: planLookupError } = await admin
         .from("razorpay_plans")
         .select("provider_plan_id")
         .eq("provider", "razorpay")
@@ -193,6 +193,13 @@ Deno.serve(async (req: Request) => {
         .eq("amount_minor", plan.amount)
         .eq("currency", plan.currency)
         .maybeSingle();
+      if (planLookupError) {
+        console.error("create-order: razorpay_plans lookup failed", planLookupError.code, requestId);
+        return new Response(JSON.stringify({ error: "Failed to resolve subscription plan" }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       if (existingPlan?.provider_plan_id) {
         monthlyPlanId = String(existingPlan.provider_plan_id);
@@ -242,7 +249,7 @@ Deno.serve(async (req: Request) => {
           }
           if (insertError) {
             // A concurrent request may have created it; reuse that row.
-            const { data: retryPlan } = await admin
+            const { data: retryPlan, error: retryLookupError } = await admin
               .from("razorpay_plans")
               .select("provider_plan_id")
               .eq("provider", "razorpay")
@@ -250,10 +257,17 @@ Deno.serve(async (req: Request) => {
               .eq("amount_minor", plan.amount)
               .eq("currency", plan.currency)
               .maybeSingle();
+            if (retryLookupError) {
+              console.error("create-order: razorpay_plans retry lookup failed", retryLookupError.code, requestId);
+              return new Response(JSON.stringify({ error: "Failed to resolve subscription plan" }), {
+                status: 502,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
             if (retryPlan?.provider_plan_id) monthlyPlanId = String(retryPlan.provider_plan_id);
           }
         } catch {
-          const { data: retryPlan } = await admin
+          const { data: retryPlan, error: retryLookupError } = await admin
             .from("razorpay_plans")
             .select("provider_plan_id")
             .eq("provider", "razorpay")
@@ -261,6 +275,13 @@ Deno.serve(async (req: Request) => {
             .eq("amount_minor", plan.amount)
             .eq("currency", plan.currency)
             .maybeSingle();
+          if (retryLookupError) {
+            console.error("create-order: razorpay_plans retry lookup failed", retryLookupError.code, requestId);
+            return new Response(JSON.stringify({ error: "Failed to resolve subscription plan" }), {
+              status: 502,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
           if (retryPlan?.provider_plan_id) monthlyPlanId = String(retryPlan.provider_plan_id);
         }
       }
@@ -300,7 +321,7 @@ Deno.serve(async (req: Request) => {
       }
       const subscriptionData = await subscriptionRes.json().catch(() => null);
       if (!subscriptionRes.ok || !subscriptionData?.id) {
-        console.error("create-order: Razorpay subscription creation failed", subscriptionRes.status, subscriptionData?.error?.code);
+        console.error("create-order: Razorpay subscription creation failed", subscriptionRes.status, subscriptionData?.error?.code, requestId);
         return new Response(JSON.stringify({ error: "Failed to create subscription" }), {
           status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

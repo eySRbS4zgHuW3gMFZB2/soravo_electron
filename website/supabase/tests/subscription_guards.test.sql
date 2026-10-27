@@ -1,6 +1,9 @@
 -- Run after migrations 001–005 in the disposable database.
 BEGIN;
 SELECT no_plan();
+SELECT throws_ok(
+  $$SELECT public.claim_monthly_checkout('33333333-0000-4000-8000-000000000000', gen_random_uuid())$$,
+  'P0001', 'Unknown user', 'checkout preserves the unknown-user exception');
 INSERT INTO auth.users (id, email) VALUES
   ('33333333-1111-4111-8111-111111111111', 'subscription-guards@example.invalid');
 

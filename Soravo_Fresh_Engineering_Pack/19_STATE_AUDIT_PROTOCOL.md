@@ -61,3 +61,5 @@ Dated audit records are preserved in `docs/engineering/STATE_AUDIT.md`.
 Subscription checkout/event-ordering audit recorded in `docs/engineering/STATE_AUDIT.md` on 2026-10-27 for task branch `coderabbit/api-subscription-hardening/8b15d30d` (base `74ec17e`).
 
 Delivery merge against remote `147fd33` was audited on 2026-10-27 in `docs/engineering/STATE_AUDIT.md`; atomic subscription migration is now 005.
+
+Checkout lookup/locking review audit (2026-10-27): isolated branch `coderabbit/harden-checkout-error-handling-locking/c935e5b0`, base `f45731b86f01481601426ed7c12f85feedfa4907`; initial tree clean. Scoped handler/migration/tests changes passed website checks, all database CI SQL tests and overlapping-session advisory-lock checks. No integration or production changes. Evidence: external `workspace-context/validation-record.md`; handoff above.

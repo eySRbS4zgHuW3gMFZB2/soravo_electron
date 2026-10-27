@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("https://esm.sh/@supabase/supabase-js@2.49.0", async () => import("@supabase/supabase-js"));
 
@@ -18,6 +18,11 @@ let providerStatus: number;
 let providerThrows: boolean;
 let planExists: boolean;
 let planFails: boolean;
+let planLookupFails: boolean;
+let planInsertError: string | null;
+let planReads: number;
+let planProviderCalls: number;
+let requestId: string;
 let providerGate: Promise<void>;
 let providerEntered: () => void;
 
@@ -29,6 +34,7 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     if (claimError) return Response.json({ message: "Synthetic database error" }, { status: 500 });
     expect(body.p_user_id).toBe("test-user");
     expect(body.p_request_id).toMatch(/^[0-9a-f-]{36}$/);
+    requestId = body.p_request_id;
     if (openStatus && blockingStatuses.includes(openStatus)) return Response.json({ status: "blocked", error: "Already active" });
     if (openStatus === "created") return Response.json({ status: "reuse", subscription_id: "sub_existing" });
     if (saved) return Response.json({ status: "reuse", subscription_id: saved.provider_subscription_id });
@@ -38,9 +44,18 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     return Response.json({ status: "claimed" });
   }
   if (url.pathname.endsWith("/razorpay_plans")) {
+    if (init?.method === "POST") {
+      return Response.json(planInsertError ? { code: planInsertError, message: "Synthetic insert error" } : null,
+        { status: planInsertError ? 409 : 201 });
+    }
+    planReads++;
+    if (planLookupFails && (planExists || planReads > 1)) {
+      return Response.json({ code: "SYNTHETIC_LOOKUP_ERROR", message: "Synthetic plan lookup error" }, { status: 500 });
+    }
     return Response.json(planExists ? { provider_plan_id: "plan_test" } : null);
   }
   if (url.hostname === "api.razorpay.com" && url.pathname === "/v1/plans") {
+    planProviderCalls++;
     return Response.json(planFails ? {} : { id: "plan_test" }, { status: planFails ? 400 : 200 });
   }
   if (url.hostname === "api.razorpay.com" && url.pathname === "/v1/subscriptions") {
@@ -50,7 +65,8 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     providerEntered();
     await providerGate;
     if (providerThrows) throw new Error("Synthetic provider timeout");
-    return Response.json({ id: "sub_test", status: "created" }, { status: providerStatus });
+    return Response.json(providerStatus >= 400 ? { error: { code: "SYNTHETIC_PROVIDER_ERROR" } }
+      : { id: "sub_test", status: "created" }, { status: providerStatus });
   }
   if (url.pathname.endsWith("/subscriptions")) {
     if (init?.method !== "POST") {
@@ -102,12 +118,17 @@ beforeEach(() => {
   raceLookupError = false;
   raceReads = 0;
   saveError = providerThrows = planFails = false;
+  planLookupFails = false;
+  planInsertError = null;
+  planReads = planProviderCalls = 0;
+  requestId = "";
   planExists = true;
   providerStatus = 200;
   providerGate = Promise.resolve();
   providerEntered = () => {};
   vi.stubGlobal("fetch", vi.fn(fakeFetch));
 });
+afterEach(() => vi.restoreAllMocks());
 afterAll(() => vi.unstubAllGlobals());
 
 describe("monthly checkout reservation", () => {
@@ -162,6 +183,35 @@ describe("monthly checkout reservation", () => {
     expect((await checkout()).status).toBe(502);
     expect(reserved).toBe(false);
     expect(providerCalls).toBe(0);
+  });
+  it("fails before creating a provider plan when the initial plan lookup fails", async () => {
+    planLookupFails = true;
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await checkout()).status).toBe(502);
+    expect(planProviderCalls).toBe(0);
+    expect(providerCalls).toBe(0);
+    expect(reserved).toBe(false);
+    expect(log).toHaveBeenCalledWith("create-order: razorpay_plans lookup failed", "SYNTHETIC_LOOKUP_ERROR", requestId);
+  });
+  it.each(["23505", "SYNTHETIC_INSERT_ERROR"])("fails before subscription creation when retry lookup fails after insert error %s", async (code) => {
+    planExists = false;
+    planInsertError = code;
+    planLookupFails = true;
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await checkout()).status).toBe(502);
+    expect(planReads).toBe(2);
+    expect(planProviderCalls).toBe(1);
+    expect(providerCalls).toBe(0);
+    expect(saved).toBeNull();
+    expect(reserved).toBe(false);
+    expect(log).toHaveBeenCalledWith("create-order: razorpay_plans retry lookup failed", "SYNTHETIC_LOOKUP_ERROR", requestId);
+  });
+  it.each([400, 408, 500])("logs the request ID on provider status %s for reconciliation", async (status) => {
+    providerStatus = status;
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await checkout()).status).toBe(502);
+    expect(log).toHaveBeenCalledWith("create-order: Razorpay subscription creation failed", status, "SYNTHETIC_PROVIDER_ERROR", requestId);
+    expect(reserved).toBe(status !== 400);
   });
 });
 
