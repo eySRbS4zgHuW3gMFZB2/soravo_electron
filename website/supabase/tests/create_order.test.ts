@@ -7,6 +7,10 @@ let claimStatus: string;
 let reserved: boolean;
 let saved: Record<string, unknown> | null;
 let providerCalls: number;
+let cancelCalls: number;
+let cancelStatus: number;
+let cancelThrows: boolean;
+let cancelRequest: { method: string | undefined; authorization: string | null; body: unknown } | null;
 let claimError: string | null;
 let openStatus: string | null;
 let raceStatus: string | null;
@@ -51,6 +55,12 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     await providerGate;
     if (providerThrows) throw new Error("Synthetic provider timeout");
     return Response.json({ id: "sub_test", status: "created" }, { status: providerStatus });
+  }
+  if (url.hostname === "api.razorpay.com" && url.pathname === "/v1/subscriptions/sub_test/cancel") {
+    cancelCalls++;
+    cancelRequest = { method: init?.method, authorization: new Headers(init?.headers).get("Authorization"), body };
+    if (cancelThrows) throw new Error("Synthetic cancellation timeout");
+    return Response.json({ status: cancelStatus === 200 ? "cancelled" : "error" }, { status: cancelStatus });
   }
   if (url.pathname.endsWith("/subscriptions")) {
     if (init?.method !== "POST") {
@@ -97,6 +107,10 @@ beforeEach(() => {
   reserved = false;
   saved = null;
   providerCalls = 0;
+  cancelCalls = 0;
+  cancelStatus = 200;
+  cancelThrows = false;
+  cancelRequest = null;
   claimError = null;
   openStatus = raceStatus = null;
   raceLookupError = false;
@@ -125,6 +139,7 @@ describe("monthly checkout reservation", () => {
     expect((await checkout()).status).toBe(200);
     expect(await (await checkout()).json()).toMatchObject({ subscription_id: "sub_test" });
     expect(providerCalls).toBe(1);
+    expect(cancelCalls).toBe(0);
     expect(reserved).toBe(false);
     expect(saved).not.toHaveProperty("last_event_created_at");
   });
@@ -156,6 +171,24 @@ describe("monthly checkout reservation", () => {
     providerStatus = 200;
     expect((await checkout()).status).toBe(200);
   });
+  it.each(["success", "rejected", "timeout"])("fails checkout after a save error when cancellation ends in %s", async (outcome) => {
+    saveError = true;
+    cancelStatus = outcome === "rejected" ? 500 : 200;
+    cancelThrows = outcome === "timeout";
+    const response = await checkout();
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Internal server error" });
+    expect(cancelCalls).toBe(1);
+    expect(cancelRequest).toEqual({
+      method: "POST", authorization: `Basic ${btoa("synthetic-key:synthetic-secret")}`,
+      body: { cancel_at_cycle_end: 0 },
+    });
+    expect(saved).toBeNull();
+    expect(reserved).toBe(true);
+    expect((await checkout()).status).toBe(409);
+    expect(providerCalls).toBe(1);
+    expect(cancelCalls).toBe(1);
+  });
   it("releases a reservation if plan creation fails before subscription creation", async () => {
     planExists = false;
     planFails = true;
@@ -184,6 +217,7 @@ describe("billable checkout guards and legacy race recovery", () => {
     expect((await checkout()).status).toBe(409);
     expect(providerCalls).toBe(1);
     expect(raceReads).toBe(1);
+    expect(cancelCalls).toBe(0);
     expect(reserved).toBe(true);
   });
   it("reuses a created subscription found during legacy race recovery", async () => {
@@ -193,11 +227,13 @@ describe("billable checkout guards and legacy race recovery", () => {
     expect((await response.json()).subscription_id).toBe("sub_existing");
     expect(providerCalls).toBe(1);
     // The newly created provider ID still needs reconciliation.
+    expect(cancelCalls).toBe(0);
     expect(reserved).toBe(true);
   });
   it("fails closed when legacy race recovery cannot read the subscription", async () => {
     raceLookupError = true;
     expect((await checkout()).status).toBe(502);
+    expect(cancelCalls).toBe(0);
     expect(reserved).toBe(true);
   });
 });

@@ -61,3 +61,5 @@ Dated audit records are preserved in `docs/engineering/STATE_AUDIT.md`.
 Subscription checkout/event-ordering audit recorded in `docs/engineering/STATE_AUDIT.md` on 2026-10-27 for task branch `coderabbit/api-subscription-hardening/8b15d30d` (base `74ec17e`).
 
 Delivery merge against remote `147fd33` was audited on 2026-10-27 in `docs/engineering/STATE_AUDIT.md`; atomic subscription migration is now 005.
+
+Subscription insert error follow-up checked at `f45731b86f01481601426ed7c12f85feedfa4907` on 2026-10-27 in the isolated `coderabbit/fix-subscription-insert-errors/969be6a5` checkout. Finding dispositions, unchanged reservation/RPC contracts and validation are recorded in `18_PROGRESS_AND_HANDOFF.md` and the workspace validation record. No external provider or production state was accessed.

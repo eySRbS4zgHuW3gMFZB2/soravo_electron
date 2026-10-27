@@ -320,7 +320,23 @@ Deno.serve(async (req: Request) => {
         // Provider event time is set only by webhooks, never the local clock.
       }, { onConflict: "provider_subscription_id", ignoreDuplicates: true });
       if (subSaveError) {
-        if (subSaveError.code !== "23505") throw subSaveError;
+        if (subSaveError.code !== "23505") {
+          try {
+            const cancelRes = await fetch(`https://api.razorpay.com/v1/subscriptions/${encodeURIComponent(String(subscriptionData.id))}/cancel`, {
+              method: "POST",
+              headers: {
+                Authorization: `Basic ${basicAuth}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ cancel_at_cycle_end: 0 }),
+            });
+            if (!cancelRes.ok) console.error("create-order: subscription cancellation failed", cancelRes.status, requestId);
+          } catch {
+            console.error("create-order: subscription cancellation failed", requestId);
+          }
+          // Keep the reservation until the failed save/provider state is reconciled.
+          throw subSaveError;
+        }
         // Also handle overlapping legacy workers that did not reserve first.
         // The just-created provider outcome remains reserved for reconciliation.
         const { data: existingAfterRace, error: raceLookupError } = await admin

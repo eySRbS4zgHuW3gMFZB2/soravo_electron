@@ -952,3 +952,7 @@ Verified and fixed all six supplied findings: isolate PricingPage tests, fail cl
 ## 2026-10-27 — Subscription delivery conflict resolution
 
 Merged remote `147fd33` with task commit `96a7866`, preserving atomic checkout/event guards and remote billable-status, paid-period, diagnostic and test fixes. Renumbered the atomic migration to 005 after the remote index upgrade. Website typecheck/build, 85 Vitest tests, 87 pgTAP assertions on fresh and upgrade paths, and concurrent SQL checks passed. Merge prepared locally; no push.
+
+## 2026-10-27 — Subscription insert error review follow-up
+
+Added immediate provider cancellation on non-23505 checkout persistence failures; HTTP 500, reservation retention and 23505 race recovery are preserved. Skipped the webhook finding because migration 005's atomic provider-ID upsert replaced the cited duplicate fallback. Website typecheck/build, all 88 tests and 87 PostgreSQL 16 assertions passed; see the engineering-pack handoff and external validation record for details.
