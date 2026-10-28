@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 const mockAuth = vi.hoisted(() => ({
@@ -22,6 +22,7 @@ vi.mock("./supabase", () => ({
 }));
 
 import { AuthProvider, useAuth, ProtectedRoute, sanitizeReturnTo } from "./auth";
+import { LoginPage } from "../pages/LoginPage";
 
 function Consumer() {
   const { user, loading } = useAuth();
@@ -84,6 +85,69 @@ describe("AuthProvider", () => {
     const result = await captured!.updatePassword("new-password-123");
     expect(result.error).toBeNull();
     expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: "new-password-123" });
+  });
+});
+
+describe("auth callback feedback", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockAuth.onAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } });
+  });
+
+  afterEach(() => {
+    cleanup();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it.each([
+    ["type=signup&access_token=synthetic&refresh_token=synthetic", "verified"],
+    ["type=signup", "idle"],
+    ["type=signup&access_token=synthetic", "idle"],
+    ["type=signup&refresh_token=synthetic", "idle"],
+    ["type=recovery&access_token=synthetic&refresh_token=synthetic", "idle"],
+    ["type=magiclink&access_token=synthetic&refresh_token=synthetic", "idle"],
+    ["type=invite&access_token=synthetic&refresh_token=synthetic", "idle"],
+    ["type=email_change&access_token=synthetic&refresh_token=synthetic", "idle"],
+    ["access_token=synthetic&refresh_token=synthetic", "idle"],
+  ])("classifies callback %s as %s at each restoration stage", async (params, expected) => {
+    window.history.replaceState(null, "", `/account#${params}`);
+    let resolveInitialization!: (value: unknown) => void;
+    let resolveSession!: (value: unknown) => void;
+    mockAuth.initialize.mockReturnValue(new Promise((resolve) => { resolveInitialization = resolve; }));
+    mockAuth.getSession.mockReturnValue(new Promise((resolve) => { resolveSession = resolve; }));
+    function ConfirmationStatus() {
+      return <p role="status">{useAuth().emailConfirmationStatus}</p>;
+    }
+    render(<AuthProvider><ConfirmationStatus /></AuthProvider>);
+
+    expect(screen.getByRole("status").textContent).toBe(expected);
+    await act(async () => resolveInitialization({ error: null }));
+    expect(mockAuth.getSession).toHaveBeenCalled();
+    expect(screen.getByRole("status").textContent).toBe(expected);
+    await act(async () => resolveSession({ data: { session: { user: { id: "user-1" } } }, error: null }));
+    expect(screen.getByRole("status").textContent).toBe(expected);
+  });
+
+  it("shows sanitized callback errors on login after the protected account redirects", async () => {
+    window.history.replaceState(null, "", "/account#error=access_denied&error_description=expired%20synthetic-private-value&type=signup");
+    mockAuth.initialize.mockResolvedValue({ error: { message: "expired synthetic-private-value" } });
+    mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    render(
+      <MemoryRouter initialEntries={["/account"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/account" element={<ProtectedRoute><p>Secret</p></ProtectedRoute>} />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole("heading", { name: "Log in" })).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toBe("This link has expired. Request a new one and try again.");
+    expect(screen.queryByText("Secret")).toBeNull();
+    expect(document.body.textContent).not.toContain("synthetic-private-value");
+    expect(window.location.hash).toBe("");
   });
 });
 

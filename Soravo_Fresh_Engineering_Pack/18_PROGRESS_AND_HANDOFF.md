@@ -731,3 +731,11 @@ Retained the runtime-isolated sole task checkout `repos/github.com/eysrbs4zghuw3
 ## P2-04/P2-06 auth redirect follow-up
 
 Branch feature/P2-04-supabase-auth-redirects (base 9efa380). Code and docs updated for safe auth redirects and confirmation handling. Website typecheck/build/unit tests/Playwright passed. Owner dashboard steps: set Supabase Site URL to https://soravo.xyz; allowlist exact preview/production redirect URLs; no live email confirmation independently verified.
+
+
+## P2-13 confirmation feedback review fixes — 2026-10-28
+
+- All three supplied findings confirmed. Moved the auth follow-up into the P2 list as P2-13, preserving its description and the P2-10 database task. Confirmation status now requires both signup type and successful tokens at initial state, initialization and session restoration. Login displays the existing sanitized callback error after protected-account redirects; AccountPage alerts remain unchanged.
+- Dedicated runtime checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/fix-auth-confirmation-feedback-and-id/28d529e5`; base `978955a250c3039e8294eb56a9fcdc72bccb6b6e`. Small sequential repair; no delegation. Loaded `code-review`; Supabase, React, Playwright and security skills considered but unavailable in the repository-adjacent/session catalog. Knowledge-base and repo-knowledge directories absent.
+- Validation: targeted auth/recovery tests 52/52, full website unit suite 137/137, browser suite 37/37, typecheck/build, task-ID invariants and unchanged AccountPage checks passed. Dependencies prepared from the unchanged website lockfile; browser tests used synthetic Supabase fixtures. Exact commands and input hashes are in external `workspace-context/validation-record.md`. Final review recorded there.
+- No provider configuration, authorization or entitlement contract changes. Live confirmation email remains unverified. Checkout retained for review; no integration performed. Rollback: revert this patch.
