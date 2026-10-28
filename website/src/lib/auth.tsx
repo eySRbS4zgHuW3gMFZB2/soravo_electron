@@ -59,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return "idle";
     const callback = parseSupabaseAuthCallback(window.location.href);
     if (callback.errorCode) return "failed";
-    if (callback.type === "signup" && callback.hasSuccessfulTokens) return "verified";
     return "idle";
   });
 
@@ -108,13 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           recoveryPending = false;
           setPasswordRecoveryUserId(null);
           setAuthError((prev) => prev ?? sanitizeAuthErrorMessage(result.error?.message));
-          setEmailConfirmationStatus((prev) => (prev === "verified" ? prev : "failed"));
           try {
             window.sessionStorage.removeItem("soravo:password-recovery-user");
           } catch {
             // Ignore storage failures.
           }
-        } else if (mounted && callback.type === "signup" && callback.hasSuccessfulTokens) {
+        } else if (mounted && !callback.errorCode && callback.type === "signup" && callback.hasSuccessfulTokens) {
           setEmailConfirmationStatus("verified");
           setAuthError(null);
         }
@@ -132,20 +130,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) {
           recoveryPending = false;
           setAuthError((prev) => prev ?? sanitizeAuthErrorMessage(error.message));
-          setEmailConfirmationStatus("failed");
+          setEmailConfirmationStatus((prev) => (prev === "idle" ? prev : "failed"));
         }
         if (error || !data.session?.user?.id) recoveryPending = false;
         if (!error && mounted) setSession(data.session);
-        if (!error && mounted && data.session?.user?.id && callback.type === "signup" && callback.hasSuccessfulTokens) {
-          setEmailConfirmationStatus("verified");
-          setAuthError(null);
-        }
       } catch {
         // Preserve the current session if restoration fails.
         recoveryPending = false;
         setPasswordRecoveryUserId(null);
         setAuthError((prev) => prev ?? "This confirmation or recovery link is invalid or has expired.");
-        setEmailConfirmationStatus("failed");
+        setEmailConfirmationStatus((prev) => (prev === "idle" ? prev : "failed"));
         try {
           window.sessionStorage.removeItem("soravo:password-recovery-user");
         } catch {

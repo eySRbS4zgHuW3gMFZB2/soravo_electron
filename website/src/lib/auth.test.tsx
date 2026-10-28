@@ -101,6 +101,7 @@ describe("auth callback feedback", () => {
 
   it.each([
     ["type=signup&access_token=synthetic&refresh_token=synthetic", "verified"],
+    ["type=signup&access_token=synthetic&refresh_token=synthetic&error=access_denied", "failed"],
     ["type=signup", "idle"],
     ["type=signup&access_token=synthetic", "idle"],
     ["type=signup&refresh_token=synthetic", "idle"],
@@ -120,12 +121,46 @@ describe("auth callback feedback", () => {
     }
     render(<AuthProvider><ConfirmationStatus /></AuthProvider>);
 
-    expect(screen.getByRole("status").textContent).toBe(expected);
+    expect(screen.getByRole("status").textContent).toBe(expected === "failed" ? "failed" : "idle");
     await act(async () => resolveInitialization({ error: null }));
     expect(mockAuth.getSession).toHaveBeenCalled();
     expect(screen.getByRole("status").textContent).toBe(expected);
     await act(async () => resolveSession({ data: { session: { user: { id: "user-1" } } }, error: null }));
     expect(screen.getByRole("status").textContent).toBe(expected);
+  });
+
+  it.each(["returned", "thrown"])("keeps signup confirmation idle after a %s initialization error", async (failure) => {
+    window.history.replaceState(null, "", "/account#type=signup&access_token=synthetic&refresh_token=synthetic");
+    const error = new Error("expired synthetic-private-value");
+    if (failure === "returned") {
+      mockAuth.initialize.mockResolvedValue({ error });
+    } else {
+      mockAuth.initialize.mockRejectedValue(error);
+    }
+    let resolveSession!: (value: unknown) => void;
+    mockAuth.getSession.mockReturnValue(new Promise((resolve) => { resolveSession = resolve; }));
+    function CallbackFeedback() {
+      const { emailConfirmationStatus, authError, user } = useAuth();
+      return <>
+        <p role="status">{emailConfirmationStatus}</p>
+        {authError && <p role="alert">{authError}</p>}
+        {user && <p>{user.email}</p>}
+      </>;
+    }
+    render(<AuthProvider><CallbackFeedback /></AuthProvider>);
+
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("idle");
+    if (failure === "returned") {
+      expect(mockAuth.getSession).toHaveBeenCalled();
+      await act(async () => resolveSession({ data: { session: { user: { id: "existing-user", email: "existing@example.com" } } }, error: null }));
+      expect(screen.getByText("existing@example.com")).toBeTruthy();
+      expect(screen.getByRole("status").textContent).toBe("idle");
+      expect(screen.getByRole("alert")).toBeTruthy();
+    } else {
+      expect(mockAuth.getSession).not.toHaveBeenCalled();
+    }
+    expect(document.body.textContent).not.toContain("synthetic-private-value");
   });
 
   it("shows sanitized callback errors on login after the protected account redirects", async () => {
