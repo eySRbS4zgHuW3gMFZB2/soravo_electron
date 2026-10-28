@@ -8,12 +8,19 @@ import {
 import { Navigate, useLocation } from "react-router-dom";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, isConfigured } from "./supabase";
+import {
+  getAuthRedirectUrl,
+  parseSupabaseAuthCallback,
+  sanitizeAuthErrorMessage,
+} from "./authRedirects";
 
 interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
   passwordRecoveryUserId: string | null;
+  authError: string | null;
+  emailConfirmationStatus: "idle" | "verified" | "failed";
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -27,9 +34,9 @@ const CONFIG_ERROR =
   "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.";
 
 /** Read URL parameters from the browser location without SSR assumptions. */
-function recoveryRedirectUrl(): string {
-  if (typeof window === "undefined") return "";
-  return `${window.location.origin}/reset-password`;
+function authCallbackSummary() {
+  if (typeof window === "undefined") return parseSupabaseAuthCallback("");
+  return parseSupabaseAuthCallback(window.location.href);
 }
 
 /**
@@ -47,6 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [emailConfirmationStatus, setEmailConfirmationStatus] = useState<"idle" | "verified" | "failed">(() => {
+    if (typeof window === "undefined") return "idle";
+    const callback = parseSupabaseAuthCallback(window.location.href);
+    if (callback.errorCode) return "failed";
+    if (callback.type === "signup" || callback.hasSuccessfulTokens) return "verified";
+    return "idle";
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -54,6 +69,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const params = new URLSearchParams(window.location.hash.slice(1));
     new URLSearchParams(window.location.search).forEach((value, key) => params.set(key, value));
     let recoveryPending = params.get("type") === "recovery" && Boolean(params.get("access_token"));
+    const callback = parseSupabaseAuthCallback(window.location.href);
+    if (callback.errorCode) {
+      setAuthError(sanitizeAuthErrorMessage(callback.errorDescription));
+      setEmailConfirmationStatus("failed");
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
@@ -69,6 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === "SIGNED_OUT") {
         setPasswordRecoveryUserId(null);
         recoveryPending = false;
+        setAuthError(null);
+        setEmailConfirmationStatus("idle");
         try {
           window.sessionStorage.removeItem("soravo:password-recovery-user");
         } catch {
@@ -85,19 +107,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (result?.error) {
           recoveryPending = false;
           setPasswordRecoveryUserId(null);
+          setAuthError((prev) => prev ?? sanitizeAuthErrorMessage(result.error?.message));
+          setEmailConfirmationStatus((prev) => (prev === "verified" ? prev : "failed"));
           try {
             window.sessionStorage.removeItem("soravo:password-recovery-user");
           } catch {
             // Ignore storage failures.
           }
+        } else if (mounted && callback.hasSuccessfulTokens) {
+          setEmailConfirmationStatus("verified");
+          setAuthError(null);
+        }
+        if (mounted && typeof window !== "undefined" && (window.location.hash || window.location.search)) {
+          const browserCallback = parseSupabaseAuthCallback(window.location.href);
+          if (browserCallback.hasSuccessfulTokens || browserCallback.errorCode) {
+            try {
+              window.history.replaceState(null, "", window.location.pathname);
+            } catch {
+              // Ignore history failures.
+            }
+          }
         }
         const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          recoveryPending = false;
+          setAuthError((prev) => prev ?? sanitizeAuthErrorMessage(error.message));
+          setEmailConfirmationStatus("failed");
+        }
         if (error || !data.session?.user?.id) recoveryPending = false;
         if (!error && mounted) setSession(data.session);
+        if (!error && mounted && data.session?.user?.id && callback.hasSuccessfulTokens) {
+          setEmailConfirmationStatus("verified");
+          setAuthError(null);
+        }
       } catch {
         // Preserve the current session if restoration fails.
         recoveryPending = false;
         setPasswordRecoveryUserId(null);
+        setAuthError((prev) => prev ?? "This confirmation or recovery link is invalid or has expired.");
+        setEmailConfirmationStatus("failed");
         try {
           window.sessionStorage.removeItem("soravo:password-recovery-user");
         } catch {
@@ -119,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isConfigured) {
       return { error: CONFIG_ERROR };
     }
+    setAuthError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error?.message ?? null };
   };
@@ -128,13 +177,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isConfigured) {
       return { error: CONFIG_ERROR };
     }
+    setAuthError(null);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { display_name: displayName },
-        emailRedirectTo:
-          typeof window === "undefined" ? undefined : `${window.location.origin}/account`,
+        emailRedirectTo: getAuthRedirectUrl("/account"),
       },
     });
     return { error: error?.message ?? null };
@@ -153,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: CONFIG_ERROR };
     }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: recoveryRedirectUrl(),
+      redirectTo: getAuthRedirectUrl("/reset-password"),
     });
     return { error: error?.message ?? null };
   };
@@ -180,6 +229,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: session?.user ?? null,
     loading,
     passwordRecoveryUserId,
+    authError,
+    emailConfirmationStatus,
     signIn,
     signUp,
     signOut,
