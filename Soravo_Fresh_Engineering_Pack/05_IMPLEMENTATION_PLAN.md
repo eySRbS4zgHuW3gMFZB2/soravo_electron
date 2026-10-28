@@ -25,13 +25,13 @@ Deliverables, in order:
 | Phase 0 (P0-02) | Created, wired, and **red** — the engine is not bundled yet | Rename requires the check to **exist, run, and report**, with its red result recorded as the known baseline. It is **not** required to be green. |
 | Phase 1 (P1-03, P1-04, P1-06) | Implemented and **green** — the bundle layout ships the engine and a clean-machine install proves it launches | The packaging check becomes a hard, required, green check. No release may ship while it is red. |
 
-The rename gate therefore requires *proof that the check works*, not *proof that the engine ships*. Requiring green in Phase 0 would be circular: the bundle layout is not chosen until P1-03, so nothing could satisfy it before the rename. If the packaging check is red in Phase 0 for a reason **other** than the known missing-engine baseline — for example it fails to run at all — that is a genuine failure and the rename must not proceed.
+The rename gate therefore requires *proof that the check works*, not *proof that the engine ships*. Requiring green in Phase 0 would be circular: the accepted bundle layout is implemented in P1-03, so nothing could satisfy it before the rename. If the packaging check is red in Phase 0 for a reason **other** than the known missing-engine baseline — for example it fails to run at all — that is a genuine failure and the rename must not proceed.
 
 Gate: repo identity and branch/remote verified; no accidental source deletion; **every non-packaging baseline CI check green**; the release-packaging check **exists, runs, and reports**, with its red result explicitly recorded as the known missing-engine baseline — a packaging check that is red for any other reason, or that fails to run at all, blocks the rename; rename checklist reviewed by the owner; production site demonstrably unchanged.
 
 ## Phase 1 — Desktop release readiness (blocker before selling)
 - Record the CrispASR engine's exact binary path, version, SHA-256 and licence, re-confirming the audited finding that the tracked location is `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/` and that `third-party/bin/` is untracked.
-- Decide and record the bundled layout in **ADR-0010** (Tauri `bundle.resources` mapping, `externalBin` sidecar, or a deliberate rename of the tracked staging directory), then implement it. The bundled files must be tracked in git so a clean clone and a clean CI runner produce the same artifact.
+- Implement the bundled layout accepted in **ADR-0010** (2026-10-22, task P0-01): Tauri `bundle.resources` map form with bundled VC++ runtime. Follow the ADR’s tracked source paths, resource destinations and recorded rationale. The bundled files must be tracked in git so a clean clone and a clean CI runner produce the same artifact.
 - Identify required companion DLLs and dynamic runtime dependencies; confirm redistribution rights and notices before bundling anything (`22_REVERSE_ENGINEERING_AND_PROVENANCE.md`).
 - Verify model download, checksum, licence/provenance and offline transcription. Models are acquired at runtime, not bundled.
 - Build and inspect the Windows installer; confirm the engine and its dependencies are present in the artifact.
@@ -43,7 +43,7 @@ Gate: clean Windows VM install works without dev tools and can dictate using the
 
 **Phase 1 is Windows-only.** It is complete when the Windows gate above is met. Linux is BLOCKED and is **not** implied by a green Phase 1, so a phase cannot appear complete while Linux remains unverified.
 
-Linux has its own gate, which applies only once **P1-05** has delivered a tracked, licensed Linux engine artifact:
+Linux has its own gate, which applies only once **P1-05** has recorded the tracked Linux engine's licensing and clean-machine launch/dictation proof:
 
 - the Linux engine's SHA-256, origin and licence are recorded, and redistribution is confirmed;
 - the Linux bundle contains the engine and its shared libraries;
@@ -103,7 +103,7 @@ Gate: end-to-end sandbox suite passes and a manual owner test is recorded before
 Gate: normal users cannot access admin API even by direct request; admin changes audited.
 
 ## Phase 8 — Distribution, production cutover and launch
-- **Finalise ADR-0005 (binary distribution host) before publishing anything.** It is currently PROPOSED; the host, the no-card check and an anonymous-download proof must be settled first.
+- **Apply ADR-0005's remaining gates before publishing.** Windows publication requires the Windows clean-machine gate; the Linux release gate is required only when publishing Linux artifacts. Owner approval is always required.
 - Publish artifacts to the selected public binary host.
 - SHA256SUMS and optional minisign signatures. Verify a clean download and checksum from a second machine and network.
 - Windows installer warning copy and Linux installation guide.

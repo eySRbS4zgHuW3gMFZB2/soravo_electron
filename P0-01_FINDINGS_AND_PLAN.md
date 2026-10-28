@@ -27,7 +27,7 @@ MCP/CLI tools used:
 
 ## Audit Findings
 
-### Finding 1: Engine not bundled (CONFIRMED)
+### Finding 1: Engine not bundled (HISTORICAL — superseded by ADR-0010 implementation)
 
 **Source:** `src-tauri/tauri.conf.json`, lines 40-48
 
@@ -63,7 +63,7 @@ Also tracked: `third-party/crispasr/crispasr.zip` (8,700,000+ bytes) — the sou
 
 `third-party/bin/` is git-ignored and contains 0 tracked files (40 files exist only on developer machines, produced by `npm run fetch:asr`).
 
-### Finding 3: Runtime lookup fails on installed machine (CONFIRMED)
+### Finding 3: Runtime lookup fails on installed machine (HISTORICAL — superseded by ADR-0010 implementation)
 
 **Source:** `src-tauri/src/lib.rs`, `find_crispasr_binary()` (lines 476-496)
 
@@ -116,22 +116,22 @@ The developer machine has VC++ x64 Redistributable v14.51.36247.00 installed. Th
 
 Redistribution rights confirmed. The LICENSE and THIRD_PARTY_NOTICES.txt must be included in the bundle.
 
-### Finding 7: ADR-0010 is PROPOSED (CONFIRMED)
+### Finding 7: ADR-0010 was PROPOSED at initial audit (superseded)
 
 **Source:** `15_ADR_INDEX.md`
 
-ADR-0010 (CrispASR engine packaging source) is PROPOSED, not ACCEPTED. The bundled layout is not yet decided. The three options are:
+Historical finding: ADR-0010 was PROPOSED before the P0-01 decision. It is now **ACCEPTED** (2026-10-22, task P0-01) in `Soravo_Fresh_Engineering_Pack/15_ADR_INDEX.md`, with the Phase A rationale below. The original options were:
 1. Tauri `bundle.resources` mapping
 2. `externalBin` sidecar
 3. Deliberate rename of the tracked staging directory
 
-Must be chosen and recorded before packaging work begins (task P1-03).
+The decision prerequisite for P1-03 is satisfied. Redistribution checks, clean-machine verification and owner release approval remain required, including the Linux release gate before publishing Linux artifacts.
 
 ### Finding 8: Linux is BLOCKED (CONFIRMED)
 
 **Source:** Multiple pack documents, `find_crispasr_binary` in lib.rs
 
-No Linux CrispASR executable or shared-library set is tracked. `find_crispasr_binary` resolves `crispasr` (not `crispasr.exe`) on non-Windows. A Linux build would install but fail to transcribe.
+Linux CrispASR artifacts are now tracked and bundled, but clean-machine runtime and dictation verification remain open; a release still must not be published for Linux until that gate passes.
 
 ### Finding 9: Tauri configuration (CONFIRMED)
 
@@ -189,7 +189,7 @@ Recommended approach:
 
 ### Phase A: ADR-0010 Decision (P1-03 prerequisite)
 
-**Action:** Choose `bundle.resources` (map form) as the bundled layout. Record in ADR-0010 as ACCEPTED.
+**Completed decision:** ADR-0010 records `bundle.resources` (map form) as ACCEPTED (2026-10-22, task P0-01). The rationale is preserved below; Phase A no longer blocks implementation.
 
 **Rationale:**
 - Simplest Tauri-native approach
@@ -198,14 +198,14 @@ Recommended approach:
 - No binary renaming required (unlike externalBin sidecar)
 - Tracked files in git ensure reproducible builds
 
-### Phase B: Bundle Configuration (P1-03 implementation)
+### Phase B: Bundle Configuration (COMPLETED)
 
 **Changes to `src-tauri/tauri.conf.json`:**
 1. Set `bundle.resources` to map the engine directory to `crispasr/`
 2. Set `bundle.windows.bundleVCRuntime` to `true`
 3. Optionally set `build.windows.staticVCRuntime` to `true`
 
-### Phase C: Runtime Lookup Update (P1-03 implementation)
+### Phase C: Runtime Lookup Update (COMPLETED)
 
 **Changes to `src-tauri/src/lib.rs`:**
 1. Add `resource_dir/crispasr/crispasr.exe` (and companions) to `find_crispasr_binary` search paths
@@ -276,7 +276,7 @@ Linux remains blocked until P1-05 delivers a tracked, licensed Linux engine. No 
 ## Next Steps
 
 1. **Owner reviews this findings/plan.**
-2. If approved, implement Phase A (ADR-0010) first, then Phase B (bundle config), then Phase C (runtime lookup).
+2. Phases A-C are complete. Run Phase D and retain the remaining verification and release-approval gates.
 3. Build and verify (Phase D).
 4. Add CI check (Phase E).
 5. Document clean-machine procedure (Phase F).

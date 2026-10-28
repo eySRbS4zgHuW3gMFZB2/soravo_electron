@@ -131,8 +131,9 @@ Monthly $12, recurring, max 3 active devices, 14-day offline grace. Lifetime $50
 
 ## ADR-0005 — Binary distribution
 
-**Status:** PROPOSED — not final, and not to be implemented as decided  
-Preferred candidate: a separate public `soravo-releases` repository containing artifacts only, so that public download links work without customer GitHub authentication while the source repository can be private. The owner asked for alternatives to any public repository, so the host is not settled. Before this ADR can become ACCEPTED it needs: an anonymous-download proof of download from a logged-out browser on a second network; confirmation that the chosen host does not require a payment card; confirmation of current file-size and quota limits from official docs; and a decision on checksum publication plus an optional minisign signature. See `14_FREE_BINARY_HOSTING_OPTIONS.md` for the option set and the decision rule. Do not start Phase 8 distribution work against this ADR while it is PROPOSED.
+**Status:** ACCEPTED (2026-10-27, preview/release-infrastructure task): separate public `soravo-releases` repository containing artifacts only.
+
+Rationale: the repository was created as `eySRbS4zgHuW3gMFZB2/soravo-releases`, a temporary prerelease asset downloaded anonymously with HTTP 200, and the publishing workflow supports draft-first publication with SHA-256 verification. GitHub's current documented release-asset limit (2 GiB per asset, no documented bandwidth cap) supports the observed ~tens-of-MB installer size. No card was required to create the public repository or release. Source-repo visibility is unchanged. Remaining gating items: clean-machine verification before publication, Linux clean-machine release gate, and owner approval of each published release.
 
 ## ADR-0006 — Repository naming
 
