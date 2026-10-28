@@ -8,7 +8,7 @@ import { listEntitlements, listDevices, revokeDevice } from "../lib/api";
  * Prompt signed-out visitors to log in and ignore stale entitlement responses.
  */
 export function AccountPage() {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, signOut, loading: authLoading, authError, emailConfirmationStatus } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [entitlements, setEntitlements] = useState<
@@ -144,6 +144,7 @@ export function AccountPage() {
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-ink">Account</h1>
+          {authError && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{authError}</p>}
           <p className="mt-4 text-muted">Please log in to view your account.</p>
           <Link to="/login" className="mt-6 inline-block rounded-full bg-ink px-6 py-3 font-semibold text-lime">
             Log in
@@ -167,6 +168,14 @@ export function AccountPage() {
       <main className="mx-auto max-w-6xl px-6 py-12">
         <h1 className="text-3xl font-bold text-ink">Account</h1>
         <p className="mt-2 text-muted">{user.email}</p>
+        {emailConfirmationStatus === "verified" && (
+          <p role="status" className="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">
+            Email confirmed. Your account is active.
+          </p>
+        )}
+        {authError && (
+          <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{authError}</p>
+        )}
         {signOutError && (
           <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{signOutError}</p>
         )}

@@ -998,3 +998,13 @@ Added immediate provider cancellation on non-23505 checkout persistence failures
 ## 2026-10-27 — Delivery merge for subscription insert compensation
 
 Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit records, remote plan lookup/logging/advisory locking changes and local provider cancellation compensation. Fresh 30 checkout tests and 88 PostgreSQL assertions passed; reused 64 unchanged tests and website typecheck/build. Merge committed locally for delivery; no push.
+
+## 2026-10-28 -- P2-04/P2-06 follow-up: Supabase auth redirects and email confirmation
+
+- Branch: feature/P2-04-supabase-auth-redirects, base SHA 9efa380.
+- Root cause: shared Supabase project Site URL/redirect allowlist pointed confirmation links at localhost; code previously derived redirect from window.location.origin but callback/error handling and safe redirect construction were incomplete.
+- Added website/src/lib/authRedirects.ts for exact origin/path validation and callback parsing.
+- Updated auth context to handle confirmation success/failure, clear tokens from the URL after processing, expose authError and emailConfirmationStatus; AccountPage shows feedback.
+- Updated redirect URLs to safe helper values; recovery uses same origin-aware construction.
+- Tests: website typecheck, build, unit tests 127 passed, Playwright auth tests 7 passed.
+- Dashboard action required: set Site URL to https://soravo.xyz and allowlist exact preview and production redirect URLs. No live email confirmation independently verified in this environment.

@@ -112,3 +112,4 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - CodeRabbit review where useful and within free quota;
 - no unresolved critical/high findings;
 - worktree removal and build-output cleanup after integration.
+- P2-10: Follow-up for P2-04/P2-06: fix deployed Supabase auth redirects, safe redirect helpers, confirmation callback handling, and tests.
