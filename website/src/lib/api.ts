@@ -116,18 +116,23 @@ export async function createOrder(planCode: PlanCode): Promise<CreateOrderResult
     throw new Error("Invalid plan");
   }
 
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/create-order`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({ plan_code: planCode }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${SUPABASE_URL}/functions/v1/create-order`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ plan_code: planCode }),
+    });
+  } catch {
+    throw new Error("Unable to reach the payment service. Check your connection and try again.");
+  }
 
   const data = (await response.json().catch(() => null)) as CreateOrderResult | null;
   if (!response.ok || !data) {
-    throw new Error(data?.error ?? "Failed to create order");
+    throw new Error(data?.error ?? "The payment service returned an unexpected response.");
   }
   return data;
 }

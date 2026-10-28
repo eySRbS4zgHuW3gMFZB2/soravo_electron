@@ -71,4 +71,14 @@ describe("Checkout order creation", () => {
     await expect(createOrder("monthly")).rejects.toThrow("Razorpay not configured");
   });
 
+  it("surfaces a safe message when the payment service cannot be reached", async () => {
+    mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await expect(createOrder("monthly")).rejects.toThrow("Unable to reach the payment service");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an unknown plan before making a request", async () => {
+    await expect(createOrder("enterprise" as never)).rejects.toThrow("Invalid plan");
+  });
+
 });
