@@ -1024,3 +1024,7 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - Client now maps network/CORS failure to a safe user-facing message.
 - Tests: website typecheck/build passed; unit tests 123 passed.
 - Owner action required: add RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET (test mode) to function secrets. No live Razorpay payment tested.
+
+## 2026-10-28 — P3-10 task record review
+
+Expanded and relocated the P3-10 task entry with linked CI evidence and all required task fields. Original deployment/worktree/review/cleanup evidence gaps and pending owner test-payment verification remain explicit. See [handoff](Soravo_Fresh_Engineering_Pack/18_PROGRESS_AND_HANDOFF.md#2026-10-28--p3-10-task-record-review) for checkout, validation and review status. Documentation only; no deployment or payment performed.

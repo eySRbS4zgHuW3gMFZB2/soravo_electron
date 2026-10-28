@@ -730,3 +730,11 @@ Retained the runtime-isolated sole task checkout `repos/github.com/eysrbs4zghuw3
 
 ## P3-10 checkout follow-up
 Branch feature/P3-10-checkout-preview (base 329316e). Root cause confirmed as undeployed Edge Functions/migrations. Applied required database migrations and deployed functions to Soravo_fresh. Razorpay test secrets remain owner-managed; no live payment tested.
+
+## 2026-10-28 — P3-10 task record review
+
+- Confirmed the supplied finding against `1300326d275d7047409343f16815423b327fdfea`. Moved P3-10 into the Website section and added the required evidence, acceptance criteria, security/privacy impact, rollback, progress, review and cleanup fields. Missing historical evidence is explicitly unverified; deployment and payment acceptance are not claimed complete.
+- Retained the runtime-provided isolated task checkout/worktree `/home/vercel-sandbox/workspace/repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, assigned branch `coderabbit/complete-p3-10-task-record/db8a346b`, base `1300326d275d7047409343f16815423b327fdfea`; initially clean, sole registered worktree. Retained for delivery; no integration or build output generated.
+- Skills: loaded `code-review`; Report skill unavailable in the declared repository-adjacent directory/session catalog. Provider and implementation skills were not needed for this documentation repair. Knowledge-base absent. Small sequential task; no delegation.
+- Verified implementation CI evidence directly: Website CI run `40782327025` succeeded with 123 unit tests and 38 browser tests, plus typecheck/build. These are historical implementation checks, not fresh runtime validation of this documentation patch. Local documentation validation passed: `git diff --check` produced no errors; `python3 /tmp/validate-p3-10-docs.py` confirmed one entry in the Website section, all eight task fields and eight local links/anchors. Manual diff/evidence review found no unrelated changes or credentials. Detailed inputs/results are tracked in `workspace-context/validation-record.md` outside the repository.
+- No provider configuration, credentials, application code or production state changed. Rollback: revert this documentation patch. Original worktree location, integration/cleanup evidence, deployment response and CodeRabbit disposition still need confirmation before closing P3-10.
