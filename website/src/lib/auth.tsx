@@ -82,13 +82,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         const result = await supabase.auth.initialize();
-        if (result?.error) recoveryPending = false;
+        if (result?.error) {
+          recoveryPending = false;
+          setPasswordRecoveryUserId(null);
+          try {
+            window.sessionStorage.removeItem("soravo:password-recovery-user");
+          } catch {
+            // Ignore storage failures.
+          }
+        }
         const { data, error } = await supabase.auth.getSession();
         if (error || !data.session?.user?.id) recoveryPending = false;
         if (!error && mounted) setSession(data.session);
       } catch {
         // Preserve the current session if restoration fails.
         recoveryPending = false;
+        setPasswordRecoveryUserId(null);
+        try {
+          window.sessionStorage.removeItem("soravo:password-recovery-user");
+        } catch {
+          // Ignore storage failures.
+        }
       } finally {
         if (mounted && !recoveryPending) setLoading(false);
       }
