@@ -1008,7 +1008,7 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - PR: https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron/pull/31
 - Changes: corrected Cloudflare Pages SPA fallback to /index.html; added preview-only GitHub Actions direct-upload workflow targeting soravo-web-preview.
 - Verification: typecheck, build, and Playwright (36 passed).
-- Blocked until owner adds least-privilege Cloudflare secrets; deploy workflow fails fast if missing. No production Pages project, domain, or DNS changed.
+- Blocked until owner adds least-privilege Cloudflare secrets; Cloudflare credential checks now run after install, build, unit, and routing tests, but before the deployment rebuild and upload. No production Pages project, domain, or DNS changed.
 
 ## 2026-10-28 - Preserve configured values in preview deployment artifact
 
