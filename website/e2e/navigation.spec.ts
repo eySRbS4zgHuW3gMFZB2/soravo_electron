@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // Runs against both Vite and the built site served by Wrangler Pages.
 // Critical routes that must be deep-linkable and survive a reload.
@@ -27,6 +30,12 @@ for (const [path, heading] of deepLinks) {
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
   });
 }
+
+test("Pages SPA fallback rule targets index.html exactly", () => {
+  const redirectsPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../public/_redirects");
+  const redirects = readFileSync(redirectsPath, "utf8");
+  expect(redirects).toMatch(/^\/\*[ \t]+\/index\.html[ \t]+200$/m);
+});
 
 test("SPA fallback is served for an unknown route", async ({ page, request }) => {
   const path = "/this/path/does/not/exist";
