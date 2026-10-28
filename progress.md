@@ -1000,6 +1000,7 @@ Added immediate provider cancellation on non-23505 checkout persistence failures
 Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit records, remote plan lookup/logging/advisory locking changes and local provider cancellation compensation. Fresh 30 checkout tests and 88 PostgreSQL assertions passed; reused 64 unchanged tests and website typecheck/build. Merge committed locally for delivery; no push.
 
 ## 2026-10-28 - Cloudflare Pages preview repair
+
 - Worktree: .worktrees/P8-02-cf-preview-deploy
 - Branch: feature/P8-02-cf-preview-deploy
 - Base SHA: 8affa5c3a918422f36337507542837505535ed0f
@@ -1008,3 +1009,11 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - Changes: corrected Cloudflare Pages SPA fallback to /index.html; added preview-only GitHub Actions direct-upload workflow targeting soravo-web-preview.
 - Verification: typecheck, build, and Playwright (36 passed).
 - Blocked until owner adds least-privilege Cloudflare secrets; deploy workflow fails fast if missing. No production Pages project, domain, or DNS changed.
+
+## 2026-10-28 - Preserve configured values in preview deployment artifact
+
+- Worktree: .worktrees/P8-02-cf-preview-deploy
+- Branch: feature/P8-02-cf-preview-deploy
+- Changes: moved Cloudflare API token out of the job-level environment so install/build/test steps do not receive it; added a final rebuild with repository VITE_* variables immediately before Wrangler upload; kept routing tests as the bounded test build.
+- Verification: website typecheck passed; npm test passed (121 tests); Playwright routing tests passed (36); simulated deployment rebuild contained configured Supabase values and no placeholder values.
+- CodeRabbit: fixed deployment-artifact finding via post-test rebuild; previous minor progress heading spacing finding addressed.
