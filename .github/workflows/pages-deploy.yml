@@ -26,6 +26,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     name: Deploy website to soravo-web-preview
     runs-on: ubuntu-latest
     timeout-minutes: 20
