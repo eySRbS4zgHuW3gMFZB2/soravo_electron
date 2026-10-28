@@ -1017,3 +1017,10 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - Changes: moved Cloudflare API token out of the job-level environment so install/build/test steps do not receive it; added a final rebuild with repository VITE_* variables immediately before Wrangler upload; kept routing tests as the bounded test build.
 - Verification: website typecheck passed; npm test passed (121 tests); Playwright routing tests passed (36); simulated deployment rebuild contained configured Supabase values and no placeholder values.
 - CodeRabbit: fixed deployment-artifact finding via post-test rebuild; previous minor progress heading spacing finding addressed.
+
+## P3-10 checkout follow-up: deployed preview create-order not found
+- Root cause: create-order, razorpay-webhook and register-device Edge Functions were not deployed to Soravo_fresh; migrations 002-005 were not applied. OPTIONS preflight returned 404, causing browser fetch/CORS failure.
+- Applied migrations 002-005 to Soravo_fresh; deployed create-order, razorpay-webhook and register-device.
+- Client now maps network/CORS failure to a safe user-facing message.
+- Tests: website typecheck/build passed; unit tests 123 passed.
+- Owner action required: add RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET (test mode) to function secrets. No live Razorpay payment tested.

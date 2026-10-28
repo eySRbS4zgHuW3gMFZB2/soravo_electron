@@ -112,3 +112,4 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - CodeRabbit review where useful and within free quota;
 - no unresolved critical/high findings;
 - worktree removal and build-output cleanup after integration.
+- P3-10: Follow-up: diagnose and repair deployed premium checkout request failures (missing Edge Functions and migrations).
