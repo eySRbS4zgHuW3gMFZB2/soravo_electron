@@ -4,7 +4,7 @@ import { useAuth, sanitizeReturnTo } from "../lib/auth";
 
 /** Render the email/password login form, password recovery entry, and a clear auth-loading state. */
 export function LoginPage() {
-  const { signIn, loading: authLoading, user } = useAuth();
+  const { signIn, loading: authLoading, user, authError } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = sanitizeReturnTo(
@@ -61,8 +61,8 @@ export function LoginPage() {
         </p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-          {error && (
-            <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
+          {(error || authError) && (
+            <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error || authError}</div>
           )}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-ink">Email</label>

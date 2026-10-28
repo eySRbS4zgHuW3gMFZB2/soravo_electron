@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return "idle";
     const callback = parseSupabaseAuthCallback(window.location.href);
     if (callback.errorCode) return "failed";
-    if (callback.type === "signup" || callback.hasSuccessfulTokens) return "verified";
+    if (callback.type === "signup" && callback.hasSuccessfulTokens) return "verified";
     return "idle";
   });
 
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch {
             // Ignore storage failures.
           }
-        } else if (mounted && callback.hasSuccessfulTokens) {
+        } else if (mounted && callback.type === "signup" && callback.hasSuccessfulTokens) {
           setEmailConfirmationStatus("verified");
           setAuthError(null);
         }
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         if (error || !data.session?.user?.id) recoveryPending = false;
         if (!error && mounted) setSession(data.session);
-        if (!error && mounted && data.session?.user?.id && callback.hasSuccessfulTokens) {
+        if (!error && mounted && data.session?.user?.id && callback.type === "signup" && callback.hasSuccessfulTokens) {
           setEmailConfirmationStatus("verified");
           setAuthError(null);
         }
