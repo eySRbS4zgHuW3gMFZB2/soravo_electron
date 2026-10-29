@@ -37,3 +37,16 @@ No signed-in test account and no owner-controlled test-mode Razorpay flow was av
 2. Create/use a dedicated owner-controlled account.
 3. Run the owner-side Playwright procedure with Razorpay's official test instruments and capture sanitized evidence.
 4. Report backend records by stable IDs and relevant fields, not merely row counts.
+
+## Owner-operated manual test procedure
+1. Run the website locally against the intended Fresh project variables.
+2. Confirm the key begins with test-mode prefix (prefix only; never log or expose full secret).
+3. Use a dedicated test account in an owner-controlled browser session.
+4. Start monthly checkout and verify the request payload is POST /functions/v1/create-order with plan_code: monthly.
+5. Complete payment only with Razorpay's official current Test Mode instruments; do not invent card numbers, CVV, OTP, or amount.
+6. Return through the normal redirect and confirm the account page does not show a paid entitlement before the signed webhook is processed.
+7. Trigger the Razorpay test webhook or provide the owner-generated signed event to the deployed webhook endpoint.
+8. Verify an invalid signature returns 401, duplicate delivery is idempotent, and payments, subscriptions, and entitlements have exactly one expected record with the expected plan.
+9. Repeat lifetime with the approved one-time amount and verify unlimited/ex indefinite offline entitlement semantics.
+10. Check failure/cancellation and refresh of the return URL.
+11. Never include real credentials, tokens, live payment identifiers, or payload secrets in evidence.
