@@ -1019,6 +1019,7 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - CodeRabbit: fixed deployment-artifact finding via post-test rebuild; previous minor progress heading spacing finding addressed.
 
 ## P6 payment validation status
+
 - Branch feature/P6-payment-validation (base 329316e).
 - Safe smoke checks performed: intended Supabase project/Fresh endpoint preflight, invalid JWT handling, deployed functions/migrations verified.
 - Strict blocker: no dedicated test-mode account/credentials available to the agent; real Razorpay payment and webhook validation not performed.
