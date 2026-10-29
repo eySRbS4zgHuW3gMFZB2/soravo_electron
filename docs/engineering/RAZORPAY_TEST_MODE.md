@@ -69,3 +69,8 @@ No signed-in test account and no owner-controlled test-mode Razorpay flow was av
 - Monthly create-order returned HTTP 502 with Failed to create subscription; no subscription or payment was recorded
 - Owner-managed next action: resend/replay the failed lifetime webhook from Razorpay Test Dashboard after applying the corrected function, then confirm entitlements
 - Owner-managed monthly action: retry monthly checkout and capture the exact Razorpay status/error shown in the browser network tab and function logs
+## Deployed diagnostics (2026-10-29 continuation)
+- Redeployed create-order as hosted version 4; monthly 502 responses now include sanitized Razorpay provider_status, provider_error_code, provider_error_description, and provider_error_reason.
+- Finalize webhook payment atomic function (hosted database) was restored as an additive CREATE OR REPLACE migration via MCP.
+- Lifetime webhook event was reprocessed successfully; payment is captured and one lifetime entitlement exists.
+- Monthly create-order was previously 502; owner should retry and report provider response fields.
