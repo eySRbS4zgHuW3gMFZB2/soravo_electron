@@ -96,6 +96,34 @@ Deno.serve(async (req: Request) => {
     const basicAuth = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
     const admin = createClient(supabaseUrl, serviceKey);
 
+    const { data: currentEntitlements, error: currentEntitlementError } = await admin
+      .from("entitlements")
+      .select("plan_code, status, lifetime, subscription_period_end")
+      .eq("user_id", user.id);
+    if (currentEntitlementError) throw currentEntitlementError;
+    const ownsLifetime = (currentEntitlements ?? []).some((row) =>
+      row.plan_code === "lifetime" &&
+      (row.lifetime === true ||
+        ["lifetime_active", "active"].includes(String(row.status).toLowerCase()))
+    );
+    const ownsActiveMonthly = (currentEntitlements ?? []).some((row) => {
+      if (row.plan_code !== "monthly" || String(row.status).toLowerCase() !== "active") return false;
+      if (!row.subscription_period_end) return true;
+      return new Date(row.subscription_period_end).getTime() > Date.now();
+    });
+    if (ownsLifetime) {
+      return new Response(JSON.stringify({ error: "Lifetime access is already active on this account" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (plan.code === "monthly" && ownsActiveMonthly) {
+      return new Response(JSON.stringify({ error: "Monthly subscription is already active on this account" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (plan.code === "lifetime") {
       const rzpRes = await fetch("https://api.razorpay.com/v1/orders", {
         method: "POST",
@@ -226,8 +254,14 @@ Deno.serve(async (req: Request) => {
         });
         const planData = await planRes.json().catch(() => null);
         if (!planRes.ok || !planData?.id) {
-          console.error("create-order: Razorpay plan creation failed", planRes.status, planData?.error?.code);
-          return new Response(JSON.stringify({ error: "Failed to create subscription plan" }), {
+          console.error("create-order: Razorpay plan creation failed", planRes.status, JSON.stringify(planData));
+          return new Response(JSON.stringify({
+            error: "Failed to create subscription plan",
+            provider_status: planRes.status,
+            provider_error_code: planData?.error?.code ?? null,
+            provider_error_description: planData?.error?.description ?? null,
+            provider_error_reason: planData?.error?.reason ?? null,
+          }), {
             status: 502,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
@@ -322,7 +356,13 @@ Deno.serve(async (req: Request) => {
       const subscriptionData = await subscriptionRes.json().catch(() => null);
       if (!subscriptionRes.ok || !subscriptionData?.id) {
         console.error("create-order: Razorpay subscription creation failed", subscriptionRes.status, subscriptionData?.error?.code, requestId);
-        return new Response(JSON.stringify({ error: "Failed to create subscription" }), {
+        return new Response(JSON.stringify({
+          error: "Failed to create subscription",
+          provider_status: subscriptionRes.status,
+          provider_error_code: subscriptionData?.error?.code ?? null,
+          provider_error_description: subscriptionData?.error?.description ?? null,
+          provider_error_reason: subscriptionData?.error?.reason ?? null,
+        }), {
           status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
