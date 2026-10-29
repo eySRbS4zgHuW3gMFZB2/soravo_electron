@@ -18,7 +18,7 @@ vi.mock("../lib/api", () => ({
   PlanCode: {},
 }));
 
-describe("PricingPage monthly checkout", () => {
+describe("PricingPage checkout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockListEntitlements.mockResolvedValue([]);
@@ -58,50 +58,74 @@ describe("PricingPage monthly checkout", () => {
     );
   }
 
-  it("disables purchases while entitlements are loading or cannot be verified", async () => {
-    mockListEntitlements.mockReturnValue(new Promise(() => {}));
-    await renderPage();
-    expect(screen.getAllByText(/Checking account access/i).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: /Buy monthly/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Buy lifetime/i })).toBeNull();
-  });
+  it.each(["lifetime_active", "active"])(
+    "blocks both checkouts when lifetime access is %s",
+    async (status) => {
+      mockListEntitlements.mockResolvedValue([
+        { plan_code: "lifetime", status, lifetime: true, subscription_period_end: null },
+      ]);
+      await renderPage();
+      const user = userEvent.setup();
+      const unavailableActions = await screen.findAllByText("Lifetime access already active");
 
-  it("blocks purchases when entitlement lookup fails", async () => {
-    mockListEntitlements.mockRejectedValue(new Error("network error"));
+      expect(unavailableActions).toHaveLength(2);
+      expect(screen.queryByRole("button", { name: /Buy monthly/i })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Buy lifetime/i })).toBeNull();
+      for (const action of unavailableActions) {
+        expect(action.getAttribute("aria-disabled")).toBe("true");
+        await user.click(action);
+      }
+      expect(mockCreateOrder).not.toHaveBeenCalled();
+    }
+  );
+
+  it("blocks monthly checkout while allowing a lifetime upgrade for active monthly access", async () => {
+    mockListEntitlements.mockResolvedValue([
+      {
+        plan_code: "monthly",
+        status: "active",
+        lifetime: false,
+        subscription_period_end: new Date(Date.now() + 86_400_000).toISOString(),
+      },
+    ]);
     await renderPage();
-    await waitFor(() => expect(screen.getAllByText(/Retry after reloading account status/i).length).toBeGreaterThan(0));
-    expect(screen.getByText(/Could not verify your current entitlements/i)).toBeTruthy();
+    const user = userEvent.setup();
+    const monthlyAction = await screen.findByText("Monthly subscription already active");
+
+    expect(monthlyAction.getAttribute("aria-disabled")).toBe("true");
+    expect(screen.queryByRole("button", { name: /Buy monthly/i })).toBeNull();
+    expect(screen.getByRole("button", { name: /Buy lifetime/i })).toBeTruthy();
+    await user.click(monthlyAction);
     expect(mockCreateOrder).not.toHaveBeenCalled();
   });
 
-  it("disables both plans when lifetime access is already active", async () => {
-    mockListEntitlements.mockResolvedValue([
-      { plan_code: "lifetime", status: "lifetime_active", lifetime: true, subscription_period_end: null },
-    ]);
+  it("blocks both checkouts when entitlement loading fails", async () => {
+    mockListEntitlements.mockRejectedValueOnce(new Error("Entitlements unavailable"));
     await renderPage();
-    await waitFor(() => expect(screen.getAllByText(/Lifetime access already active/i).length).toBeGreaterThan(0));
+    const user = userEvent.setup();
+    const unavailableActions = await screen.findAllByText("Retry after reloading account status");
+
+    expect(unavailableActions).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /Buy monthly/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /Buy lifetime/i })).toBeNull();
-    expect(screen.queryByText(/Buy monthly/i)).toBeNull();
+    for (const action of unavailableActions) {
+      expect(action.getAttribute("aria-disabled")).toBe("true");
+      await user.click(action);
+    }
+    expect(mockCreateOrder).not.toHaveBeenCalled();
   });
 
-  it("disables only monthly when a monthly subscription is already active", async () => {
+  it("allows lifetime checkout when a revoked entitlement retains its lifetime flag", async () => {
     mockListEntitlements.mockResolvedValue([
-      { plan_code: "monthly", status: "active", lifetime: false, subscription_period_end: new Date(Date.now() + 86400000).toISOString() },
+      { plan_code: "lifetime", status: "revoked", lifetime: true, subscription_period_end: null },
     ]);
     await renderPage();
-    await waitFor(() => expect(screen.getByText(/Monthly subscription is already active/i)).toBeTruthy());
-    expect(screen.getByText(/Monthly subscription already active/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Buy monthly/i })).toBeNull();
-    // Lifetime remains purchasable.
-    expect(screen.getByRole("button", { name: /Buy lifetime/i })).toBeTruthy();
-  });
+    const user = userEvent.setup();
+    const lifetimeButton = await screen.findByRole("button", { name: /Buy lifetime/i });
 
-  it("allows both purchase paths when there is no active entitlement", async () => {
-    mockListEntitlements.mockResolvedValue([]);
-    await renderPage();
-    await waitFor(() => expect(screen.getByRole("button", { name: /Buy monthly/i })).toBeTruthy());
-    expect(screen.getByRole("button", { name: /Buy lifetime/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Buy monthly/i })).toBeTruthy();
+    await user.click(lifetimeButton);
+    await waitFor(() => expect(mockCreateOrder).toHaveBeenCalledWith("lifetime"));
   });
 
   it("opens Razorpay Checkout with subscription_id for monthly", async () => {

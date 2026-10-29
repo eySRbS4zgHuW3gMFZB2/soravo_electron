@@ -63,3 +63,10 @@
 - CONFIRMED: clean task commit `96a7866` and remote head `147fd3377295ff7df7009c088d3d8dea4d52f24a` diverged from `74ec17e`; user requested a merge commit with both changes preserved and no push. Runtime checkout now holds `feature/razorpay-recurring-sandbox`, sole registered worktree.
 - CONFIRMED: resolved all eight conflicting paths; retained both documentation histories and remote PricingPage cleanup. Atomic checkout/event migration is now 005, after remote 004's pending/resumed uniqueness upgrade. Both source and test contracts were integrated, including stale-capture paid-period enrichment without status resurrection.
 - CONFIRMED: merged website typecheck/build and 85 tests passed; fresh-install and original-index upgrade paths passed 87 SQL assertions each. Upgrade rollback on duplicate billable data and overlapping checkout/cancellation transactions were verified with synthetic fixtures. PostgreSQL 18.6 was exercised; CI remains PostgreSQL 16. No live services or secrets used, and no remote CI result is claimed.
+
+
+## Lifetime checkout review — 2026-10-29
+
+- CONFIRMED: sole isolated runtime worktree on `coderabbit/guard-lifetime-checkout/983114c9`, base `cea3da291f293ab55e3f94a25b589be373a8addf`, initially clean. All three supplied findings were valid; repairs preserve the existing monthly database guard.
+- CONFIRMED: new migration 006 reserves lifetime checkout atomically, reuses unpaid orders and shares the payment finalizer's lifetime lock. RLS and service-role permissions verified. Fresh migrations and 111 pgTAP assertions, 137 website tests, typecheck/build, 38 browser tests and three overlapping-session scenarios passed. Ubuntu 26.04.1, Node 24.21.0/npm 11.19.0, PostgreSQL 16.15 with synthetic Auth/pgTAP fixtures.
+- LIMITATIONS: deploy migration 006 before the handler; uncertain provider outcomes require reconciliation. Live provider/Deno deployment and patch remote CI unverified. No production/provider configuration changes, integration or push. Existing Wrangler redirect warning did not fail browser checks. Exact commands/hashes and environment recovery evidence: `workspace-context/validation-record.md` outside Git.

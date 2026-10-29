@@ -45,7 +45,7 @@ export function PricingPage() {
   const activeLifetimeEntitlement = entitlements.some(
     (entitlement) =>
       entitlement.plan_code === "lifetime" &&
-      (entitlement.lifetime || entitlement.status === "lifetime_active" || entitlement.status === "active")
+      (entitlement.status === "lifetime_active" || entitlement.status === "active")
   );
   const activeMonthlyEntitlement = entitlements.some((entitlement) => {
     if (entitlement.plan_code !== "monthly") return false;

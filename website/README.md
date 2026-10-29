@@ -55,9 +55,26 @@ Entitlements are server-authoritative; browser checkout callbacks only refresh U
 
 ## Monthly checkout and subscription reconciliation
 
-Apply migrations through `005_atomic_subscription_checkout_and_events.sql` before deploying the updated Edge Functions.
+Apply migrations through `006_atomic_lifetime_checkout.sql` before deploying the updated Edge Functions.
 Monthly checkout reserves the user in the database before contacting Razorpay. Active entitlements or authenticated/active/pending/resumed subscriptions return 409; an existing created subscription returns its provider ID. Another request during creation returns 409.
 
 A provider timeout, ambiguous server error, or failure to save a successful provider response keeps the reservation in `monthly_checkout_reservations`. It deliberately has no automatic expiry. Before releasing a stuck reservation, an operator must reconcile Razorpay subscriptions using the `user_id` and `checkout_request_id` notes: persist any created subscription locally and confirm that no request remains in flight. Release only the matching `user_id`/`request_id` reservation after the outcome is known. Do not retry creation by deleting an unresolved reservation.
 
 Both lifecycle events and payment-triggered active updates use the provider webhook's `created_at` through one conditional database upsert. Older events cannot overwrite newer state; terminal statuses win equal-time ties. The subscription entity's creation time is not a transition timestamp. Undated events cannot replace dated state; an undated terminal event may close an undated checkout and requires provider reconciliation before reactivation. A stale verified capture can extend the recorded paid period without changing subscription status or its event timestamp. Captured-payment provisioning remains authoritative for paid entitlement periods.
+
+## Lifetime checkout
+
+Lifetime checkout atomically checks active/lifetime_active lifetime entitlements and
+reserves the account before contacting Razorpay. Revoked lifetime entitlements do
+not block lifetime repurchase; monthly access still allows a lifetime upgrade.
+Concurrent creation returns 409. Retrying after a successful save reuses the same
+unpaid order, including after a failed payment attempt. Verified captured,
+refunded, or charged-back orders are not reused.
+
+Ambiguous provider outcomes or failed saves retain `lifetime_checkout_reservations`
+without automatic expiry. Reconcile Razorpay orders using the `user_id` and
+`checkout_request_id` notes before releasing only the matching user/request
+reservation. Persist any created order as a pending payment before release;
+never release while a provider request remains unresolved. Rollback requires
+reverting the handler before removing migration 006's function/table, and first
+reconciling outstanding reservations.
