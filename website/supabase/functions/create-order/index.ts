@@ -97,53 +97,98 @@ Deno.serve(async (req: Request) => {
     const admin = createClient(supabaseUrl, serviceKey);
 
     if (plan.code === "lifetime") {
-      const rzpRes = await fetch("https://api.razorpay.com/v1/orders", {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${basicAuth}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          amount: plan.amount,
-          currency: plan.currency,
-          receipt: `rcpt_${crypto.randomUUID().replace(/-/g, "").slice(0, 32)}`,
-          notes: {
-            user_id: user.id,
-            plan_code: plan.code,
-          },
-        }),
+      const requestId = crypto.randomUUID();
+      const { data: checkout, error: checkoutError } = await admin.rpc("claim_lifetime_checkout", {
+        p_user_id: user.id,
+        p_request_id: requestId,
       });
-
-      const rzpData = await rzpRes.json().catch(() => null);
-      if (!rzpRes.ok) {
-        console.error("create-order: Razorpay order creation failed", rzpRes.status, rzpData?.error?.code);
-        return new Response(JSON.stringify({ error: "Failed to create order" }), {
+      if (checkoutError) {
+        return new Response(JSON.stringify({ error: "Failed to check lifetime checkout" }), {
           status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      if (checkout?.status === "blocked" || checkout?.status === "busy") {
+        return new Response(JSON.stringify({ error: checkout.error }), {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (checkout?.status === "reuse") {
+        return new Response(JSON.stringify({
+          key_id: razorpayKeyId,
+          order_id: checkout.order_id,
+          amount: plan.amount,
+          currency: plan.currency,
+          plan_code: plan.code,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (checkout?.status !== "claimed") throw new Error("Unexpected checkout claim result");
 
-      await admin.from("payments").insert({
-        user_id: user.id,
-        provider: "razorpay",
-        provider_payment_id: String(rzpData.id),
-        provider_order_id: rzpData.id,
-        provider_subscription_id: null,
-        amount_minor: plan.amount,
-        currency: plan.currency,
-        status: "pending",
-      }).throwOnError();
+      // Retain ambiguous outcomes for reconciliation, just as monthly checkout does.
+      let providerOutcomeUncertain = true;
+      try {
+        const rzpRes = await fetch("https://api.razorpay.com/v1/orders", {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${basicAuth}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: plan.amount,
+            currency: plan.currency,
+            receipt: `rcpt_${crypto.randomUUID().replace(/-/g, "").slice(0, 32)}`,
+            notes: {
+              user_id: user.id,
+              plan_code: plan.code,
+              checkout_request_id: requestId,
+            },
+          }),
+        });
+        if (rzpRes.status >= 400 && rzpRes.status < 500 && rzpRes.status !== 408) {
+          providerOutcomeUncertain = false;
+        }
+        const rzpData = await rzpRes.json().catch(() => null);
+        if (!rzpRes.ok || !rzpData?.id) {
+          console.error("create-order: Razorpay order creation failed", rzpRes.status, rzpData?.error?.code, requestId);
+          return new Response(JSON.stringify({ error: "Failed to create order" }), {
+            status: 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
-      return new Response(JSON.stringify({
-        key_id: razorpayKeyId,
-        order_id: rzpData.id,
-        amount: rzpData.amount,
-        currency: rzpData.currency,
-        plan_code: plan.code,
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+        await admin.from("payments").insert({
+          user_id: user.id,
+          provider: "razorpay",
+          provider_payment_id: String(rzpData.id),
+          provider_order_id: rzpData.id,
+          provider_subscription_id: null,
+          amount_minor: plan.amount,
+          currency: plan.currency,
+          status: "pending",
+        }).throwOnError();
+        providerOutcomeUncertain = false;
+
+        return new Response(JSON.stringify({
+          key_id: razorpayKeyId,
+          order_id: rzpData.id,
+          amount: plan.amount,
+          currency: plan.currency,
+          plan_code: plan.code,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } finally {
+        if (!providerOutcomeUncertain) {
+          const { error: releaseError } = await admin.from("lifetime_checkout_reservations")
+            .delete().eq("user_id", user.id).eq("request_id", requestId);
+          if (releaseError) console.error("create-order: checkout reservation release failed", releaseError.code, requestId);
+        }
+      }
     }
 
     // Correlation ID for billing diagnostics.
