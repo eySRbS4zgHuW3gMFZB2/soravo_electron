@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
-import { createOrder, PlanCode } from "../lib/api";
+import { createOrder, listEntitlements, PlanCode } from "../lib/api";
 
 declare global {
   interface Window {
@@ -37,8 +37,82 @@ export function PricingPage() {
   const [checkoutPlan, setCheckoutPlan] = useState<PlanCode | null>(null);
   const [checkoutState, setCheckoutState] = useState<CheckoutState>("idle");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [entitlements, setEntitlements] = useState<Array<{ plan_code: "monthly" | "lifetime"; status: string; lifetime: boolean; subscription_period_end: string | null }>>([
+  ]);
+  const [entitlementsLoading, setEntitlementsLoading] = useState(false);
+  const [entitlementsLoadError, setEntitlementsLoadError] = useState<string | null>(null);
+
+  const activeLifetimeEntitlement = entitlements.some(
+    (entitlement) =>
+      entitlement.plan_code === "lifetime" &&
+      (entitlement.lifetime || entitlement.status === "lifetime_active" || entitlement.status === "active")
+  );
+  const activeMonthlyEntitlement = entitlements.some((entitlement) => {
+    if (entitlement.plan_code !== "monthly") return false;
+    if (entitlement.status !== "active" && entitlement.status !== "payment_pending") return false;
+    if (entitlement.lifetime) return true;
+    if (!entitlement.subscription_period_end) return true;
+    return new Date(entitlement.subscription_period_end).getTime() > Date.now();
+  });
+  useEffect(() => {
+    if (!user) {
+      setEntitlements([]);
+      setEntitlementsLoadError(null);
+      setEntitlementsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setEntitlementsLoading(true);
+      setEntitlementsLoadError(null);
+      try {
+        const data = await listEntitlements();
+        if (!cancelled) setEntitlements(data as never);
+      } catch (error) {
+        if (!cancelled) {
+          setEntitlements([]);
+          setEntitlementsLoadError(
+            error instanceof Error ? error.message : "Could not load account entitlements."
+          );
+        }
+      } finally {
+        if (!cancelled) setEntitlementsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const lifetimeAccessActive = activeLifetimeEntitlement;
+  const monthlyAccessActive = activeMonthlyEntitlement;
 
   const startCheckout = async (plan: PlanCode) => {
+    if (lifetimeAccessActive) {
+      setCheckoutState("failed");
+      setCheckoutError("Lifetime access is already active on this account.");
+      setCheckoutPlan(null);
+      return;
+    }
+    if (plan === "monthly" && monthlyAccessActive) {
+      setCheckoutState("failed");
+      setCheckoutError("A monthly subscription is already active on this account.");
+      setCheckoutPlan(null);
+      return;
+    }
+    if (entitlementsLoading) {
+      setCheckoutState("failed");
+      setCheckoutError("Entitlement status is still loading. Please wait and try again.");
+      setCheckoutPlan(null);
+      return;
+    }
+    if (entitlementsLoadError) {
+      setCheckoutState("failed");
+      setCheckoutError("Could not verify account entitlements. Please try again.");
+      setCheckoutPlan(null);
+      return;
+    }
+
     setCheckoutPlan(plan);
     setCheckoutError(null);
     setCheckoutState("creating");
@@ -107,6 +181,41 @@ export function PricingPage() {
         </Link>
       );
     }
+    const blockedByLifetime = lifetimeAccessActive;
+    const blockedMonthlyDuplicate =
+      plan === "monthly" && monthlyAccessActive;
+    const blockedByEntitlementLoadError = Boolean(
+      user && entitlementsLoadError
+    );
+    const blockedByEntitlementLoading = Boolean(user && entitlementsLoading);
+    if (blockedByLifetime) {
+      return (
+        <span className={className} aria-disabled>
+          Lifetime access already active
+        </span>
+      );
+    }
+    if (blockedMonthlyDuplicate) {
+      return (
+        <span className={className} aria-disabled>
+          Monthly subscription already active
+        </span>
+      );
+    }
+    if (blockedByEntitlementLoading) {
+      return (
+        <span className={className} aria-disabled>
+          Checking account access...
+        </span>
+      );
+    }
+    if (blockedByEntitlementLoadError) {
+      return (
+        <span className={className} aria-disabled>
+          Retry after reloading account status
+        </span>
+      );
+    }
     return (
       <button
         type="button"
@@ -148,6 +257,21 @@ export function PricingPage() {
         {checkoutError && (
           <div role="alert" className="mx-auto mt-8 max-w-2xl rounded-lg bg-red-50 p-3 text-sm text-red-600">
             {checkoutError}
+          </div>
+        )}
+        {entitlementsLoadError && user && (
+          <div role="status" className="mx-auto mt-4 max-w-2xl rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+            Could not verify your current entitlements. Purchases are blocked until this check succeeds.
+          </div>
+        )}
+        {lifetimeAccessActive && user && (
+          <div role="status" className="mx-auto mt-4 max-w-2xl rounded-lg bg-green-50 p-3 text-sm text-green-700">
+            Lifetime access is already active on this account. Additional purchases are disabled.
+          </div>
+        )}
+        {monthlyAccessActive && user && !lifetimeAccessActive && (
+          <div role="status" className="mx-auto mt-4 max-w-2xl rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+            A monthly subscription is already active. Another monthly checkout is disabled.
           </div>
         )}
 

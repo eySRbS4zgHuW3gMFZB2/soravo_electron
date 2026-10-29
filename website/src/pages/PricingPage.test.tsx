@@ -11,14 +11,17 @@ vi.mock("../lib/auth", () => ({
 }));
 
 const mockCreateOrder = vi.fn();
+const mockListEntitlements = vi.fn().mockResolvedValue([]);
 vi.mock("../lib/api", () => ({
   createOrder: (...args: any[]) => mockCreateOrder(...args),
+  listEntitlements: (...args: any[]) => mockListEntitlements(...args),
   PlanCode: {},
 }));
 
 describe("PricingPage monthly checkout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockListEntitlements.mockResolvedValue([]);
     constructorOptions = undefined;
     mockCreateOrder.mockResolvedValue({
       key_id: "rzp_test",
@@ -58,7 +61,7 @@ describe("PricingPage monthly checkout", () => {
   it("opens Razorpay Checkout with subscription_id for monthly", async () => {
     await renderPage();
     const user = userEvent.setup();
-    const monthlyButton = screen.getAllByRole("button", { name: /Buy monthly/i })[0]!;
+    const monthlyButton = await screen.findByRole("button", { name: /Buy monthly/i });
     await user.click(monthlyButton);
     await waitFor(() => expect(mockCreateOrder).toHaveBeenCalledWith("monthly"));
     await waitFor(() => expect(constructorOptions).toBeTruthy());
@@ -76,7 +79,7 @@ describe("PricingPage monthly checkout", () => {
     });
     await renderPage();
     const user = userEvent.setup();
-    const lifetimeButton = screen.getAllByRole("button", { name: /Buy lifetime/i })[0]!;
+    const lifetimeButton = await screen.findByRole("button", { name: /Buy lifetime/i });
     await user.click(lifetimeButton);
     await waitFor(() => expect(mockCreateOrder).toHaveBeenCalledWith("lifetime"));
     await waitFor(() => expect(constructorOptions).toBeTruthy());
