@@ -56,15 +56,6 @@ No signed-in test account and no owner-controlled test-mode Razorpay flow was av
 - Lifetime payment: pay_Ttc5fbmkjZRZQb, USD 5000, pending before webhook
 - Received webhook event: payment.captured for the above payment
 - Signature verification: valid
-- Previously missing server function inalize_webhook_payment_atomic prevented entitlement grant; deployment of that function corrected this
-- Monthly create-order returned HTTP 502 with Failed to create subscription; no subscription or payment was recorded
-- Owner-managed next action: resend/replay the failed lifetime webhook from Razorpay Test Dashboard after applying the corrected function, then confirm entitlements
-- Owner-managed monthly action: retry monthly checkout and capture the exact Razorpay status/error shown in the browser network tab and function logs
-## Observed owner-run test (2026-10-29)
-- Lifetime order: order_Ttc4iiqMgCDcgn
-- Lifetime payment: pay_Ttc5fbmkjZRZQb, USD 5000, pending before webhook
-- Received webhook event: payment.captured for the above payment
-- Signature verification: valid
 - Previously missing server function finalize_webhook_payment_atomic prevented entitlement grant; deployment of that function corrected this
 - Monthly create-order returned HTTP 502 with Failed to create subscription; no subscription or payment was recorded
 - Owner-managed next action: resend/replay the failed lifetime webhook from Razorpay Test Dashboard after applying the corrected function, then confirm entitlements
