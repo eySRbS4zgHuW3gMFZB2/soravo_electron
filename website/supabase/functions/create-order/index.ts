@@ -131,6 +131,7 @@ Deno.serve(async (req: Request) => {
         p_request_id: requestId,
       });
       if (checkoutError) {
+        console.error("create-order: lifetime checkout claim failed", checkoutError.code, requestId);
         return new Response(JSON.stringify({ error: "Failed to check lifetime checkout" }), {
           status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
