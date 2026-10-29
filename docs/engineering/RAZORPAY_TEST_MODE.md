@@ -62,7 +62,7 @@ No signed-in test account and no owner-controlled test-mode Razorpay flow was av
 ## Observed owner-run test (2026-10-29)
 
 - Lifetime order: order_Ttc4iiqMgCDcgn
-- Lifetime payment: pay_Ttc5fbmkjZRZQb, USD 5000, pending before webhook
+- Lifetime payment: pay_Ttc5fbmkjZRZQb, 5,000 minor units (USD 50.00), pending before webhook
 - Received webhook event: payment.captured for the above payment
 - Signature verification: valid
 - Previously missing server function finalize_webhook_payment_atomic prevented entitlement grant; deployment of that function corrected this
