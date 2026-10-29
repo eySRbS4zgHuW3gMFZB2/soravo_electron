@@ -47,7 +47,7 @@ No signed-in test account and no owner-controlled test-mode Razorpay flow was av
 6. Return through the normal redirect and confirm the account page does not show a paid entitlement before the signed webhook is processed.
 7. Trigger the Razorpay test webhook or provide the owner-generated signed event to the deployed webhook endpoint.
 8. Verify an invalid signature returns 401, duplicate delivery is idempotent, and payments, subscriptions, and entitlements have exactly one expected record with the expected plan.
-9. Repeat lifetime with the approved one-time amount and verify unlimited/ex indefinite offline entitlement semantics.
+9. Repeat lifetime with the approved one-time amount and verify unlimited/indefinite offline entitlement semantics.
 10. Check failure/cancellation and refresh of the return URL.
 11. Never include real credentials, tokens, live payment identifiers, or payload secrets in evidence.
 
