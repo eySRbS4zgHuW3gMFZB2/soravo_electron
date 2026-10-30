@@ -25,7 +25,8 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'Unknown user'; END IF;
 
   IF EXISTS (SELECT 1 FROM public.entitlements WHERE user_id = p_user_id
-    AND plan_code = 'lifetime' AND (lifetime OR status = 'lifetime_active')) THEN
+    AND plan_code = 'lifetime' AND status <> 'revoked'
+    AND (lifetime OR status IN ('lifetime_active', 'active'))) THEN
     RETURN jsonb_build_object('status', 'blocked', 'error', 'Lifetime entitlement already active');
   END IF;
   IF EXISTS (SELECT 1 FROM public.entitlements WHERE user_id = p_user_id
