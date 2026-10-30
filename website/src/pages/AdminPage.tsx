@@ -77,6 +77,7 @@ export function AdminPage() {
       setSectionError(null);
       try {
         if (section === "users") {
+          setUsersData(null);
           setUsersLoading(true);
           const data = await fetchAdminUsers(usersPage, 25, usersQuery);
           if (!cancelled) setUsersData(data);

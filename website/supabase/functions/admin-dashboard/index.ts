@@ -135,7 +135,11 @@ Deno.serve(async (req: Request) => {
         const { data, error } = await admin.auth.admin.listUsers({ page, perPage: pageSize });
         if (error) return json(500, { error: "Failed to list users" });
         pageAuthUsers = data?.users ?? [];
-        total = data?.total ?? pageAuthUsers.length;
+        const reportedTotal = data?.total ?? 0;
+        total =
+          reportedTotal > 0
+            ? reportedTotal
+            : page * pageSize + (pageAuthUsers.length === pageSize ? 1 : 0);
       }
 
       const ids = pageAuthUsers.map((u: any) => u.id);
