@@ -10,6 +10,8 @@ let displayName: string;
 let failure: string | null;
 let auditFailed: boolean;
 let overviewThrows: boolean;
+let emailFailure: boolean;
+let adminMember: { user_id: string; role: string } | null;
 let authPages: number[];
 let searchCalls: { search_text: string; page_number: number; page_size: number }[];
 let enrichmentIds: string[][];
@@ -20,7 +22,17 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
   const url = new URL(String(input));
   const table = url.pathname.split("/").at(-1);
   if (url.pathname === "/auth/v1/user") return Response.json({ id: "admin" });
-  if (table === "admin_users") return Response.json({ user_id: "admin", role: "owner" });
+  const userLookupMatch = url.pathname.match(/\/auth\/v1\/admin\/users\/([^/]+)$/);
+  if (userLookupMatch) {
+    const userId = decodeURIComponent(userLookupMatch[1]);
+    if (emailFailure) return Response.json({ message: "Synthetic lookup failure" }, { status: 500 });
+    const user = users.find((candidate) => candidate.id === userId);
+    return Response.json({ user: user ? { id: user.id, email: user.email } : null });
+  }
+  if (table === "admin_users") {
+    if (!adminMember || adminMember.role !== "owner") return new Response(null, { status: 404 });
+    return Response.json(adminMember);
+  }
   if (url.pathname.endsWith("/rpc/admin_dashboard_overview")) {
     if (overviewThrows) throw new Error("Synthetic connection error");
     return failure === "overview" ? Response.json({ message: "Synthetic failure" }, { status: 500 }) : Response.json(overview);
@@ -44,6 +56,12 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     const offset = (args.page_number - 1) * args.page_size;
     return Response.json({ total: matches.length, users: matches.slice(offset, offset + args.page_size) });
   }
+  if (url.pathname.endsWith("/rest/v1/payments")) {
+    if (failure === "payments") return Response.json({ message: "Synthetic failure" }, { status: 500 });
+    const ids = url.searchParams.get("user_id") ? url.searchParams.get("user_id")!.slice(4, -1).split(",") : [];
+    enrichmentIds.push(ids);
+    return Response.json([{ id: "payment-1", user_id: "user-email-failure", provider: "razorpay", provider_payment_id: "pay_1", amount_minor: 1200, currency: "USD", status: "captured", created_at: "2026-01-01T00:00:00.000Z" }]);
+  }
   if (table === "admin_audit_events") {
     auditWrites++;
     return auditFailed ? Response.json({ message: "Synthetic audit failure" }, { status: 500 }) : new Response(null, { status: 201 });
@@ -60,6 +78,9 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
 
 const request = (body: object) => handler(new Request("https://dashboard.invalid", {
   method: "POST", headers: { Authorization: "Bearer synthetic-user-token" }, body: JSON.stringify(body),
+}));
+const requestWithoutAuth = (body: object) => handler(new Request("https://dashboard.invalid", {
+  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
 }));
 
 beforeAll(async () => {
@@ -81,6 +102,8 @@ beforeEach(() => {
   searchCalls = [];
   enrichmentIds = [];
   auditWrites = 0;
+  emailFailure = false;
+  adminMember = { user_id: "admin", role: "owner" };
   vi.stubGlobal("fetch", vi.fn(fakeFetch));
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -160,4 +183,35 @@ describe("admin dashboard handler", () => {
     expect(response.status).toBe(500);
     expect(auditWrites).toBe(0);
   });
+describe("admin dashboard security", () => {
+  it("denies anonymous requests", async () => {
+    const response = await requestWithoutAuth({ action: "overview" });
+    expect(response.status).toBe(403);
+    expect(auditWrites).toBe(0);
+  });
+
+  it("denies ordinary active-admin roles", async () => {
+    adminMember = { user_id: "admin", role: "admin" };
+    expect((await request({ action: "overview" })).status).toBe(403);
+    expect(auditWrites).toBe(0);
+  });
+
+  it("denies revoked owners", async () => {
+    adminMember = null;
+    expect((await request({ action: "overview" })).status).toBe(403);
+    expect(auditWrites).toBe(0);
+  });
+
+  it("allows an active owner", async () => {
+    expect((await request({ action: "overview" })).status).toBe(200);
+  });
+
+  it("returns 500 when an email lookup fails", async () => {
+    emailFailure = true;
+    expect((await request({ action: "payments" })).status).toBe(500);
+    expect(auditWrites).toBe(0);
+  });
+});
+
+
 });

@@ -48,6 +48,7 @@ async function authenticateAdmin(req: Request) {
     .from("admin_users")
     .select("user_id, role")
     .eq("user_id", user.id)
+    .eq("role", "owner")
     .is("revoked_at", null)
     .maybeSingle();
   if (roleError || !adminRow) return null;
@@ -63,7 +64,8 @@ function safeSearch(value: unknown): string {
 async function emailsFor(admin: any, ids: string[]): Promise<Map<string, string | null>> {
   const entries = await Promise.all(
     ids.map(async (id) => {
-      const { data } = await admin.auth.admin.getUserById(id);
+      const { data, error } = await admin.auth.admin.getUserById(id);
+      if (error) throw error;
       return [id, data?.user?.email ?? null] as const;
     })
   );
