@@ -61,13 +61,17 @@ function safeSearch(value: unknown): string {
 }
 
 async function audit(adminClient: any, actorId: string, action: string, extra: Record<string, unknown> = {}) {
-  await adminClient.from("admin_audit_events").insert({
+  const { error } = await adminClient.from("admin_audit_events").insert({
     actor_user_id: actorId,
     action,
     target_type: "admin_dashboard",
     target_id: "dashboard",
     metadata: extra,
   });
+  // Privileged dashboard reads are fail-closed: if the audit trail cannot be
+  // written, the response is not returned. Missing security-relevant evidence
+  // is treated as an access failure rather than a best-effort log.
+  if (error) throw new Error("Admin audit logging failed");
 }
 
 Deno.serve(async (req: Request) => {
@@ -203,7 +207,8 @@ Deno.serve(async (req: Request) => {
 
       // Search must inspect all accounts, not just one page, so filtered
       // results cannot leak records across page boundaries.
-      let allAuthUsers: any[] = [];\n      let authTotal: number | null = null;
+      let allAuthUsers: any[] = [];
+      let authTotal: number | null = null;
       if (q) {
         const maxUsers = 5000;
         const perPage = 1000;
@@ -335,19 +340,19 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "devices") {
-      const { data: devices, error } = await admin
+      const { data: deviceRows, error } = await admin
         .from("devices")
         .select("*")
         .order("last_seen_at", { ascending: false })
         .limit(100);
       if (error) return json(500, { error: "Failed to list devices" });
 
-      const userIds = Array.from(new Set((devices ?? []).map((d: any) => d.user_id)));
+      const userIds = Array.from(new Set((deviceRows ?? []).map((d: any) => d.user_id)));
       const { data: usersResult } = userIds.length
         ? await admin.auth.admin.listUsers({ perPage: 1000 })
         : { data: { users: [] } };
       const emailMap = new Map((usersResult?.users ?? []).map((u: any) => [u.id, u.email]));
-      const devices = (devices ?? []).map((d: any) => ({
+      const devices = (deviceRows ?? []).map((d: any) => ({
         ...d,
         userEmail: emailMap.get(d.user_id) ?? null,
       }));

@@ -27,12 +27,18 @@ export function AdminPage() {
   const [overview, setOverview] = useState<any>(null);
   const [usersPage, setUsersPage] = useState(1);
   const [usersQuery, setUsersQuery] = useState("");
+  const [debouncedUsersQuery, setDebouncedUsersQuery] = useState("");
   const [usersData, setUsersData] = useState<any>(null);
   const [usersLoading, setUsersLoading] = useState(false);
   const [paymentsData, setPaymentsData] = useState<any>(null);
   const [subscriptionsData, setSubscriptionsData] = useState<any>(null);
   const [devicesData, setDevicesData] = useState<any>(null);
   const [auditData, setAuditData] = useState<any>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedUsersQuery(usersQuery), 300);
+    return () => window.clearTimeout(timer);
+  }, [usersQuery]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -59,7 +65,7 @@ export function AdminPage() {
       try {
         if (section === "users") {
           setUsersLoading(true);
-          const data = await fetchAdminUsers(usersPage, 25, usersQuery);
+          const data = await fetchAdminUsers(usersPage, 25, debouncedUsersQuery);
           if (!cancelled) setUsersData(data);
         } else if (section === "payments") {
           const data = await fetchAdminPayments(1, 25);
@@ -81,7 +87,7 @@ export function AdminPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [section, authLoading, user, usersPage, usersQuery, error]);
+  }, [section, authLoading, user, usersPage, debouncedUsersQuery, error]);
 
   if (authLoading) return <p className="p-8 text-muted">Loading...</p>;
   if (!user) return <p className="p-8 text-muted">Please log in.</p>;

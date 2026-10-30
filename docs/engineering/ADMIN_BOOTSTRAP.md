@@ -49,6 +49,21 @@ Do this only after the owner has chosen the exact administrator account.
 Revocation is performed by setting `revoked_at`, not by deleting the row, so
 an audit trail remains.
 
+## Why the approved owner bootstrap may set `granted_by = user_id`
+
+The migration allows `granted_by` to equal `user_id` only when `role = 'owner'`.
+
+This is safe because:
+
+- The insertion is performed only through a trusted SQL editor or
+  service-role process controlled by the owner.
+- The exact owner account is selected explicitly before the insert.
+- Ordinary users have no permissions on `admin_users`.
+- The browser cannot assign or modify administrative roles.
+- A revoked owner record can be retained while a new active ownership
+  assignment is recorded deliberately.
+- Administrative reads are audited, and authorization remains fail closed.
+
 ## Testing status
 
 - Preview stacks must use non-production data.
