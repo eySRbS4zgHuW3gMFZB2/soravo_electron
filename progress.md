@@ -1021,5 +1021,14 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 ## P7-08 owner-only admin dashboard
 P7-08 branch feature/P7-08-admin-dashboard-owner-only created from origin/main 329316e. Adds migration 006 admin_users with service-only access; protects profile updates; Edge Function admin-dashboard (server-side admin role check + audited reads); /admin React page with overview, users, payments, subscriptions, devices, audit tabs; tests and docs. Preview URL to be provided by deployment; no production changes.
 
+## P7-08 admin dashboard follow-up (2026-10-30)
+Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening.
+Start SHA: 0ab690e10ace99fe5c2378ced2a16ef5f65a966f.
+End SHA: d828e4bef136693d8f665f8402183f06b4da4b0f.
+PR: https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron/pull/38.
+Changes: fixed duplicate devices declaration in the admin Edge Function; enforced fail-closed audit logging; debounced admin user search; refactored admin API helpers to a shared typed requester; corrected pgTAP bigint assertion; documented approved owner self-grant bootstrap; added an Edge Function Deno check job to Website CI.
+Verified commands: targeted Vitest AdminPage/api tests, complete npm test (130 passed), npm run typecheck, npm run build, npx deno check website/supabase/functions/admin-dashboard/index.ts, npx playwright test e2e/admin.spec.ts --project=chromium (3 passed).
+Unresolved: GitHub Actions database run, CodeRabbit review final result, owner-selected admin bootstrap, preview deployment verification.
+
 ## P7-08 admin dashboard hardening (2026-10-30)
 Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening, based on feature/P7-08-admin-dashboard-owner-only (8ee01ad). Reused existing admin implementation; hardened admin overview metrics (registered/active users, registered/active devices, lifetime vs recurring payment counters); fixed user search pagination to avoid partial-record leakage; corrected admin role self-grant constraint for approved owner bootstrap; added Vitest component/API tests and Playwright read-only navigation; added migration 006 to DB workflow and pinned ubuntu-24.04. Verification: 130 Vitest tests passed; Playwright admin 3 passed; website typecheck and production build passed. Outstanding owner actions: approve exact admin account, perform controlled SQL bootstrap, verify preview deployment.

@@ -733,3 +733,12 @@ Worktree .worktrees/P7-08-admin-dashboard-owner-only, branch eature/P7-08-admin
 
 ## P7-08 admin dashboard hardening (2026-10-30)
 Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening, based on feature/P7-08-admin-dashboard-owner-only (8ee01ad). Reused existing admin dashboard. Added hardened overview metrics, robust admin user search pagination, approved owner self-grant constraint, Vitest and Playwright coverage, DB workflow update. Verification: 130 website Vitest tests passed; 3 Playwright admin tests passed; typecheck and build passed. Owner bootstrap and preview deployment remain pending owner approval.
+
+## P7-08 admin dashboard follow-up (2026-10-30)
+Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening.
+Start SHA: 0ab690e10ace99fe5c2378ced2a16ef5f65a966f.
+End SHA: d828e4bef136693d8f665f8402183f06b4da4b0f.
+PR #38.
+Scope: Edge Function duplicate-device repair, fail-closed audit policy, search debouncing, typed admin API helper, pgTAP assertion repair, bootstrap documentation, Edge Function CI gate.
+Verification: 130 website Vitest tests passed; 3 Playwright admin tests passed; typecheck/build passed; Deno check passed.
+Remaining: GitHub Actions database verification, CodeRabbit findings, owner bootstrap and preview deployment.
