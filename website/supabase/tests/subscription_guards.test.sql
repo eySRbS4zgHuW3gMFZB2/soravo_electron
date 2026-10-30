@@ -18,9 +18,18 @@ INSERT INTO public.entitlements (user_id, plan_code, status, lifetime)
 VALUES ('33333333-1111-4111-8111-111111111111', 'lifetime', 'lifetime_active', TRUE);
 SELECT is(public.claim_monthly_checkout('33333333-1111-4111-8111-111111111111', gen_random_uuid())->>'status',
   'blocked', 'lifetime entitlement blocks monthly checkout');
-UPDATE public.entitlements SET status = 'revoked';
+UPDATE public.entitlements SET status = 'active', lifetime = FALSE;
 SELECT is(public.claim_monthly_checkout('33333333-1111-4111-8111-111111111111', gen_random_uuid())->>'status',
-  'blocked', 'existing lifetime flag retains baseline checkout guard');
+  'blocked', 'active lifetime entitlement blocks even without the lifetime flag');
+DELETE FROM public.monthly_checkout_reservations;
+UPDATE public.entitlements SET status = 'revoked', lifetime = TRUE;
+SELECT is(public.claim_monthly_checkout('33333333-1111-4111-8111-111111111111',
+  '33333333-2222-4222-8222-222222222222')->>'status',
+  'claimed', 'revoked lifetime entitlement permits monthly checkout');
+SELECT is((SELECT request_id FROM public.monthly_checkout_reservations
+  WHERE user_id = '33333333-1111-4111-8111-111111111111'),
+  '33333333-2222-4222-8222-222222222222'::uuid, 'monthly checkout reservation is saved');
+DELETE FROM public.monthly_checkout_reservations;
 DELETE FROM public.entitlements;
 INSERT INTO public.entitlements (user_id, plan_code, status)
 VALUES ('33333333-1111-4111-8111-111111111111', 'monthly', 'active');

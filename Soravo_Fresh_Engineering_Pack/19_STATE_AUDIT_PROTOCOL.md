@@ -86,3 +86,20 @@ Checkout lookup/locking review audit (2026-10-27): isolated branch `coderabbit/h
 Delivery merge audit (2026-10-27): merged remote `b645e8246c4089c9ca6f73bdc9a25b0d577e884f` with local `d8d7ec4a8d49b05d575e22976d66a76f4d182867` on runtime delivery branch `feature/razorpay-recurring-sandbox`. Both parent handoff/audit additions retained; combined source/tests verified. Fresh 30 checkout tests and 88 PostgreSQL assertions passed; unchanged 64 tests/typecheck/build results reused. Merge committed locally for delivery, without pushing; details in the latest handoff and external validation record.
 
 Cancellation deadline/guideline audit follow-up (2026-10-27): isolated runtime branch `coderabbit/bound-cancellation-and-update-audit/8e133da2`, base `10da4424140e30beb80ed5361a81f904c4d4da52`, initially clean. Confirmed root `AGENTS.md` and engineering-pack reading gate apply; corrected the earlier audit statement. Cancellation now aborts after five seconds while preserving HTTP 500 and the reconciliation reservation. Fresh 31 checkout tests, all 95 website tests and website typecheck/build passed. Manual diff/security and whitespace checks passed; live provider/Deno deployment unverified. Detailed evidence: external workspace validation record and latest handoff.
+
+
+## 2026-10-29 — Lifetime checkout guard review
+
+Confirmed all three findings on initially clean isolated branch `coderabbit/guard-lifetime-checkout/983114c9`, base `cea3da291f293ab55e3f94a25b589be373a8addf`. Active-status frontend guard and migration 006's atomic lifetime checkout claim validated with website tests/build/browser suites, database permissions and concurrent sessions. Existing monthly claim contract retained. Evidence and limitations are recorded in the matching handoff and external workspace validation record; no integration or production changes.
+
+## 2026-10-30 — Checkout entitlement review
+
+Isolated task branch `coderabbit/fix-lifetime-checkout-gating/5f468d22` at base `58d99742da535d4478b9d635381b36ec0da25718`; initially clean. Both review findings fixed; website checks and browser tests passed. See the handoff and external validation record for details.
+
+## 2026-10-30 — Database CI and checkout review triage
+
+The isolated `coderabbit/fix-revoked-lifetime-checkout/triage_r` checkout at base `a56d5f3610d810cf6ae58bfcc28fc9fdcac7489c` repairs database CI package installation. Its checkout path, uncommitted-file count, upstream tracking and build-output size are unavailable and unknown for that historical checkout. The original monthly claim test and the handler's mocked revoked-lifetime expectation conflict; a contract decision remains outstanding. Local database and handler test results and hosted-CI limitations are recorded in the corresponding handoff and workspace validation record.
+
+## 2026-10-30 — Revoked lifetime monthly claim
+
+On isolated task branch `coderabbit/allow-revoked-lifetime-monthly-claim/ffb440b9` at base `02aeef5ecb76b3533581975495f3afa40947e02d`, the user authorized the previously outstanding contract change allowing a monthly claim after lifetime revocation. The database guard and pgTAP coverage were updated; fresh migration replay and 113 assertions passed. See the matching handoff and external validation record. No integration or production changes.

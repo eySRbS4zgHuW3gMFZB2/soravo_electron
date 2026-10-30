@@ -96,54 +96,127 @@ Deno.serve(async (req: Request) => {
     const basicAuth = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
     const admin = createClient(supabaseUrl, serviceKey);
 
-    if (plan.code === "lifetime") {
-      const rzpRes = await fetch("https://api.razorpay.com/v1/orders", {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${basicAuth}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          amount: plan.amount,
-          currency: plan.currency,
-          receipt: `rcpt_${crypto.randomUUID().replace(/-/g, "").slice(0, 32)}`,
-          notes: {
-            user_id: user.id,
-            plan_code: plan.code,
-          },
-        }),
+    const { data: currentEntitlements, error: currentEntitlementError } = await admin
+      .from("entitlements")
+      .select("plan_code, status, subscription_period_end")
+      .eq("user_id", user.id);
+    if (currentEntitlementError) throw currentEntitlementError;
+    const ownsLifetime = (currentEntitlements ?? []).some((row) =>
+      row.plan_code === "lifetime" &&
+      ["lifetime_active", "active"].includes(String(row.status).toLowerCase())
+    );
+    const ownsActiveMonthly = (currentEntitlements ?? []).some((row) => {
+      if (row.plan_code !== "monthly" || String(row.status).toLowerCase() !== "active") return false;
+      if (!row.subscription_period_end) return true;
+      return new Date(row.subscription_period_end).getTime() > Date.now();
+    });
+    if (ownsLifetime) {
+      return new Response(JSON.stringify({ error: "Lifetime access is already active on this account" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+    if (plan.code === "monthly" && ownsActiveMonthly) {
+      return new Response(JSON.stringify({ error: "Monthly subscription is already active on this account" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-      const rzpData = await rzpRes.json().catch(() => null);
-      if (!rzpRes.ok) {
-        console.error("create-order: Razorpay order creation failed", rzpRes.status, rzpData?.error?.code);
-        return new Response(JSON.stringify({ error: "Failed to create order" }), {
+    if (plan.code === "lifetime") {
+      const requestId = crypto.randomUUID();
+      const { data: checkout, error: checkoutError } = await admin.rpc("claim_lifetime_checkout", {
+        p_user_id: user.id,
+        p_request_id: requestId,
+      });
+      if (checkoutError) {
+        console.error("create-order: lifetime checkout claim failed", checkoutError.code, requestId);
+        return new Response(JSON.stringify({ error: "Failed to check lifetime checkout" }), {
           status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      if (checkout?.status === "blocked" || checkout?.status === "busy") {
+        return new Response(JSON.stringify({ error: checkout.error }), {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (checkout?.status === "reuse") {
+        return new Response(JSON.stringify({
+          key_id: razorpayKeyId,
+          order_id: checkout.order_id,
+          amount: plan.amount,
+          currency: plan.currency,
+          plan_code: plan.code,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (checkout?.status !== "claimed") throw new Error("Unexpected checkout claim result");
 
-      await admin.from("payments").insert({
-        user_id: user.id,
-        provider: "razorpay",
-        provider_payment_id: String(rzpData.id),
-        provider_order_id: rzpData.id,
-        provider_subscription_id: null,
-        amount_minor: plan.amount,
-        currency: plan.currency,
-        status: "pending",
-      }).throwOnError();
+      // Retain ambiguous outcomes for reconciliation, just as monthly checkout does.
+      let providerOutcomeUncertain = true;
+      try {
+        const rzpRes = await fetch("https://api.razorpay.com/v1/orders", {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${basicAuth}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: plan.amount,
+            currency: plan.currency,
+            receipt: `rcpt_${crypto.randomUUID().replace(/-/g, "").slice(0, 32)}`,
+            notes: {
+              user_id: user.id,
+              plan_code: plan.code,
+              checkout_request_id: requestId,
+            },
+          }),
+        });
+        if (rzpRes.status >= 400 && rzpRes.status < 500 && rzpRes.status !== 408) {
+          providerOutcomeUncertain = false;
+        }
+        const rzpData = await rzpRes.json().catch(() => null);
+        if (!rzpRes.ok || !rzpData?.id) {
+          console.error("create-order: Razorpay order creation failed", rzpRes.status, rzpData?.error?.code, requestId);
+          return new Response(JSON.stringify({ error: "Failed to create order" }), {
+            status: 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
-      return new Response(JSON.stringify({
-        key_id: razorpayKeyId,
-        order_id: rzpData.id,
-        amount: rzpData.amount,
-        currency: rzpData.currency,
-        plan_code: plan.code,
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+        await admin.from("payments").insert({
+          user_id: user.id,
+          provider: "razorpay",
+          provider_payment_id: String(rzpData.id),
+          provider_order_id: rzpData.id,
+          provider_subscription_id: null,
+          amount_minor: plan.amount,
+          currency: plan.currency,
+          status: "pending",
+        }).throwOnError();
+        providerOutcomeUncertain = false;
+
+        return new Response(JSON.stringify({
+          key_id: razorpayKeyId,
+          order_id: rzpData.id,
+          amount: plan.amount,
+          currency: plan.currency,
+          plan_code: plan.code,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } finally {
+        if (!providerOutcomeUncertain) {
+          const { error: releaseError } = await admin.from("lifetime_checkout_reservations")
+            .delete().eq("user_id", user.id).eq("request_id", requestId);
+          if (releaseError) console.error("create-order: checkout reservation release failed", releaseError.code, requestId);
+        }
+      }
     }
 
     // Correlation ID for billing diagnostics.
@@ -226,8 +299,14 @@ Deno.serve(async (req: Request) => {
         });
         const planData = await planRes.json().catch(() => null);
         if (!planRes.ok || !planData?.id) {
-          console.error("create-order: Razorpay plan creation failed", planRes.status, planData?.error?.code);
-          return new Response(JSON.stringify({ error: "Failed to create subscription plan" }), {
+          console.error("create-order: Razorpay plan creation failed", planRes.status, JSON.stringify(planData));
+          return new Response(JSON.stringify({
+            error: "Failed to create subscription plan",
+            provider_status: planRes.status,
+            provider_error_code: planData?.error?.code ?? null,
+            provider_error_description: planData?.error?.description ?? null,
+            provider_error_reason: planData?.error?.reason ?? null,
+          }), {
             status: 502,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
@@ -322,7 +401,13 @@ Deno.serve(async (req: Request) => {
       const subscriptionData = await subscriptionRes.json().catch(() => null);
       if (!subscriptionRes.ok || !subscriptionData?.id) {
         console.error("create-order: Razorpay subscription creation failed", subscriptionRes.status, subscriptionData?.error?.code, requestId);
-        return new Response(JSON.stringify({ error: "Failed to create subscription" }), {
+        return new Response(JSON.stringify({
+          error: "Failed to create subscription",
+          provider_status: subscriptionRes.status,
+          provider_error_code: subscriptionData?.error?.code ?? null,
+          provider_error_description: subscriptionData?.error?.description ?? null,
+          provider_error_reason: subscriptionData?.error?.reason ?? null,
+        }), {
           status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

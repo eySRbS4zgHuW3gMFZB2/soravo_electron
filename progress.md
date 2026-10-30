@@ -1017,3 +1017,15 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - Changes: moved Cloudflare API token out of the job-level environment so install/build/test steps do not receive it; added a final rebuild with repository VITE_* variables immediately before Wrangler upload; kept routing tests as the bounded test build.
 - Verification: website typecheck passed; npm test passed (121 tests); Playwright routing tests passed (36); simulated deployment rebuild contained configured Supabase values and no placeholder values.
 - CodeRabbit: fixed deployment-artifact finding via post-test rebuild; previous minor progress heading spacing finding addressed.
+
+## P6 payment validation status
+
+- Branch feature/P6-payment-validation (base 329316e).
+- Safe smoke checks performed: intended Supabase project/Fresh endpoint preflight, invalid JWT handling, deployed functions/migrations verified.
+- Strict blocker: no dedicated test-mode account/credentials available to the agent; real Razorpay payment and webhook validation not performed.
+- Documented owner-operated next steps in docs/engineering/RAZORPAY_TEST_MODE.md.
+
+
+## 2026-10-29 — Lifetime checkout review fixes
+
+Fixed the three verified pricing/lifetime checkout findings: active-status gating, entitlement scenario tests and an authenticated atomic lifetime checkout reservation with unpaid-order reuse. Migration 006 and CI SQL coverage added. Website tests (137), browser tests (38), typecheck/build, database assertions (111) and concurrent-session checks passed; deploy 006 before the handler. See engineering-pack handoff for evidence and limitations.

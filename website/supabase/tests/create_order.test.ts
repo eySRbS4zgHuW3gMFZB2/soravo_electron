@@ -32,12 +32,68 @@ let planProviderCalls: number;
 let requestId: string;
 let providerGate: Promise<void>;
 let providerEntered: () => void;
+let lifetimeReserved: boolean;
+let lifetimeSaved: Record<string, unknown> | null;
+let orderCalls: number;
+let orderMalformed: boolean;
+let claimCalls: number;
+let monthlyClaimCalls: number;
+let authenticated: boolean;
+let entitlements: Array<{ plan_code: string; status: string; lifetime: boolean; subscription_period_end: string | null }>;
+let entitlementError: boolean;
 
 async function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const url = new URL(String(input));
   const body = init?.body ? JSON.parse(String(init.body)) : null;
-  if (url.pathname === "/auth/v1/user") return Response.json({ id: "test-user" });
+  if (url.pathname === "/auth/v1/user") {
+    return authenticated ? Response.json({ id: "test-user" })
+      : Response.json({ message: "Invalid token" }, { status: 401 });
+  }
+  if (url.pathname.endsWith("/entitlements")) {
+    expect(url.searchParams.get("user_id")).toBe("eq.test-user");
+    return entitlementError
+      ? Response.json({ message: "Synthetic entitlement error" }, { status: 400 })
+      : Response.json(entitlements);
+  }
+  if (url.pathname.endsWith("/rpc/claim_lifetime_checkout")) {
+    claimCalls++;
+    expect(body.p_user_id).toBe("test-user");
+    expect(body.p_request_id).toMatch(/^[0-9a-f-]{36}$/);
+    requestId = body.p_request_id;
+    if (claimError) return Response.json({ message: "Synthetic database error" }, { status: 500 });
+    if (claimStatus === "blocked") return Response.json({ status: "blocked", error: "Lifetime already active" });
+    if (lifetimeSaved) return Response.json({ status: "reuse", order_id: lifetimeSaved.provider_order_id });
+    if (lifetimeReserved) return Response.json({ status: "busy", error: "Checkout in progress" });
+    lifetimeReserved = true;
+    return Response.json({ status: "claimed" });
+  }
+  if (url.hostname === "api.razorpay.com" && url.pathname === "/v1/orders") {
+    orderCalls++;
+    expect(lifetimeReserved).toBe(true);
+    expect(body).toMatchObject({ amount: 5000, currency: "USD", notes: {
+      user_id: "test-user", plan_code: "lifetime", checkout_request_id: requestId,
+    } });
+    providerEntered();
+    await providerGate;
+    if (providerThrows) throw new Error("Synthetic provider timeout");
+    return Response.json(providerStatus >= 400 ? { error: { code: "SYNTHETIC_PROVIDER_ERROR" } }
+      : orderMalformed ? {} : { id: "order_test", amount: 5000, currency: "USD" }, { status: providerStatus });
+  }
+  if (url.pathname.endsWith("/payments")) {
+    expect(init?.method).toBe("POST");
+    if (saveError) return Response.json({ message: "Synthetic save error" }, { status: 500 });
+    lifetimeSaved = body;
+    return Response.json(null, { status: 201 });
+  }
+  if (url.pathname.endsWith("/lifetime_checkout_reservations")) {
+    expect(init?.method).toBe("DELETE");
+    expect(url.searchParams.get("user_id")).toBe("eq.test-user");
+    expect(url.searchParams.get("request_id")).toMatch(/^eq\.[0-9a-f-]{36}$/);
+    lifetimeReserved = false;
+    return Response.json(null);
+  }
   if (url.pathname.endsWith("/rpc/claim_monthly_checkout")) {
+    monthlyClaimCalls++;
     if (claimError) return Response.json({ message: "Synthetic database error" }, { status: 500 });
     expect(body.p_user_id).toBe("test-user");
     expect(body.p_request_id).toMatch(/^[0-9a-f-]{36}$/);
@@ -111,9 +167,9 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
   throw new Error(`Unexpected request ${url}`);
 }
 
-const checkout = () => handler(new Request("https://checkout.invalid", {
+const checkout = (planCode = "monthly") => handler(new Request("https://checkout.invalid", {
   method: "POST", headers: { Authorization: "Bearer synthetic-user-token" },
-  body: JSON.stringify({ plan_code: "monthly" }),
+  body: JSON.stringify({ plan_code: planCode }),
 }));
 
 beforeAll(async () => {
@@ -129,6 +185,13 @@ beforeAll(async () => {
   await import("../functions/create-order/index");
 });
 beforeEach(() => {
+  lifetimeReserved = false;
+  lifetimeSaved = null;
+  orderCalls = claimCalls = monthlyClaimCalls = 0;
+  entitlements = [];
+  entitlementError = false;
+  orderMalformed = false;
+  authenticated = true;
   claimStatus = "claimed";
   reserved = false;
   saved = null;
@@ -157,6 +220,28 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 afterAll(() => vi.unstubAllGlobals());
+
+describe("checkout entitlement guard", () => {
+  it.each(["monthly", "lifetime"])("allows %s checkout when lifetime access is revoked", async (plan) => {
+    entitlements = [{ plan_code: "lifetime", status: "revoked", lifetime: true, subscription_period_end: null }];
+    expect((await checkout(plan)).status).toBe(200);
+    expect(plan === "lifetime" ? claimCalls : monthlyClaimCalls).toBe(1);
+    expect(plan === "lifetime" ? orderCalls : providerCalls).toBe(1);
+  });
+  it.each([
+    ["monthly", "active", false], ["monthly", "lifetime_active", true],
+    ["lifetime", "active", false], ["lifetime", "lifetime_active", true],
+  ])("blocks %s checkout for %s lifetime access", async (plan, status, lifetime) => {
+    entitlements = [{ plan_code: "lifetime", status, lifetime, subscription_period_end: null }];
+    expect((await checkout(plan)).status).toBe(409);
+    expect(claimCalls + monthlyClaimCalls + orderCalls + providerCalls).toBe(0);
+  });
+  it.each(["monthly", "lifetime"])("fails closed when %s checkout cannot read entitlements", async (plan) => {
+    entitlementError = true;
+    expect((await checkout(plan)).status).toBe(500);
+    expect(claimCalls + monthlyClaimCalls + orderCalls + providerCalls).toBe(0);
+  });
+});
 
 describe("monthly checkout reservation", () => {
   it("returns 409 without calling Razorpay for a blocked account", async () => {
@@ -324,5 +409,75 @@ describe("billable checkout guards and legacy race recovery", () => {
     expect((await checkout()).status).toBe(502);
     expect(cancelCalls).toBe(0);
     expect(reserved).toBe(true);
+  });
+});
+
+
+describe("lifetime checkout reservation", () => {
+  it("blocks active lifetime access before creating an order", async () => {
+    claimStatus = "blocked";
+    expect((await checkout("lifetime")).status).toBe(409);
+    expect(orderCalls).toBe(0);
+    expect(lifetimeSaved).toBeNull();
+  });
+  it("fails closed when the database entitlement/claim check fails", async () => {
+    claimError = "entitlements";
+    expect((await checkout("lifetime")).status).toBe(502);
+    expect(orderCalls).toBe(0);
+    expect(lifetimeSaved).toBeNull();
+  });
+  it("authenticates and validates the plan before claiming checkout", async () => {
+    authenticated = false;
+    expect((await checkout("lifetime")).status).toBe(401);
+    authenticated = true;
+    expect((await checkout("unknown")).status).toBe(400);
+    expect(claimCalls).toBe(0);
+    expect(orderCalls).toBe(0);
+  });
+  it("saves and reuses a trusted one-time order on subsequent checkout", async () => {
+    const response = await checkout("lifetime");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ order_id: "order_test", amount: 5000, currency: "USD", plan_code: "lifetime" });
+    expect(lifetimeSaved).toMatchObject({
+      user_id: "test-user", provider_order_id: "order_test", provider_subscription_id: null,
+      provider_payment_id: "order_test", amount_minor: 5000, currency: "USD", status: "pending",
+    });
+    expect(lifetimeReserved).toBe(false);
+    expect(await (await checkout("lifetime")).json()).toMatchObject({ order_id: "order_test" });
+    expect(orderCalls).toBe(1);
+    expect(providerCalls).toBe(0);
+  });
+  it("creates only one provider order during concurrent checkout", async () => {
+    let release!: () => void;
+    providerGate = new Promise<void>((resolve) => { release = resolve; });
+    const entered = new Promise<void>((resolve) => { providerEntered = resolve; });
+    const first = checkout("lifetime");
+    await entered;
+    try {
+      expect((await checkout("lifetime")).status).toBe(409);
+      expect(orderCalls).toBe(1);
+    } finally { release(); }
+    expect((await first).status).toBe(200);
+  });
+  it.each(["timeout", "provider_408", "provider_500", "malformed_success", "save_error"])(
+    "retains the reservation after %s and blocks another provider order", async (failure) => {
+      providerThrows = failure === "timeout";
+      providerStatus = failure === "provider_500" ? 500 : failure === "provider_408" ? 408 : 200;
+      orderMalformed = failure === "malformed_success";
+      saveError = failure === "save_error";
+      expect((await checkout("lifetime")).status).toBe(providerThrows || saveError ? 500 : 502);
+      expect(lifetimeReserved).toBe(true);
+      expect(lifetimeSaved).toBeNull();
+      expect((await checkout("lifetime")).status).toBe(409);
+      expect(orderCalls).toBe(1);
+    }
+  );
+  it("releases the reservation after a definitive provider rejection", async () => {
+    providerStatus = 400;
+    expect((await checkout("lifetime")).status).toBe(502);
+    expect(lifetimeReserved).toBe(false);
+    providerStatus = 200;
+    expect((await checkout("lifetime")).status).toBe(200);
+    expect(orderCalls).toBe(2);
   });
 });
