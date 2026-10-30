@@ -110,7 +110,7 @@ export function AdminPage() {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-ink">Admin access denied</h1>
+          <h1 className="text-2xl font-bold text-ink">{error === "Admin access denied." ? "Admin access denied" : "Unable to load admin dashboard"}</h1>
           <p className="mt-3 text-muted">{error}</p>
           <button
             type="button"
@@ -243,7 +243,7 @@ export function AdminPage() {
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
-                disabled={usersPage <= 1}
+                disabled={usersPage <= 1 || usersLoading}
                 onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
                 className="rounded border border-ink/20 px-3 py-1 text-sm"
               >
@@ -251,7 +251,7 @@ export function AdminPage() {
               </button>
               <button
                 type="button"
-                disabled={usersData ? usersPage * 25 >= (usersData.total ?? 0) : false}
+                disabled={usersLoading || (usersData ? usersPage * 25 >= (usersData.total ?? 0) : true)}
                 onClick={() => setUsersPage((p) => p + 1)}
                 className="rounded border border-ink/20 px-3 py-1 text-sm"
               >

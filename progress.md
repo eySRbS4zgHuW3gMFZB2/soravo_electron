@@ -1060,3 +1060,10 @@ SHA: ed68eb85da0f37b81009e7c510af82bfabc60e83
 Changes: Mocked realistic Supabase auth pagination headers and added auth total/page assertions.
 Validation: Vitest 162 passed; typecheck/build passed; Deno check passed; Playwright 3 passed.
 No merge, deployment, bootstrap, or privileges changed.
+
+## P7-08 CodeRabbit follow-up fixes (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+Changes: disabled users pagination while loading; preserved zero/unavailable auth totals with exact-count fallback; neutral heading for non-authorization dashboard failures.
+Validation: website Vitest 162 passed; TypeScript passed.
+No merge, deployment, bootstrap, or privileges changed.
+
