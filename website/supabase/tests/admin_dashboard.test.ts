@@ -46,11 +46,17 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     return failure === "overview" ? Response.json({ message: "Synthetic failure" }, { status: 500 }) : Response.json(overview);
   }
   if (url.pathname === "/auth/v1/admin/users") {
-    const page = Number(url.searchParams.get("page"));
-    const perPage = Number(url.searchParams.get("per_page"));
+    const page = Number(url.searchParams.get("page")) || 1;
+    const perPage = Number(url.searchParams.get("per_page")) || 25;
     authPages.push(page);
     if (failure === "auth") return Response.json({ msg: "Synthetic failure" }, { status: 400 });
-    return Response.json({ users: users.slice((page - 1) * perPage, page * perPage) });
+    const total = users.length;
+    const body = JSON.stringify({ users: users.slice((page - 1) * perPage, page * perPage) });
+    const headers = new Headers({ "content-type": "application/json", "x-total-count": String(total) });
+    if (page * perPage < total) {
+      headers.append("link", `<https://supabase.invalid/auth/v1/admin/users?page=${page + 1}&per_page=${perPage}>; rel="next"`);
+    }
+    return new Response(body, { status: 200, headers });
   }
   if (url.pathname.endsWith("/rpc/admin_dashboard_search_users")) {
     const args = JSON.parse(String(init?.body));
@@ -191,6 +197,23 @@ describe("admin dashboard handler", () => {
     expect(response.status).toBe(500);
     expect(auditWrites).toBe(0);
   });
+
+  it("reports the full unfiltered user total", async () => {
+    const response = await request({ action: "users", q: "", page: 1, pageSize: 25 });
+    expect(response.status).toBe(200);
+    expect((await response.json())).toMatchObject({ page: 1, pageSize: 25, total: 6005 });
+    expect(authPages).toContain(1);
+  });
+
+  it("returns the requested page of users", async () => {
+    const response = await request({ action: "users", q: "", page: 2, pageSize: 25 });
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data).toMatchObject({ page: 2, pageSize: 25, total: 6005 });
+    expect(data.users.map((u: { userId: string }) => u.userId)).toEqual(users.slice(25, 50).map((user) => user.id));
+    expect(authPages).toContain(2);
+  });
+
 describe("admin dashboard security", () => {
   it("denies anonymous requests", async () => {
     const response = await requestWithoutAuth({ action: "overview" });
