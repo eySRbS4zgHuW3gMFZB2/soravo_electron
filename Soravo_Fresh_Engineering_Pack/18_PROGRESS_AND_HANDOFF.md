@@ -785,3 +785,16 @@ Remaining: GitHub Actions database verification, CodeRabbit findings, owner boot
 
 
 <!-- /coderabbit-ai-generated:v1 -->
+## 2026-10-30 — P7-08 CodeRabbit test mock findings
+
+- PR: 38
+- Branch: feature/P7-08-admin-dashboard-hardening
+- Findings:
+  - A bearer-token validation added to the Supabase Auth user mock.
+  - B mock default page size changed to 50.
+  - C Link headers include rel="last" for final/single/empty pages.
+- Files changed: website/supabase/tests/admin_dashboard.test.ts; progress.md
+- Validation: npm test (167 passed), typecheck 0, build 0, deno check 0, local CodeRabbit 0 findings.
+- Code commit: 3bd46bc5f27663fccf8e67f1647c2c20c408b7ba
+- Push status: pushed.
+- PR #38 remains open and unmerged; no deployment performed.

@@ -1067,3 +1067,21 @@ Changes: disabled users pagination while loading; preserved zero/unavailable aut
 Validation: website Vitest 162 passed; TypeScript passed.
 No merge, deployment, bootstrap, or privileges changed.
 
+
+## P7-08 CodeRabbit test mock findings (2026-10-30)
+PR: 38
+Branch: feature/P7-08-admin-dashboard-hardening
+Findings addressed:
+- A: /auth/v1/user mock now validates the Authorization header and returns 401 for missing/malformed/incorrect bearer tokens.
+- B: default Supabase Auth mock page size changed from 25 to 50; pagination remains explicitly per_page-driven.
+- C: mock Link headers now include rel=\"last\" on final/single/empty result sets and rel=\"next\" when another page exists.
+Changes: website/supabase/tests/admin_dashboard.test.ts
+Validation:
+- npm test -> 12 files, 167 tests passed, exit 0
+- npm run typecheck -> exit 0
+- npm run build -> exit 0
+- npx deno check supabase/functions/admin-dashboard/index.ts -> exit 0
+- coderabbit review --uncommitted --agent -> 0 findings
+Code commit: 3bd46bc5f27663fccf8e67f1647c2c20c408b7ba
+Push status: pushed to origin/feature/P7-08-admin-dashboard-hardening
+PR #38 remains open and unmerged; no deployment performed.
