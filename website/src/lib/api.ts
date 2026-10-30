@@ -157,7 +157,9 @@ export async function listEntitlements(): Promise<
 export interface AdminOverview {
   totalUsers: number;
   newUsers30d: number;
+  activeUsers: number;
   activeDevices: number;
+  totalDevices: number;
   lifetimeEntitlements: number;
   monthlyEntitlements: number;
   paymentTotalMinor: number;
@@ -165,6 +167,10 @@ export interface AdminOverview {
   failedPayments: number;
   refundedPayments: number;
   totalPayments: number;
+  lifetimePaymentCount: number;
+  recurringPaymentCount: number;
+  lifetimePaymentTotalMinor: number;
+  recurringPaymentTotalMinor: number;
   subscriptionBreakdown: Record<string, number>;
   webhookBreakdown: Record<string, number>;
   newUsersByDay: { date: string; count: number }[];

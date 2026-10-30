@@ -130,12 +130,17 @@ export function AdminPage() {
           <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card label="Registered users" value={overview.totalUsers} />
             <Card label="New users (30 days)" value={overview.newUsers30d} />
+            <Card label="Active users" value={overview.activeUsers} />
             <Card label="Active devices" value={overview.activeDevices} />
+            <Card label="Registered devices" value={overview.totalDevices} />
             <Card label="Lifetime entitlements" value={overview.lifetimeEntitlements} />
             <Card label="Monthly entitlements" value={overview.monthlyEntitlements} />
             <Card label="Captured payments" value={overview.capturedPayments} />
             <Card label="Payment total (minor units)" value={overview.paymentTotalMinor} />
+            <Card label="Lifetime payment count" value={overview.lifetimePaymentCount} />
+            <Card label="Recurring payment count" value={overview.recurringPaymentCount} />
             <Card label="Failed payments" value={overview.failedPayments} />
+            <Card label="Refunded payments" value={overview.refundedPayments} />
           </section>
         )}
         {section === "overview" && overview && (

@@ -97,20 +97,24 @@ Deno.serve(async (req: Request) => {
         { count: totalUsers },
         { count: newUsers30d },
         { count: activeDevices },
+        { count: totalDevices },
         { data: entitlements },
         { data: payments },
         { data: subscriptions },
         { data: webhookEvents },
         { data: profiles },
+        { data: allDevices },
       ] = await Promise.all([
         admin.from("profiles").select("user_id", { count: "exact", head: true }),
         admin.from("profiles").select("user_id", { count: "exact", head: true }).gte("created_at", since30),
         admin.from("devices").select("id", { count: "exact", head: true }).is("revoked_at", null),
+        admin.from("devices").select("id", { count: "exact", head: true }),
         admin.from("entitlements").select("plan_code, status, lifetime"),
-        admin.from("payments").select("status, amount_minor"),
+        admin.from("payments").select("status, amount_minor, provider_subscription_id"),
         admin.from("subscriptions").select("status"),
         admin.from("webhook_events").select("processing_status"),
         admin.from("profiles").select("created_at"),
+        admin.from("devices").select("user_id, revoked_at"),
       ]);
 
       const lifetimeEntitlements = (entitlements ?? []).filter(
@@ -124,13 +128,26 @@ Deno.serve(async (req: Request) => {
       let capturedCount = 0;
       let failedPayments = 0;
       let refundedPayments = 0;
+      let lifetimePaymentCount = 0;
+      let recurringPaymentCount = 0;
+      let lifetimePaymentTotalMinor = 0;
+      let recurringPaymentTotalMinor = 0;
       for (const p of payments ?? []) {
         if (p.status === "captured") {
           capturedTotal += Number(p.amount_minor ?? 0);
           capturedCount += 1;
+          if (p.provider_subscription_id) {
+            recurringPaymentCount += 1;
+            recurringPaymentTotalMinor += Number(p.amount_minor ?? 0);
+          } else {
+            lifetimePaymentCount += 1;
+            lifetimePaymentTotalMinor += Number(p.amount_minor ?? 0);
+          }
         } else if (p.status === "failed") failedPayments += 1;
         else if (p.status === "refunded") refundedPayments += 1;
       }
+
+      const activeUserIds = new Set((allDevices ?? []).filter((d: any) => d.revoked_at === null).map((d: any) => d.user_id));
 
       const subscriptionBreakdown: Record<string, number> = {};
       for (const s of subscriptions ?? []) {
@@ -159,7 +176,9 @@ Deno.serve(async (req: Request) => {
       return json(200, {
         totalUsers: totalUsers ?? 0,
         newUsers30d: newUsers30d ?? 0,
+        activeUsers: activeUserIds.size,
         activeDevices: activeDevices ?? 0,
+        totalDevices: totalDevices ?? 0,
         lifetimeEntitlements,
         monthlyEntitlements,
         paymentTotalMinor: capturedTotal,
@@ -167,6 +186,10 @@ Deno.serve(async (req: Request) => {
         failedPayments,
         refundedPayments,
         totalPayments: (payments ?? []).length,
+        lifetimePaymentCount,
+        recurringPaymentCount,
+        lifetimePaymentTotalMinor,
+        recurringPaymentTotalMinor,
         subscriptionBreakdown,
         webhookBreakdown,
         newUsersByDay,
@@ -178,14 +201,34 @@ Deno.serve(async (req: Request) => {
       const pageSize = numberParam(body.pageSize, 25, 50);
       const q = safeSearch(body.q).toLowerCase();
 
-      const { data: usersResult, error: usersError } = await admin.auth.admin.listUsers({
-        page,
-        perPage: pageSize,
-      });
-      if (usersError) return json(500, { error: "Failed to list users" });
-      const users = usersResult?.users ?? [];
-      const ids = users.map((u: any) => u.id);
+      // Search must inspect all accounts, not just one page, so filtered
+      // results cannot leak records across page boundaries.
+      let allAuthUsers: any[] = [];\n      let authTotal: number | null = null;
+      if (q) {
+        const maxUsers = 5000;
+        const perPage = 1000;
+        for (let authPage = 1; authPage <= Math.ceil(maxUsers / perPage); authPage++) {
+          const { data: usersResult, error: usersError } = await admin.auth.admin.listUsers({
+            page: authPage,
+            perPage,
+          });
+          if (usersError) return json(500, { error: "Failed to list users" });
+          const batch = usersResult?.users ?? [];
+          allAuthUsers = allAuthUsers.concat(batch);
+          if (batch.length < perPage) break;
+          if (allAuthUsers.length >= maxUsers) break;
+        }
+      } else {
+        const { data: usersResult, error: usersError } = await admin.auth.admin.listUsers({
+          page,
+          perPage: pageSize,
+        });
+        if (usersError) return json(500, { error: "Failed to list users" });
+        allAuthUsers = usersResult?.users ?? [];
+        authTotal = usersResult?.total ?? allAuthUsers.length;
+      }
 
+      const ids = allAuthUsers.map((u: any) => u.id);
       const [{ data: profiles }, { data: entitlementRows }, { data: paymentRows }, { data: deviceRows }] = await Promise.all([
         ids.length ? admin.from("profiles").select("user_id, display_name, created_at").in("user_id", ids) : Promise.resolve({ data: [] }),
         ids.length ? admin.from("entitlements").select("user_id, plan_code, status, lifetime, subscription_period_end").in("user_id", ids) : Promise.resolve({ data: [] }),
@@ -213,7 +256,7 @@ Deno.serve(async (req: Request) => {
         devicesByUser.set(d.user_id, cur);
       }
 
-      const enriched = users.map((u: any) => ({
+      const enriched = allAuthUsers.map((u: any) => ({
         userId: u.id,
         email: u.email ?? null,
         signupDate: u.created_at ?? profileMap.get(u.id)?.created_at ?? null,
@@ -229,13 +272,19 @@ Deno.serve(async (req: Request) => {
         ? enriched.filter((u: any) => (u.email ?? "").toLowerCase().includes(q) || (u.displayName ?? "").toLowerCase().includes(q))
         : enriched;
 
-      await audit(admin, user.id, "admin.users.read", { page, q: q ? "provided" : "none", resultCount: filtered.length });
+      // Paginate in memory for search; for direct listing we already fetched
+      // only the requested page.
+      const total = filtered.length;
+      const start = q ? (page - 1) * pageSize : 0;
+      const paged = q ? filtered.slice(start, start + pageSize) : filtered;
+
+      await audit(admin, user.id, "admin.users.read", { page, q: q ? "provided" : "none", resultCount: paged.length });
 
       return json(200, {
-        users: filtered,
+        users: paged,
         page,
         pageSize,
-        total: usersResult?.total ?? users.length,
+        total: q ? total : (authTotal ?? allAuthUsers.length),
       });
     }
 

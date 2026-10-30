@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.admin_users (
   granted_by UUID REFERENCES auth.users(id),
   granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   revoked_at TIMESTAMPTZ,
-  CHECK (granted_by IS NULL OR granted_by <> user_id)
+  CHECK (granted_by IS NULL OR granted_by <> user_id OR (granted_by = user_id AND role = 'owner'))
 );
 
 ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;

@@ -730,3 +730,6 @@ Retained the runtime-isolated sole task checkout `repos/github.com/eysrbs4zghuw3
 
 ## P7-08 owner-only admin dashboard (2026-10-30)
 Worktree .worktrees/P7-08-admin-dashboard-owner-only, branch eature/P7-08-admin-dashboard-owner-only, base 329316e. Implementation above. Owner bootstrap remains unperformed pending approval.
+
+## P7-08 admin dashboard hardening (2026-10-30)
+Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening, based on feature/P7-08-admin-dashboard-owner-only (8ee01ad). Reused existing admin dashboard. Added hardened overview metrics, robust admin user search pagination, approved owner self-grant constraint, Vitest and Playwright coverage, DB workflow update. Verification: 130 website Vitest tests passed; 3 Playwright admin tests passed; typecheck and build passed. Owner bootstrap and preview deployment remain pending owner approval.
