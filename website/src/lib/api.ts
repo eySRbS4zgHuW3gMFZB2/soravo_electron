@@ -73,18 +73,20 @@ export async function listDevices(): Promise<{ id: string; device_id: string; la
  * Mark a device belonging to the current user as revoked.
  *
  * @param deviceId - Device identifier to revoke within the current user's account.
- * @throws If the caller is not authenticated or the database update fails.
+ * @throws If the caller is not authenticated, the database update fails, or no matching device is found.
  */
 export async function revokeDevice(deviceId: string): Promise<void> {
   // Get current user to ensure ownership
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("devices")
     .update({ revoked_at: new Date().toISOString() })
     .eq("device_id", deviceId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("id");
 
   if (error) throw error;
+  if (!data?.length) throw new Error("Device not found");
 }

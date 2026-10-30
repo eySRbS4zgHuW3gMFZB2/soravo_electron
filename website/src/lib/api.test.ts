@@ -55,7 +55,7 @@ describe("Device Registration API", () => {
     expect(result.success).toBe(true);
     expect(result.device_id).toBe("test-device-123");
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://placeholder.supabase.co/functions/v1/register-device",
+      expect.stringMatching(/\/functions\/v1\/register-device$/),
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
@@ -139,12 +139,26 @@ describe("Device Revocation API", () => {
     mockFrom.mockReturnValue({
       update: vi.fn(() => ({
         eq: vi.fn(() => ({
-          eq: vi.fn().mockResolvedValue({ error: null }),
+          eq: vi.fn(() => ({
+            select: vi.fn().mockResolvedValue({ data: [{ id: "row-1" }], error: null }),
+          })),
         })),
       })),
     });
 
     await expect(revokeDevice("test-device-123")).resolves.toBeUndefined();
+  });
+
+  it("throws when no owned device was updated", async () => {
+    mockFrom.mockReturnValue({
+      update: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({ select: vi.fn().mockResolvedValue({ data: [], error: null }) })),
+        })),
+      })),
+    });
+
+    await expect(revokeDevice("missing-device")).rejects.toThrow("Device not found");
   });
 
   it("throws when not authenticated", async () => {

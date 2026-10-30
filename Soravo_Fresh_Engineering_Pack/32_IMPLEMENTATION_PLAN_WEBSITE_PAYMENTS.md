@@ -112,7 +112,7 @@ becomes available.
 - Refreshing an already-active device is always allowed, even at the limit (it updates `last_seen_at` and any provided non-null `label`/`platform`/`app_version` without consuming a new device slot)
 - Reactivating a revoked device counts as a new active device and must pass the limit check
 - All side effects are idempotent (re-registering same active device is safe)
-- Tests pass with mocked Supabase client
+- **Unmet:** tests directly exercising the register-device Edge Function with a mocked Supabase client
 
 > **Device replacement flow is NOT implemented in Phase A1.** The user-facing
 > device-replacement UI (remove a device to free a slot, or replace at the

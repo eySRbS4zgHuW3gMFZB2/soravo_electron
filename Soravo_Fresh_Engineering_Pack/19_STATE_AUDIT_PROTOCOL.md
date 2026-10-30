@@ -62,3 +62,10 @@ Report every worktree found, including ones created by earlier sessions. For eac
 - CONFIRMED: all four supplied auth/signup/device diagnostics findings were still present and repaired with no payment, entitlement, authorization or response contract changes.
 - CONFIRMED: Node v24.21.0, npm 11.19.0; website lockfile dependencies installed successfully. Deno is unavailable, so device-handler behavior is checked through a temporary Node harness executing the transpiled function with synthetic Deno/Supabase fixtures; deployment/runtime compatibility remains unverified.
 - No provider configuration, data or production state inspected or changed. Current patch validation is recorded in `workspace-context/validation-record.md` outside the repository; completion results are appended to the session handoff.
+
+## Payment review repair audit — 2026-10-30
+
+- Inspected assigned checkout at `0a6e6f45ae6db1d7b97f7e060cc0281cfa659528`; one registered worktree, initially clean. The remote `feature/integrate-pr18-pr21` head was checked and matched that commit.
+- Skills: `code-review` loaded; Supabase, React, and security skills were considered but are not in the available skill catalog. A read-only subagent examined payment contracts; the primary agent made and validated the changes.
+- Scoped website tests, typecheck, and build passed. The validation record outside the repository has commands and input identity. No payment provider or deployment was exercised.
+- Payment currency, reconciliation/retry semantics, sign-out scope, and changes to the documented preview and error contracts require decisions before those findings can be completed.

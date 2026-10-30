@@ -547,13 +547,11 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Admin operations
 - All server-side business logic
 
-### What is NOT implemented yet
+### Implementation status (updated 2026-10-30)
 
-- Device registration Edge Function implemented (register-device); payment and entitlement Edge Functions remain unimplemented
-- No payment processing
-- No webhook handling
-- No entitlement provisioning
-- Design documents only
+- `register-device`, `create-order`, and `razorpay-webhook` Edge Functions exist in the repository.
+- `create-order` creates a Razorpay order and pending payment record; the webhook verifies signatures and contains payment and entitlement writes. Order reconciliation and captured-payment checks remain incomplete, and configured INR amounts do not match the approved USD prices.
+- Payment, webhook, and entitlement behavior has not been verified end to end against a configured merchant account or confirmed deployed. Subscription renewals, refunds, and production readiness remain outstanding.
 
 ## New Project Isolation (2026-10-23)
 
@@ -605,9 +603,8 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 ### Remaining blockers
 
 - Supabase project not yet created/configured (requires owner approval)
-- Razorpay integration not implemented (design only)
+- Razorpay order and webhook code exists but requires reconciliation, pricing, deployment, and end-to-end verification before use
 - Web-desktop auth flow not implemented (contract only)
-- No payment processing
 - Clean-machine Linux test still outstanding (P1-08)
 - PR #17 and PR #18 not yet merged
 
