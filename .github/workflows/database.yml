@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - "website/supabase/**"
+      - ".github/workflows/database.yml"
   push:
     branches:
       - main
     paths:
       - "website/supabase/**"
+      - ".github/workflows/database.yml"
   workflow_dispatch:
 
 permissions:
@@ -52,9 +54,8 @@ jobs:
       - name: Install pgTAP
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-16-pgtap
-          container_id="$(docker ps --filter "ancestor=postgres:16" --format '{{.ID}}' | head -n1)"
-          docker exec "$container_id" bash -c "apt-get update && apt-get install -y postgresql-16-pgtap"
+          sudo apt-get install -y postgresql-client libtap-parser-sourcehandler-pgtap-perl
+          docker exec "${{ job.services.postgres.id }}" bash -c "apt-get update && apt-get install -y postgresql-16-pgtap"
 
       - name: Bootstrap Supabase-compatible test database
         run: psql -v ON_ERROR_STOP=1 -f website/supabase/tests/bootstrap_pg.sql

@@ -95,3 +95,7 @@ Confirmed all three findings on initially clean isolated branch `coderabbit/guar
 ## 2026-10-30 — Checkout entitlement review
 
 Isolated task branch `coderabbit/fix-lifetime-checkout-gating/5f468d22` at base `58d99742da535d4478b9d635381b36ec0da25718`; initially clean. Both review findings fixed; website checks and browser tests passed. See the handoff and external validation record for details.
+
+## 2026-10-30 — Database CI and checkout review triage
+
+The isolated `coderabbit/fix-revoked-lifetime-checkout/triage_r` checkout at base `a56d5f3610d810cf6ae58bfcc28fc9fdcac7489c` repairs database CI package installation. The original monthly claim test and the handler's mocked revoked-lifetime expectation conflict; a contract decision remains outstanding. Local database and handler test results and hosted-CI limitations are recorded in the corresponding handoff and workspace validation record.
