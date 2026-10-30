@@ -1017,3 +1017,26 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - Changes: moved Cloudflare API token out of the job-level environment so install/build/test steps do not receive it; added a final rebuild with repository VITE_* variables immediately before Wrangler upload; kept routing tests as the bounded test build.
 - Verification: website typecheck passed; npm test passed (121 tests); Playwright routing tests passed (36); simulated deployment rebuild contained configured Supabase values and no placeholder values.
 - CodeRabbit: fixed deployment-artifact finding via post-test rebuild; previous minor progress heading spacing finding addressed.
+
+## P7-08 auth realism verification (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+SHA: ed68eb85da0f37b81009e7c510af82bfabc60e83
+Changes: mocked Supabase auth pagination headers and added auth total/page assertions.
+Validation: npm test 162 passed; typecheck and build passed; Deno check passed; Playwright 3 passed.
+GitHub: push successful; core CI known green from prior matching commit, CodeRabbit run in progress.
+No merge, deployment, bootstrap, or privileges changed.
+## Windows desktop development launch — 2026-10-30
+- Host OS: Windows 11 (x86_64)
+- App workspace: C:/Users/kaya/Desktop/Hydra/soravo
+- Development command: 
+pm run tauri:dev via cmd /c C:\Users\kaya\AppData\Local\Temp\opencode\launch.bat
+- Launch script environment: Visual Studio 2017 BuildTools vcvars64.bat; PATH includes C:\Users\kaya\.cargo\bin; RUSTUP_TOOLCHAIN=1.90.0-x86_64-pc-windows-msvc
+- rustc: 1.90.1 (rustup MSVC)
+- cargo: active via rustup 1.90.0 MSVC target
+- Vite dev server: http://localhost:5173 (started)
+- Rust build result: succeeded after 5m15s (	arget\debug\soravo.exe launched)
+- Application window/toolchain evidence: log reports VITE ready and Running target\debug\soravo.exe; Tauri process is running.
+- Authentication/entitlement/device-registration verification: not yet performed (manual owner test pending).
+- Supabase target for app: Soravo_fresh (vfrhplskegqqdxbykyvx), existing owner account to be signed in manually; no secrets printed.
+- Stop instruction: close the Soravo app window or terminate the background Tauri dev process (npm/cargo) in the terminal; stop the Vite child process if needed. Do not close this terminal while testing.
+- No production deployment, release, account creation, entitlement modification, or privilege grant performed.
