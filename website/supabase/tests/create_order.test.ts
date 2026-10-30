@@ -37,7 +37,10 @@ let lifetimeSaved: Record<string, unknown> | null;
 let orderCalls: number;
 let orderMalformed: boolean;
 let claimCalls: number;
+let monthlyClaimCalls: number;
 let authenticated: boolean;
+let entitlements: Array<{ plan_code: string; status: string; lifetime: boolean; subscription_period_end: string | null }>;
+let entitlementError: boolean;
 
 async function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const url = new URL(String(input));
@@ -45,6 +48,12 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
   if (url.pathname === "/auth/v1/user") {
     return authenticated ? Response.json({ id: "test-user" })
       : Response.json({ message: "Invalid token" }, { status: 401 });
+  }
+  if (url.pathname.endsWith("/entitlements")) {
+    expect(url.searchParams.get("user_id")).toBe("eq.test-user");
+    return entitlementError
+      ? Response.json({ message: "Synthetic entitlement error" }, { status: 400 })
+      : Response.json(entitlements);
   }
   if (url.pathname.endsWith("/rpc/claim_lifetime_checkout")) {
     claimCalls++;
@@ -84,6 +93,7 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     return Response.json(null);
   }
   if (url.pathname.endsWith("/rpc/claim_monthly_checkout")) {
+    monthlyClaimCalls++;
     if (claimError) return Response.json({ message: "Synthetic database error" }, { status: 500 });
     expect(body.p_user_id).toBe("test-user");
     expect(body.p_request_id).toMatch(/^[0-9a-f-]{36}$/);
@@ -177,7 +187,9 @@ beforeAll(async () => {
 beforeEach(() => {
   lifetimeReserved = false;
   lifetimeSaved = null;
-  orderCalls = claimCalls = 0;
+  orderCalls = claimCalls = monthlyClaimCalls = 0;
+  entitlements = [];
+  entitlementError = false;
   orderMalformed = false;
   authenticated = true;
   claimStatus = "claimed";
@@ -208,6 +220,28 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 afterAll(() => vi.unstubAllGlobals());
+
+describe("checkout entitlement guard", () => {
+  it.each(["monthly", "lifetime"])("allows %s checkout when lifetime access is revoked", async (plan) => {
+    entitlements = [{ plan_code: "lifetime", status: "revoked", lifetime: true, subscription_period_end: null }];
+    expect((await checkout(plan)).status).toBe(200);
+    expect(plan === "lifetime" ? claimCalls : monthlyClaimCalls).toBe(1);
+    expect(plan === "lifetime" ? orderCalls : providerCalls).toBe(1);
+  });
+  it.each([
+    ["monthly", "active", false], ["monthly", "lifetime_active", true],
+    ["lifetime", "active", false], ["lifetime", "lifetime_active", true],
+  ])("blocks %s checkout for %s lifetime access", async (plan, status, lifetime) => {
+    entitlements = [{ plan_code: "lifetime", status, lifetime, subscription_period_end: null }];
+    expect((await checkout(plan)).status).toBe(409);
+    expect(claimCalls + monthlyClaimCalls + orderCalls + providerCalls).toBe(0);
+  });
+  it.each(["monthly", "lifetime"])("fails closed when %s checkout cannot read entitlements", async (plan) => {
+    entitlementError = true;
+    expect((await checkout(plan)).status).toBe(500);
+    expect(claimCalls + monthlyClaimCalls + orderCalls + providerCalls).toBe(0);
+  });
+});
 
 describe("monthly checkout reservation", () => {
   it("returns 409 without calling Razorpay for a blocked account", async () => {

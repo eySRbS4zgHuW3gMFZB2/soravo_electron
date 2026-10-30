@@ -98,13 +98,12 @@ Deno.serve(async (req: Request) => {
 
     const { data: currentEntitlements, error: currentEntitlementError } = await admin
       .from("entitlements")
-      .select("plan_code, status, lifetime, subscription_period_end")
+      .select("plan_code, status, subscription_period_end")
       .eq("user_id", user.id);
     if (currentEntitlementError) throw currentEntitlementError;
     const ownsLifetime = (currentEntitlements ?? []).some((row) =>
       row.plan_code === "lifetime" &&
-      (row.lifetime === true ||
-        ["lifetime_active", "active"].includes(String(row.status).toLowerCase()))
+      ["lifetime_active", "active"].includes(String(row.status).toLowerCase())
     );
     const ownsActiveMonthly = (currentEntitlements ?? []).some((row) => {
       if (row.plan_code !== "monthly" || String(row.status).toLowerCase() !== "active") return false;

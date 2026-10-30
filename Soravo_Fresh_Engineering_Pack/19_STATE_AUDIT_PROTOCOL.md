@@ -91,3 +91,7 @@ Cancellation deadline/guideline audit follow-up (2026-10-27): isolated runtime b
 ## 2026-10-29 — Lifetime checkout guard review
 
 Confirmed all three findings on initially clean isolated branch `coderabbit/guard-lifetime-checkout/983114c9`, base `cea3da291f293ab55e3f94a25b589be373a8addf`. Active-status frontend guard and migration 006's atomic lifetime checkout claim validated with website tests/build/browser suites, database permissions and concurrent sessions. Existing monthly claim contract retained. Evidence and limitations are recorded in the matching handoff and external workspace validation record; no integration or production changes.
+
+## 2026-10-30 — Checkout entitlement review
+
+Isolated task branch `coderabbit/fix-lifetime-checkout-gating/5f468d22` at base `58d99742da535d4478b9d635381b36ec0da25718`; initially clean. Both review findings fixed; website checks and browser tests passed. See the handoff and external validation record for details.
