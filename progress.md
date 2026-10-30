@@ -1030,5 +1030,11 @@ Changes: fixed duplicate devices declaration in the admin Edge Function; enforce
 Verified commands: targeted Vitest AdminPage/api tests, complete npm test (130 passed), npm run typecheck, npm run build, npx deno check website/supabase/functions/admin-dashboard/index.ts, npx playwright test e2e/admin.spec.ts --project=chromium (3 passed).
 Unresolved: GitHub Actions database run, CodeRabbit review final result, owner-selected admin bootstrap, preview deployment verification.
 
+## P7-08 code review follow-up (2026-10-30)
+End SHA: cad68cf3c774c9f871833ed045b1c1f483ac87cb.
+Changes: repaired payments/audit pagination, profile trigger assertions, Edge Function query errors/allowlists/email resolution, sub/device pagination, secret-safe error handling.
+Validation: complete website vitest 130 passed; typecheck/build passed; Playwright 3 passed; Deno check passed; DB pgTAP passed; GitHub checks all completed successfully except CodeRabbit AI review (auto status may be pending).
+Remaining: CodeRabbit AI review completion, owner bootstrap, preview verification.
+
 ## P7-08 admin dashboard hardening (2026-10-30)
 Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening, based on feature/P7-08-admin-dashboard-owner-only (8ee01ad). Reused existing admin implementation; hardened admin overview metrics (registered/active users, registered/active devices, lifetime vs recurring payment counters); fixed user search pagination to avoid partial-record leakage; corrected admin role self-grant constraint for approved owner bootstrap; added Vitest component/API tests and Playwright read-only navigation; added migration 006 to DB workflow and pinned ubuntu-24.04. Verification: 130 Vitest tests passed; Playwright admin 3 passed; website typecheck and production build passed. Outstanding owner actions: approve exact admin account, perform controlled SQL bootstrap, verify preview deployment.
