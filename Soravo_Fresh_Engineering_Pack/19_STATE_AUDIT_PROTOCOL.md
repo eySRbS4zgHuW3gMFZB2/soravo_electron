@@ -98,4 +98,4 @@ Isolated task branch `coderabbit/fix-lifetime-checkout-gating/5f468d22` at base 
 
 ## 2026-10-30 — Database CI and checkout review triage
 
-The isolated `coderabbit/fix-revoked-lifetime-checkout/triage_r` checkout at base `a56d5f3610d810cf6ae58bfcc28fc9fdcac7489c` repairs database CI package installation. The original monthly claim test and the handler's mocked revoked-lifetime expectation conflict; a contract decision remains outstanding. Local database and handler test results and hosted-CI limitations are recorded in the corresponding handoff and workspace validation record.
+The isolated `coderabbit/fix-revoked-lifetime-checkout/triage_r` checkout at base `a56d5f3610d810cf6ae58bfcc28fc9fdcac7489c` repairs database CI package installation. Its checkout path, uncommitted-file count, upstream tracking and build-output size are unavailable and unknown for that historical checkout. The original monthly claim test and the handler's mocked revoked-lifetime expectation conflict; a contract decision remains outstanding. Local database and handler test results and hosted-CI limitations are recorded in the corresponding handoff and workspace validation record.
