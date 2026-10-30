@@ -11,7 +11,7 @@ let failure: string | null;
 let auditFailed: boolean;
 let overviewThrows: boolean;
 let emailFailure: boolean;
-let adminMember: { user_id: string; role: string } | null;
+let adminMember: { user_id: string; role: string; revoked_at: string | null } | null;
 let authPages: number[];
 let searchCalls: { search_text: string; page_number: number; page_size: number }[];
 let enrichmentIds: string[][];
@@ -30,7 +30,15 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     return Response.json({ user: user ? { id: user.id, email: user.email } : null });
   }
   if (table === "admin_users") {
-    if (!adminMember || adminMember.role !== "owner") return new Response(null, { status: 404 });
+    const userFilter = url.searchParams.get("user_id");
+    const roleFilter = url.searchParams.get("role");
+    const revokedFilter = url.searchParams.get("revoked_at");
+    if (!adminMember ||
+      (userFilter !== null && userFilter !== `eq.${adminMember.user_id}`) ||
+      (roleFilter !== null && roleFilter !== `eq.${adminMember.role}`) ||
+      (revokedFilter !== null && (revokedFilter !== "is.null" || adminMember.revoked_at !== null))) {
+      return new Response(null, { status: 404 });
+    }
     return Response.json(adminMember);
   }
   if (url.pathname.endsWith("/rpc/admin_dashboard_overview")) {
@@ -103,7 +111,7 @@ beforeEach(() => {
   enrichmentIds = [];
   auditWrites = 0;
   emailFailure = false;
-  adminMember = { user_id: "admin", role: "owner" };
+  adminMember = { user_id: "admin", role: "owner", revoked_at: null };
   vi.stubGlobal("fetch", vi.fn(fakeFetch));
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -191,12 +199,24 @@ describe("admin dashboard security", () => {
   });
 
   it("denies ordinary active-admin roles", async () => {
-    adminMember = { user_id: "admin", role: "admin" };
+    adminMember = { user_id: "admin", role: "admin", revoked_at: null };
     expect((await request({ action: "overview" })).status).toBe(403);
     expect(auditWrites).toBe(0);
   });
 
   it("denies revoked owners", async () => {
+    adminMember = { user_id: "admin", role: "owner", revoked_at: "2026-01-01T00:00:00.000Z" };
+    expect((await request({ action: "overview" })).status).toBe(403);
+    expect(auditWrites).toBe(0);
+  });
+
+  it("denies an owner row belonging to another user", async () => {
+    adminMember = { user_id: "another-user", role: "owner", revoked_at: null };
+    expect((await request({ action: "overview" })).status).toBe(403);
+    expect(auditWrites).toBe(0);
+  });
+
+  it("denies users without an admin row", async () => {
     adminMember = null;
     expect((await request({ action: "overview" })).status).toBe(403);
     expect(auditWrites).toBe(0);
