@@ -21,7 +21,13 @@ const overview = { totalUsers: 6005, activeUsers: 1005, paymentTotalMinor: 30150
 async function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const url = new URL(String(input));
   const table = url.pathname.split("/").at(-1);
-  if (url.pathname === "/auth/v1/user") return Response.json({ id: "admin" });
+  if (url.pathname === "/auth/v1/user") {
+    const authHeaders = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    if (authHeaders.get("Authorization") !== "Bearer synthetic-user-token") {
+      return Response.json({ message: "Invalid JWT" }, { status: 401 });
+    }
+    return Response.json({ id: "admin" });
+  }
   const userLookupMatch = url.pathname.match(/\/auth\/v1\/admin\/users\/([^/]+)$/);
   if (userLookupMatch) {
     const userId = decodeURIComponent(userLookupMatch[1]);
@@ -47,15 +53,21 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
   }
   if (url.pathname === "/auth/v1/admin/users") {
     const page = Number(url.searchParams.get("page")) || 1;
-    const perPage = Number(url.searchParams.get("per_page")) || 25;
+    const perPage = Number(url.searchParams.get("per_page")) || 50;
     authPages.push(page);
     if (failure === "auth") return Response.json({ msg: "Synthetic failure" }, { status: 400 });
     const total = users.length;
-    const body = JSON.stringify({ users: users.slice((page - 1) * perPage, page * perPage) });
-    const headers = new Headers({ "content-type": "application/json", "x-total-count": String(total) });
-    if (page * perPage < total) {
-      headers.append("link", `<https://supabase.invalid/auth/v1/admin/users?page=${page + 1}&per_page=${perPage}>; rel="next"`);
+    const lastPage = Math.max(1, Math.ceil(total / perPage));
+    const links = [`<https://supabase.invalid/auth/v1/admin/users?page=${lastPage}&per_page=${perPage}>; rel="last"`];
+    if (page < lastPage) {
+      links.unshift(`<https://supabase.invalid/auth/v1/admin/users?page=${page + 1}&per_page=${perPage}>; rel="next"`);
     }
+    const body = JSON.stringify({ users: users.slice((page - 1) * perPage, page * perPage) });
+    const headers = new Headers({
+      "content-type": "application/json",
+      "x-total-count": String(total),
+      "link": links.join(", "),
+    });
     return new Response(body, { status: 200, headers });
   }
   if (url.pathname.endsWith("/rpc/admin_dashboard_search_users")) {
@@ -92,6 +104,9 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
 
 const request = (body: object) => handler(new Request("https://dashboard.invalid", {
   method: "POST", headers: { Authorization: "Bearer synthetic-user-token" }, body: JSON.stringify(body),
+}));
+const requestWithToken = (token: string | null, body: object) => handler(new Request("https://dashboard.invalid", {
+  method: "POST", headers: token ? { Authorization: token } : { "Content-Type": "application/json" }, body: JSON.stringify(body),
 }));
 const requestWithoutAuth = (body: object) => handler(new Request("https://dashboard.invalid", {
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -214,7 +229,44 @@ describe("admin dashboard handler", () => {
     expect(authPages).toContain(2);
   });
 
+  it("reports an empty Supabase Auth user total", async () => {
+    users = [];
+    const response = await request({ action: "users", q: "", page: 1, pageSize: 25 });
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data).toMatchObject({ page: 1, pageSize: 25, total: 0, users: [] });
+  });
+
+  it("reports a single-page Supabase Auth user total", async () => {
+    users = users.slice(0, 10);
+    const response = await request({ action: "users", q: "", page: 1, pageSize: 25 });
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.total).toBe(10);
+    expect(data.users).toHaveLength(10);
+  });
+
+  it("reports the final Supabase Auth user page total", async () => {
+    const response = await request({ action: "users", q: "", page: 241, pageSize: 25 });
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data).toMatchObject({ page: 241, pageSize: 25, total: 6005 });
+    expect(data.users).toHaveLength(5);
+  });
+
 describe("admin dashboard security", () => {
+  it("rejects a malformed bearer token", async () => {
+    const response = await requestWithToken("synthetic-user-token", { action: "overview" });
+    expect(response.status).toBe(403);
+    expect(auditWrites).toBe(0);
+  });
+
+  it("rejects an incorrect bearer token", async () => {
+    const response = await requestWithToken("Bearer wrong-token", { action: "overview" });
+    expect(response.status).toBe(403);
+    expect(auditWrites).toBe(0);
+  });
+
   it("denies anonymous requests", async () => {
     const response = await requestWithoutAuth({ action: "overview" });
     expect(response.status).toBe(403);
