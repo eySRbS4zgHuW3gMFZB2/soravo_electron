@@ -90,7 +90,13 @@
 
 ## P7-08 readiness repair round 3 — 2026-10-30
 
-- CONFIRMED: the sole registered worktree was `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, on branch `feature/P7-08-admin-dashboard-hardening`, based on `ca48d47231a2ca76526a8fd9a9bc0adee5a29bcd`. It initially had 0 uncommitted files and no configured upstream. Initial build-output size and post-build Git status were not recorded; `website/dist` measured 475795 bytes after the local build.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:f5562e26b620e7d9f414c78577015e63efe1ad74b793645da38da49ee9b543c2 -->
+
+- CONFIRMED: the audited checkout input HEAD was `ca48d47231a2ca76526a8fd9a9bc0adee5a29bcd` (recorded in the round 3 handoff). The sole registered worktree was `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, on branch `feature/P7-08-admin-dashboard-hardening`, with base `ca48d47231a2ca76526a8fd9a9bc0adee5a29bcd`. It initially had 0 uncommitted files and no configured upstream. Initial build-output size and post-build Git status were not recorded; `website/dist` measured 475795 bytes after the local build.
+
+<!-- /coderabbit-ai-generated:v1 -->
 - CONFIRMED: the worktree inventory was corrected, section reloads were separated from overview retries, and stale section errors were cleared on new requests. Migration 008 adds a service-role-only search RPC with literal, case-insensitive, deduplicated, email-first matching and stable ordering by creation time and ID within each group; this ordering can change page placement. Exact totals require database-wide match counting.
 - VALIDATION: 32 handler/API/UI tests, PostgreSQL 16 migration replay and 132 database assertions, website typecheck/build, Deno check, and 3 admin Chromium tests passed. The first browser run required Chromium installation; the passing rerun emitted the existing Pages redirect warning. See the round 3 entry in `Soravo_Fresh_Engineering_Pack/18_PROGRESS_AND_HANDOFF.md` and the historical external `workspace-context/validation-record.md` for exact evidence; that historical record was unavailable in this workspace for this documentation update.
 - LIMITATIONS: live Supabase integration and current-head remote CI/review policy were not verified. No integration, push or provider mutation was performed. Apply migration 008 before deploying the updated Edge Function.
