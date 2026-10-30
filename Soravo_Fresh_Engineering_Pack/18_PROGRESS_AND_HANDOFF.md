@@ -734,6 +734,12 @@ Worktree .worktrees/P7-08-admin-dashboard-owner-only, branch feature/P7-08-admin
 ## P7-08 admin dashboard hardening (2026-10-30)
 Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening, based on ffeature/P7-08-admin-dashboard-owner-only (8ee01ad). Reused existing admin dashboard. Added hardened overview metrics, robust admin user search pagination, approved owner self-grant constraint, Vitest and Playwright coverage, DB workflow update. Verification: 130 website Vitest tests passed; 3 Playwright admin tests passed; typecheck and build passed. Owner bootstrap and preview deployment remain pending owner approval.
 
+## P7-08 re-orientation / CI-ready state (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+SHA: 8cb006d1b8d91bef6013e0ad583d9e6eec10f9d9
+PR #38 state: OPEN, mergeable, not merged. GitHub checks: all required checks success at final SHA; CodeRabbit review in_progress.
+No merge, deployment, bootstrap, or privilege grants performed.
+
 ## P7-08 admin dashboard follow-up (2026-10-30)
 Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening.
 Start SHA: 0ab690e10ace99fe5c2378ced2a16ef5f65a966f.

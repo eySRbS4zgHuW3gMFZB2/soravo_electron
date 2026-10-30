@@ -1030,6 +1030,14 @@ Changes: fixed duplicate devices declaration in the admin Edge Function; enforce
 Verified commands: targeted Vitest AdminPage/api tests, complete npm test (130 passed), npm run typecheck, npm run build, npx deno check website/supabase/functions/admin-dashboard/index.ts, npx playwright test e2e/admin.spec.ts --project=chromium (3 passed).
 Unresolved: GitHub Actions database run, CodeRabbit review final result, owner-selected admin bootstrap, preview deployment verification.
 
+## P7-08 re-orientation / CI-ready state (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+Final SHA: 8cb006d1b8d91bef6013e0ad583d9e6eec10f9d9
+PR #38 state: OPEN, mergeable=true, mergeStateStatus=UNSTABLE, not merged.
+CI at final SHA: all GitHub Actions checks completed SUCCESS except CodeRabbit review in_progress (non-blocking gate still pending). Website tests/local: npm run typecheck, npm test (149 passed), npm run build, Playwright admin (3 passed), and Deno check passed.
+Security: read-only inspection only; no merge, deployment, bootstrap, or access grants performed.
+Next safe action: owner approval to integrate PR #38, followed by the controlled non-production admin bootstrap and preview verification.
+
 ## P7-08 code review follow-up (2026-10-30)
 End SHA: cad68cf3c774c9f871833ed045b1c1f483ac87cb.
 Changes: repaired payments/audit pagination, profile trigger assertions, Edge Function query errors/allowlists/email resolution, sub/device pagination, secret-safe error handling.
