@@ -798,3 +798,15 @@ Remaining: GitHub Actions database verification, CodeRabbit findings, owner boot
 - Code commit: 3bd46bc5f27663fccf8e67f1647c2c20c408b7ba
 - Push status: pushed.
 - PR #38 remains open and unmerged; no deployment performed.
+
+## 2026-10-30 — Backend admin deployment to Soravo_fresh
+
+- Target project: Soravo_fresh (vfrhplskegqqdxbykyvx)
+- Migrations 006/007/008 applied successfully; history recorded above.
+- admin_users count: 0. No owner/admin account created or granted.
+- admin-dashboard Edge Function: version 1, ACTIVE, verify_jwt true.
+- Other functions unchanged.
+- Smoke tests passed (OPTIONS 200, unauth 401, invalid JWT 401).
+- Cloudflare preview https://ad8df800.soravo-web-preview.pages.dev/admin returned 200.
+- PR for this change: pending.
+

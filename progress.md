@@ -1085,3 +1085,21 @@ Validation:
 Code commit: 3bd46bc5f27663fccf8e67f1647c2c20c408b7ba
 Push status: pushed to origin/feature/P7-08-admin-dashboard-hardening
 PR #38 remains open and unmerged; no deployment performed.
+
+## Backend admin deployment — 2026-10-30
+
+- Target project: Soravo_fresh (ref vfrhplskegqqdxbykyvx)
+- Migration history before: 001, 002, 003, 004, 005, 010
+- Migrations applied:
+  - 006_admin_roles_and_safe_profile_updates: SUCCESS
+  - 007_admin_dashboard_overview: SUCCESS
+  - 008_admin_user_search: SUCCESS
+- Migration history after: 001, 002, 003, 004, 005, 010, 006, 007, 008
+- Verified: admin_users table exists with RLS true; only postgres/service_role grants; anon/authenticated no grants; RPCs exist service_role-only; trigger installed; audit indexes present.
+- Admin users count: 0 (no admin account created or granted).
+- Edge Function: admin-dashboard version 1, ACTIVE, verify_jwt true. Existing functions unchanged.
+- Smoke tests: OPTIONS 200; unauthenticated POST 401; invalid JWT 401.
+- Cloudflare preview: https://ad8df800.soravo-web-preview.pages.dev/admin returned 200 (SPA).
+- Security advisor notes: protect_profile_sensitive_fields lacks search_path (warning), pre-existing extension/function advisor items unrelated; RLS-enabled-no-policy is intended for service-role-only tables.
+- No merge, production deployment, admin bootstrap, or privileges granted.
+
