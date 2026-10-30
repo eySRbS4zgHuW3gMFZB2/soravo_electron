@@ -96,4 +96,11 @@ test.describe("auth flows (mocked Supabase)", () => {
     await expect(page.getByLabel("Password")).toBeVisible();
     await expect(page.getByRole("button", { name: /log in/i })).toBeVisible();
   });
+
+  test("expired confirmation feedback survives the account redirect to login", async ({ page }) => {
+    await page.goto("/account#error=access_denied&error_code=otp_expired&error_description=Email%20link%20expired&type=signup");
+    await expect(page).toHaveURL(/\/login\?returnTo=%2Faccount$/);
+    await expect(page.getByRole("alert")).toHaveText("This link has expired. Request a new one and try again.");
+    await expect(page.getByLabel("Email")).toBeVisible();
+  });
 });
