@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, MemoryRouter, Routes, Route } from "react-router-dom";
 
 const mockAuth = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -161,6 +161,57 @@ describe("auth callback feedback", () => {
       expect(mockAuth.getSession).not.toHaveBeenCalled();
     }
     expect(document.body.textContent).not.toContain("synthetic-private-value");
+  });
+
+  it.each(["initialize returned", "initialize threw", "session returned", "session threw"])(
+    "uses a neutral message for %s without a callback", async (failure) => {
+      window.history.replaceState(null, "", "/account?tab=devices");
+      const error = new Error("expired synthetic-private-value");
+      mockAuth.initialize.mockResolvedValue({ error: failure === "initialize returned" ? error : null });
+      mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: failure === "session returned" ? error : null });
+      if (failure === "initialize threw") mockAuth.initialize.mockRejectedValue(error);
+      if (failure === "session threw") mockAuth.getSession.mockRejectedValue(error);
+      function Feedback() {
+        return <p role="alert">{useAuth().authError}</p>;
+      }
+      render(<AuthProvider><Feedback /></AuthProvider>);
+      await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("We could not restore your session. Please log in again."));
+      expect(document.body.textContent).not.toContain("synthetic-private-value");
+    }
+  );
+
+  it.each(["access_token", "refresh_token"])("keeps %s-only callback errors link-specific and sanitized", async (token) => {
+    window.history.replaceState(null, "", `/account#${token}=synthetic`);
+    mockAuth.initialize.mockResolvedValue({ error: new Error("expired synthetic-private-value") });
+    mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    function Feedback() {
+      return <p role="alert">{useAuth().authError}</p>;
+    }
+    render(<AuthProvider><Feedback /></AuthProvider>);
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("This link has expired. Request a new one and try again."));
+    expect(document.body.textContent).not.toContain("synthetic-private-value");
+  });
+
+  it("preserves router history state when removing callback parameters before redirecting to login", async () => {
+    window.history.replaceState({ usr: { marker: "kept" }, key: "test-key", idx: 3 }, "", "/account#error=access_denied&type=signup");
+    mockAuth.initialize.mockResolvedValue({ error: null });
+    mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    const replaceState = vi.spyOn(window.history, "replaceState");
+    render(
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/account" element={<ProtectedRoute><p>Secret</p></ProtectedRoute>} />
+            <Route path="/login" element={<p>Login page</p>} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    );
+    await screen.findByText("Login page");
+    expect(replaceState).toHaveBeenCalledWith({ usr: { marker: "kept" }, key: "test-key", idx: 3 }, "", "/account");
+    expect(window.history.state.idx).toBe(3);
+    expect(window.location.hash).toBe("");
+    replaceState.mockRestore();
   });
 
   it("shows sanitized callback errors on login after the protected account redirects", async () => {

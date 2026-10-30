@@ -62,6 +62,8 @@ describe("auth redirect helpers", () => {
   });
 
   it("does not leak provider text for malformed callbacks", () => {
-    expect(sanitizeAuthErrorMessage("weird tokenish value")).toContain("invalid");
+    const message = sanitizeAuthErrorMessage("weird tokenish value");
+    expect(message).toContain("invalid");
+    expect(message).not.toContain("tokenish");
   });
 });
