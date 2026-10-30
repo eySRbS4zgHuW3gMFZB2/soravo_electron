@@ -61,3 +61,21 @@ jobs:
 
       - name: Test Vite and Pages routing
         run: npm run test:playwright
+
+  edge-function-check:
+    name: Typecheck Supabase Edge Function
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+
+      - name: Typecheck admin dashboard Edge Function
+        run: deno check website/supabase/functions/admin-dashboard/index.ts

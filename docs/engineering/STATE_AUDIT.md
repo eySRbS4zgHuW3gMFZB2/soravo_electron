@@ -63,3 +63,40 @@
 - CONFIRMED: clean task commit `96a7866` and remote head `147fd3377295ff7df7009c088d3d8dea4d52f24a` diverged from `74ec17e`; user requested a merge commit with both changes preserved and no push. Runtime checkout now holds `feature/razorpay-recurring-sandbox`, sole registered worktree.
 - CONFIRMED: resolved all eight conflicting paths; retained both documentation histories and remote PricingPage cleanup. Atomic checkout/event migration is now 005, after remote 004's pending/resumed uniqueness upgrade. Both source and test contracts were integrated, including stale-capture paid-period enrichment without status resurrection.
 - CONFIRMED: merged website typecheck/build and 85 tests passed; fresh-install and original-index upgrade paths passed 87 SQL assertions each. Upgrade rollback on duplicate billable data and overlapping checkout/cancellation transactions were verified with synthetic fixtures. PostgreSQL 18.6 was exercised; CI remains PostgreSQL 16. No live services or secrets used, and no remote CI result is claimed.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:746787153074da2d3da4cab7171b9354172893c02d51ee6a1953e4851d968562 -->
+
+## P7-08 readiness repair round 1 — 2026-10-30
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:c0beba74e2c812d89a411b3f6daa552e1d7890389f7ca190abdab9294193f74c -->
+
+- CONFIRMED: expected head `4052f9ba9c2d7dea88a9821aa198c2027f320a12`; origin is the active `eySRbS4zgHuW3gMFZB2/soravo_electron` repository. The sole registered worktree was `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `coderabbit/admin-dashboard-readiness-fixes/triage_r`, based on `4052f9ba9c2d7dea88a9821aa198c2027f320a12`, with 0 uncommitted files initially. Historical upstream tracking and build-output size are unknown. No merge/rebase was started. Branch/PR remote heads still matched after local validation.
+
+<!-- /coderabbit-ai-generated:v1 -->
+- CONFIRMED: audit insert checks and anon pgTAP permission assertion already exist. Fail-closed audit behavior is documented in the helper and bootstrap runbook, so it was preserved. Overview truncation, search ceiling/profile lookup handling, missing overview Retry and absent subscriptions/devices navigation were applicable and repaired.
+- CONFIRMED: migration 007 returns one JSON aggregate under a fixed empty search_path, grants EXECUTE only to service_role, and preserves metric definitions/response fields. 1,005-row synthetic fixtures validate complete counts/breakdowns, distinct active users, payment sums above 32-bit range, empty aggregates, UTC signup buckets and anon/authenticated denial. Creation and privileges commit atomically.
+- CONFIRMED: actual handler/query-builder tests validate search after account 5,000, name-result pagination under a smaller server cap, deduplication, literal wildcard handling, page-only enrichment, failure responses and fail-closed audit writes. UI/API tests validate retry recovery and subscriptions/devices first/last/back navigation.
+- VALIDATION: 28 scoped handler/API/component tests, 29 admin pgTAP assertions with full prerequisite migration replay, Deno check, website package typecheck/build and 3 admin Chromium browser tests passed. Initial new SQL fixture failed for omitted required plan_code; corrected and rerun successfully. Existing Pages redirect warning observed. No repository-wide verification selected; other website/desktop/billing suites were outside the affected scope. No prior validation record was available to reuse.
+- LIMITATIONS: search still enumerates all Auth pages; live Supabase deployment/provider integration and required CI/review policy on a published repair were not exercised. Migration 007 must precede the updated Edge Function. Manual integrated diff and security inspection completed. Host publishes; no push, comment/thread changes, approval, merge, deployment or external state mutation occurred. See external workspace validation record for exact inputs and commands.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+## P7-08 readiness repair round 3 — 2026-10-30
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:f5562e26b620e7d9f414c78577015e63efe1ad74b793645da38da49ee9b543c2 -->
+
+- CONFIRMED: the audited checkout input HEAD was `ca48d47231a2ca76526a8fd9a9bc0adee5a29bcd` (recorded in the round 3 handoff). The sole registered worktree was `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, on branch `feature/P7-08-admin-dashboard-hardening`, with base `ca48d47231a2ca76526a8fd9a9bc0adee5a29bcd`. It initially had 0 uncommitted files and no configured upstream. Initial build-output size and post-build Git status were not recorded; `website/dist` measured 475795 bytes after the local build.
+
+<!-- /coderabbit-ai-generated:v1 -->
+- CONFIRMED: the worktree inventory was corrected, section reloads were separated from overview retries, and stale section errors were cleared on new requests. Migration 008 adds a service-role-only search RPC with literal, case-insensitive, deduplicated, email-first matching and stable ordering by creation time and ID within each group; this ordering can change page placement. Exact totals require database-wide match counting.
+- VALIDATION: 32 handler/API/UI tests, PostgreSQL 16 migration replay and 132 database assertions, website typecheck/build, Deno check, and 3 admin Chromium tests passed. The first browser run required Chromium installation; the passing rerun emitted the existing Pages redirect warning. See the round 3 entry in `Soravo_Fresh_Engineering_Pack/18_PROGRESS_AND_HANDOFF.md` and the historical external `workspace-context/validation-record.md` for exact evidence; that historical record was unavailable in this workspace for this documentation update.
+- LIMITATIONS: live Supabase integration and current-head remote CI/review policy were not verified. No integration, push or provider mutation was performed. Apply migration 008 before deploying the updated Edge Function.

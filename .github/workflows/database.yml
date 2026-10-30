@@ -21,7 +21,7 @@ concurrency:
 jobs:
   pg-tap:
     name: PostgreSQL pgTAP (disposable)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
       postgres:
@@ -74,10 +74,22 @@ jobs:
       - name: Apply atomic checkout and event ordering migration
         run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/005_atomic_subscription_checkout_and_events.sql
 
+      - name: Apply admin roles migration
+        run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/006_admin_roles_and_safe_profile_updates.sql
+
+      - name: Apply admin overview aggregation migration
+        run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/007_admin_dashboard_overview.sql
+
+      - name: Apply admin user search migration
+        run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/008_admin_user_search.sql
+
       - name: Run pgTAP SQL tests
         run: |
            pg_prove \
             website/supabase/tests/register_device_atomic.test.sql \
             website/supabase/tests/webhook_claim_idempotency.test.sql \
             website/supabase/tests/webhook_finalize_atomic.test.sql \
-            website/supabase/tests/subscription_guards.test.sql
+            website/supabase/tests/subscription_guards.test.sql \
+            website/supabase/tests/admin_role_rls.test.sql \
+            website/supabase/tests/admin_dashboard_overview.test.sql \
+            website/supabase/tests/admin_user_search.test.sql

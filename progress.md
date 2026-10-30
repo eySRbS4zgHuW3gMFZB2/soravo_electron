@@ -1017,3 +1017,71 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - Changes: moved Cloudflare API token out of the job-level environment so install/build/test steps do not receive it; added a final rebuild with repository VITE_* variables immediately before Wrangler upload; kept routing tests as the bounded test build.
 - Verification: website typecheck passed; npm test passed (121 tests); Playwright routing tests passed (36); simulated deployment rebuild contained configured Supabase values and no placeholder values.
 - CodeRabbit: fixed deployment-artifact finding via post-test rebuild; previous minor progress heading spacing finding addressed.
+
+## P7-08 owner-only admin dashboard
+P7-08 branch feature/P7-08-admin-dashboard-owner-only created from origin/main 329316e. Adds migration 006 admin_users with service-only access; protects profile updates; Edge Function admin-dashboard (server-side admin role check + audited reads); /admin React page with overview, users, payments, subscriptions, devices, audit tabs; tests and docs. Preview URL to be provided by deployment; no production changes.
+
+## P7-08 admin dashboard follow-up (2026-10-30)
+Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening.
+Start SHA: 0ab690e10ace99fe5c2378ced2a16ef5f65a966f.
+End SHA: d828e4bef136693d8f665f8402183f06b4da4b0f.
+PR: https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron/pull/38.
+Changes: fixed duplicate devices declaration in the admin Edge Function; enforced fail-closed audit logging; debounced admin user search; refactored admin API helpers to a shared typed requester; corrected pgTAP bigint assertion; documented approved owner self-grant bootstrap; added an Edge Function Deno check job to Website CI.
+Verified commands: targeted Vitest AdminPage/api tests, complete npm test (130 passed), npm run typecheck, npm run build, npx deno check website/supabase/functions/admin-dashboard/index.ts, npx playwright test e2e/admin.spec.ts --project=chromium (3 passed).
+Unresolved: GitHub Actions database run, CodeRabbit review final result, owner-selected admin bootstrap, preview deployment verification.
+
+## P7-08 re-orientation / CI-ready state (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+Final SHA: 8cb006d1b8d91bef6013e0ad583d9e6eec10f9d9
+PR #38 state: OPEN, mergeable=true, mergeStateStatus=UNSTABLE, not merged.
+CI at final SHA: all GitHub Actions checks completed SUCCESS except CodeRabbit review in_progress (non-blocking gate still pending). Website tests/local: npm run typecheck, npm test (149 passed), npm run build, Playwright admin (3 passed), and Deno check passed.
+Security: read-only inspection only; no merge, deployment, bootstrap, or access grants performed.
+Next safe action: owner approval to integrate PR #38, followed by the controlled non-production admin bootstrap and preview verification.
+
+## P7-08 code review follow-up (2026-10-30)
+End SHA: cad68cf3c774c9f871833ed045b1c1f483ac87cb.
+Changes: repaired payments/audit pagination, profile trigger assertions, Edge Function query errors/allowlists/email resolution, sub/device pagination, secret-safe error handling.
+Validation: complete website vitest 130 passed; typecheck/build passed; Playwright 3 passed; Deno check passed; DB pgTAP passed; GitHub checks all completed successfully except CodeRabbit AI review (auto status may be pending).
+Remaining: CodeRabbit AI review completion, owner bootstrap, preview verification.
+
+## P7-08 admin dashboard hardening (2026-10-30)
+Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening, based on feature/P7-08-admin-dashboard-owner-only (8ee01ad). Reused existing admin implementation; hardened admin overview metrics (registered/active users, registered/active devices, lifetime vs recurring payment counters); fixed user search pagination to avoid partial-record leakage; corrected admin role self-grant constraint for approved owner bootstrap; added Vitest component/API tests and Playwright read-only navigation; added migration 006 to DB workflow and pinned ubuntu-24.04. Verification: 130 Vitest tests passed; Playwright admin 3 passed; website typecheck and production build passed. Outstanding owner actions: approve exact admin account, perform controlled SQL bootstrap, verify preview deployment.
+
+## P7-08 final security corrections (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+SHA: a767cbfba8276fe176d740ebd2f8421660046c4b
+Changes: Edge Function authorization now requires role='owner'; emailsFor errors are propagated.
+Validation: Vitest 158 passed, Playwright 3 passed, typecheck/build passed, Deno check passed.
+Tests added: anonymous, admin-role, revoked-owner, owner-access, email-lookup-failure.
+No merge, deployment, bootstrap, or privilege grants performed.
+## P7-08 auth pagination verification (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+SHA: ed68eb85da0f37b81009e7c510af82bfabc60e83
+Changes: Mocked realistic Supabase auth pagination headers and added auth total/page assertions.
+Validation: Vitest 162 passed; typecheck/build passed; Deno check passed; Playwright 3 passed.
+No merge, deployment, bootstrap, or privileges changed.
+
+## P7-08 CodeRabbit follow-up fixes (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+Changes: disabled users pagination while loading; preserved zero/unavailable auth totals with exact-count fallback; neutral heading for non-authorization dashboard failures.
+Validation: website Vitest 162 passed; TypeScript passed.
+No merge, deployment, bootstrap, or privileges changed.
+
+
+## P7-08 CodeRabbit test mock findings (2026-10-30)
+PR: 38
+Branch: feature/P7-08-admin-dashboard-hardening
+Findings addressed:
+- A: /auth/v1/user mock now validates the Authorization header and returns 401 for missing/malformed/incorrect bearer tokens.
+- B: default Supabase Auth mock page size changed from 25 to 50; pagination remains explicitly per_page-driven.
+- C: mock Link headers now include rel=\"last\" on final/single/empty result sets and rel=\"next\" when another page exists.
+Changes: website/supabase/tests/admin_dashboard.test.ts
+Validation:
+- npm test -> 12 files, 167 tests passed, exit 0
+- npm run typecheck -> exit 0
+- npm run build -> exit 0
+- npx deno check supabase/functions/admin-dashboard/index.ts -> exit 0
+- coderabbit review --uncommitted --agent -> 0 findings
+Code commit: 3bd46bc5f27663fccf8e67f1647c2c20c408b7ba
+Push status: pushed to origin/feature/P7-08-admin-dashboard-hardening
+PR #38 remains open and unmerged; no deployment performed.

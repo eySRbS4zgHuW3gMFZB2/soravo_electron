@@ -727,3 +727,74 @@ Retained the runtime-isolated sole task checkout `repos/github.com/eysrbs4zghuw3
 - P6-03/P6-08 follow-up in isolated runtime checkout `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, assigned branch `coderabbit/bound-cancellation-and-update-audit/8e133da2`, base `10da4424140e30beb80ed5361a81f904c4d4da52`. Small sequential repair; no delegation. Skills: loaded `code-review`; Supabase/Postgres/security skills considered but unavailable in the declared repository-adjacent/session catalog. Root guidance and pack reading gate applied; additional knowledge-base guidance absent.
 - Validation: 31 checkout tests and all 95 website Vitest tests passed; website typecheck/build passed. The new stalled-provider test checks the deadline, HTTP 500, retained reservation and blocked retry. An initial global timer-count assertion counted unrelated Supabase SDK timers and was removed; the corrected suite passed. Manual diff/security inspection and whitespace checks passed. Exact inputs and commands are in external `workspace-context/validation-record.md`.
 - No schema, dependency version, provider configuration or production changes. Live cancellation and Deno deployment remain unverified. Checkout retained for review; no commit, push or integration performed. Rollback: revert this patch before deployment.
+
+## P7-08 owner-only admin dashboard (2026-10-30)
+Worktree .worktrees/P7-08-admin-dashboard-owner-only, branch feature/P7-08-admin-dashboard-owner-only, base 329316e. Implementation above. Owner bootstrap remains unperformed pending approval.
+
+## P7-08 admin dashboard hardening (2026-10-30)
+Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening, based on ffeature/P7-08-admin-dashboard-owner-only (8ee01ad). Reused existing admin dashboard. Added hardened overview metrics, robust admin user search pagination, approved owner self-grant constraint, Vitest and Playwright coverage, DB workflow update. Verification: 130 website Vitest tests passed; 3 Playwright admin tests passed; typecheck and build passed. Owner bootstrap and preview deployment remain pending owner approval.
+
+## P7-08 re-orientation / CI-ready state (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+SHA: 8cb006d1b8d91bef6013e0ad583d9e6eec10f9d9
+PR #38 state: OPEN, mergeable, not merged. GitHub checks: all required checks success at final SHA; CodeRabbit review in_progress.
+No merge, deployment, bootstrap, or privilege grants performed.
+
+## P7-08 admin dashboard follow-up (2026-10-30)
+Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening.
+Start SHA: 0ab690e10ace99fe5c2378ced2a16ef5f65a966f.
+End SHA: d828e4bef136693d8f665f8402183f06b4da4b0f.
+PR #38.
+Scope: Edge Function duplicate-device repair, fail-closed audit policy, search debouncing, typed admin API helper, pgTAP assertion repair, bootstrap documentation, Edge Function CI gate.
+Verification: 130 website Vitest tests passed; 3 Playwright admin tests passed; typecheck/build passed; Deno check passed.
+Remaining: GitHub Actions database verification, CodeRabbit findings, owner bootstrap and preview deployment.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:4474a8696de9975950b731b41e95cf707e36aa1ebdf3b8c0120fc3f264c2dbdd -->
+
+## P7-08 readiness repair round 1 — 2026-10-30
+
+- Expected/input head: `4052f9ba9c2d7dea88a9821aa198c2027f320a12`. Worktree: runtime-isolated `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, assigned branch `coderabbit/admin-dashboard-readiness-fixes/triage_r`; initially clean, sole registered named worktree. UI/client files delegated under exclusive file scope; integrated diff reread and tested by the parent.
+- Replaced capped overview row fetches with service-role-only SQL aggregate `admin_dashboard_overview()` in migration 007, preserving response fields, metric definitions, UTC day buckets, all-or-error handling and fail-closed audit writes. Apply 007 before deploying the updated Edge Function. CI now applies 007 and includes its pgTAP regression tests.
+- Removed the 5,000-account search ceiling, pages filtered display-name matches independently, preserves literal substring matching/deduplication, and checks profile-search failures. Enrichment remains limited to the selected page (maximum 50 IDs); search still enumerates Auth pages because the existing Auth admin list API has no email substring filter.
+- Added overview Retry and independent subscriptions/devices pagination with boundary controls. The audit-insert and anonymous-role findings were already repaired at the input head; existing fail-closed policy remains unchanged. Supplied walkthrough and Autofix status comments contain no additional actionable defect.
+- Fresh validation: 28 scoped handler/API/component tests passed; PostgreSQL 16 migration replay plus 29 admin aggregate/access pgTAP assertions passed; Deno 2.5.6 check, website typecheck/build, and 3 admin Playwright tests passed. Initial SQL fixture omitted required subscription plan_code; corrected before the passing run. Playwright emitted the existing Pages redirect-rule warning; selected admin Chromium tests passed. No repository-wide or desktop checks ran. Website typecheck/build are the narrowest declared package checks. Inputs/commands are in the external workspace validation record.
+- Skills: `code-review` loaded. Supabase/Postgres/security/React/Playwright skills were considered but unavailable in the declared adjacent path/session catalog; current repository conventions and direct security/access checks used. Knowledge-base locations absent. Manual integrated diff and security inspection completed.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:0800ec55965fb99240925f9bd4d2fc6916a24c5884d704acd5e609ddf48cec47 -->
+
+- Remote branch and PR head refreshed and still matched the expected head after validation. Required remote CI/review policy on the published repair remain unverified; no publication, comment mutation, deployment, bootstrap or provider data/configuration change performed. Host owns publication and final review-thread handling.
+
+## P7-08 readiness repair round 3 — 2026-10-30
+
+- Input head `ca48d47231a2ca76526a8fd9a9bc0adee5a29bcd`. Fixed the earlier worktree inventory, separated section reloads from overview retries, and cleared stale section errors on new requests.
+- Migration 008 adds a service-role-only search RPC. Matching remains literal, case-insensitive, deduplicated, and email-first; within each group it now uses creation time and ID for stable pagination, which can change page placement. Exact totals still require database-wide match counting. Apply migration 008 before the updated Edge Function.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:67aeb90d8407e3e0c9b3dcccd070b4111b29e2b65a89062df7830b2b4d2ade88 -->
+
+- Scoped verification: 32 handler/API/UI tests, PostgreSQL 16 migration replay and 132 database assertions, website typecheck/build, Deno check, and 3 admin Chromium tests passed.
+
+<!-- /coderabbit-ai-generated:v1 --> The first browser run required installation of Chromium; the passing rerun emitted the existing Pages redirect warning. No live Supabase integration or current-head remote CI/review policy was verified. Exact evidence is in `workspace-context/validation-record.md` outside Git.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+## 2026-10-30 � P7-08 CodeRabbit test mock findings
+
+- PR: 38
+- Branch: feature/P7-08-admin-dashboard-hardening
+- Findings:
+  - A bearer-token validation added to the Supabase Auth user mock.
+  - B mock default page size changed to 50.
+  - C Link headers include rel="last" for final/single/empty pages.
+- Files changed: website/supabase/tests/admin_dashboard.test.ts; progress.md
+- Validation: npm test (167 passed), typecheck 0, build 0, deno check 0, local CodeRabbit 0 findings.
+- Code commit: 3bd46bc5f27663fccf8e67f1647c2c20c408b7ba
+- Push status: pushed.
+- PR #38 remains open and unmerged; no deployment performed.
