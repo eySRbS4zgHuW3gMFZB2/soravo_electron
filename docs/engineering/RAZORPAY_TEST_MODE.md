@@ -76,3 +76,4 @@ No signed-in test account and no owner-controlled test-mode Razorpay flow was av
 - Finalize webhook payment atomic function (hosted database) was restored as an additive CREATE OR REPLACE migration via MCP.
 - Lifetime webhook event was reprocessed successfully; payment is captured and one lifetime entitlement exists.
 - Monthly create-order was previously 502; owner should retry and report provider response fields.
+Monthly currency blocker: USD recurring Razorpay plan returned BAD_REQUEST_ERROR Currency provided is not supported; await Razorpay support confirmation.
