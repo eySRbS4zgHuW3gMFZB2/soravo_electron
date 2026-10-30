@@ -97,6 +97,29 @@ test.describe("auth flows (mocked Supabase)", () => {
     await expect(page.getByRole("button", { name: /log in/i })).toBeVisible();
   });
 
+  test("expired confirmation feedback survives an expired stored session", async ({ page }) => {
+    let refreshAttempts = 0;
+    await page.addInitScript(() => {
+      localStorage.setItem("sb-placeholder-auth-token", JSON.stringify({
+        access_token: "synthetic-access-token",
+        refresh_token: "synthetic-refresh-token",
+        expires_at: 1,
+        expires_in: 3600,
+        token_type: "bearer",
+        user: { id: "synthetic-user" },
+      }));
+    });
+    await page.route(`${SUPABASE}/auth/v1/token*`, async (route) => {
+      if (route.request().method() !== "OPTIONS") refreshAttempts++;
+      await fulfillJson(route, 400, { error: "invalid_grant", error_description: "Invalid refresh token" });
+    });
+
+    await page.goto("/account#error=access_denied&error_code=otp_expired&error_description=Email%20link%20expired&type=signup");
+    await expect(page).toHaveURL(/\/login\?returnTo=%2Faccount$/);
+    await expect(page.getByRole("alert")).toHaveText("This link has expired. Request a new one and try again.");
+    expect(refreshAttempts).toBeGreaterThan(0);
+  });
+
   test("expired confirmation feedback survives the account redirect to login", async ({ page }) => {
     await page.goto("/account#error=access_denied&error_code=otp_expired&error_description=Email%20link%20expired&type=signup");
     await expect(page).toHaveURL(/\/login\?returnTo=%2Faccount$/);

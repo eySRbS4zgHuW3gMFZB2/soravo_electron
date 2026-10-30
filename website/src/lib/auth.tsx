@@ -64,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let restoringSession = true;
     // URL hints only keep verification pending; the recovery event supplies identity.
     const params = new URLSearchParams(window.location.hash.slice(1));
     new URLSearchParams(window.location.search).forEach((value, key) => params.set(key, value));
@@ -88,8 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === "SIGNED_OUT") {
         setPasswordRecoveryUserId(null);
         recoveryPending = false;
-        setAuthError(null);
-        setEmailConfirmationStatus("idle");
+        // A stale stored session can sign out while a failed link is being handled.
+        if (!restoringSession || !callback.errorCode) {
+          setAuthError(null);
+          setEmailConfirmationStatus("idle");
+        }
         try {
           window.sessionStorage.removeItem("soravo:password-recovery-user");
         } catch {
@@ -146,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Ignore storage failures.
         }
       } finally {
+        restoringSession = false;
         if (mounted && !recoveryPending) setLoading(false);
       }
     })();

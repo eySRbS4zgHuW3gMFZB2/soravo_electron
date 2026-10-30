@@ -163,6 +163,41 @@ describe("auth callback feedback", () => {
     expect(document.body.textContent).not.toContain("synthetic-private-value");
   });
 
+  it("preserves a failed link during expired session restoration and clears it on later sign-out", async () => {
+    window.history.replaceState(null, "", "/account#error=access_denied&error_description=expired%20synthetic-private-value&type=signup");
+    mockAuth.initialize.mockResolvedValue({ error: { message: "expired synthetic-private-value" } });
+    const emitSignOut = () => {
+      const [notify] = mockAuth.onAuthStateChange.mock.calls[0] as unknown as [(event: string, session: null) => void];
+      notify("SIGNED_OUT", null);
+    };
+    mockAuth.getSession.mockImplementation(async () => {
+      emitSignOut();
+      return { data: { session: null }, error: { message: "invalid refresh token" } };
+    });
+    function ConfirmationStatus() {
+      return <p role="status">{useAuth().emailConfirmationStatus}</p>;
+    }
+    render(
+      <MemoryRouter initialEntries={["/account"]}>
+        <AuthProvider>
+          <ConfirmationStatus />
+          <Routes>
+            <Route path="/account" element={<ProtectedRoute><p>Secret</p></ProtectedRoute>} />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole("heading", { name: "Log in" })).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toBe("This link has expired. Request a new one and try again.");
+    expect(screen.getByRole("status").textContent).toBe("failed");
+    expect(document.body.textContent).not.toContain("synthetic-private-value");
+    await act(async () => emitSignOut());
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("status").textContent).toBe("idle");
+  });
+
   it("shows sanitized callback errors on login after the protected account redirects", async () => {
     window.history.replaceState(null, "", "/account#error=access_denied&error_description=expired%20synthetic-private-value&type=signup");
     mockAuth.initialize.mockResolvedValue({ error: { message: "expired synthetic-private-value" } });

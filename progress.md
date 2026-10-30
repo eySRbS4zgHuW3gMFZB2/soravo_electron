@@ -1008,3 +1008,7 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - Updated redirect URLs to safe helper values; recovery uses same origin-aware construction.
 - Tests: website typecheck, build, unit tests 127 passed, Playwright auth tests 7 passed.
 - Dashboard action required: set Site URL to https://soravo.xyz and allowlist exact preview and production redirect URLs. No live email confirmation independently verified in this environment.
+
+## 2026-10-30 — Authentication callback feedback review
+
+Confirmed login already displays callback errors; fixed a session-restoration race where an expired stored session cleared that feedback. A regression test reproduced the wrong message before the repair. The focused auth/recovery unit tests and two mocked browser scenarios passed; website typecheck and the build invoked by the browser harness passed. See the handoff and external validation record for details.
