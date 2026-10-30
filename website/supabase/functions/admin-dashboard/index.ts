@@ -106,116 +106,13 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (action === "overview") {
-      const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const [
-        { count: totalUsers, error: totalUsersError },
-        { count: newUsers30d, error: newUsers30dError },
-        { count: activeDevices, error: activeDevicesError },
-        { count: totalDevices, error: totalDevicesError },
-        { data: entitlements, error: entitlementsError },
-        { data: payments, error: paymentsError },
-        { data: subscriptions, error: subscriptionsError },
-        { data: webhookEvents, error: webhookEventsError },
-        { data: profiles, error: profilesError },
-        { data: allDevices, error: allDevicesError },
-      ] = await Promise.all([
-        admin.from("profiles").select("user_id", { count: "exact", head: true }),
-        admin.from("profiles").select("user_id", { count: "exact", head: true }).gte("created_at", since30),
-        admin.from("devices").select("id", { count: "exact", head: true }).is("revoked_at", null),
-        admin.from("devices").select("id", { count: "exact", head: true }),
-        admin.from("entitlements").select("plan_code, status, lifetime"),
-        admin.from("payments").select("status, amount_minor, provider_subscription_id"),
-        admin.from("subscriptions").select("status"),
-        admin.from("webhook_events").select("processing_status"),
-        admin.from("profiles").select("created_at"),
-        admin.from("devices").select("user_id, revoked_at"),
-      ]);
-
-      if (
-        totalUsersError || newUsers30dError || activeDevicesError || totalDevicesError ||
-        entitlementsError || paymentsError || subscriptionsError || webhookEventsError ||
-        profilesError || allDevicesError
-      ) {
-        return json(500, { error: "Failed to load admin overview" });
-      }
-
-      const lifetimeEntitlements = (entitlements ?? []).filter(
-        (e: any) => e.lifetime === true || e.status === "lifetime_active"
-      ).length;
-      const monthlyEntitlements = (entitlements ?? []).filter(
-        (e: any) => e.plan_code === "monthly"
-      ).length;
-
-      let capturedTotal = 0;
-      let capturedCount = 0;
-      let failedPayments = 0;
-      let refundedPayments = 0;
-      let lifetimePaymentCount = 0;
-      let recurringPaymentCount = 0;
-      let lifetimePaymentTotalMinor = 0;
-      let recurringPaymentTotalMinor = 0;
-      for (const p of payments ?? []) {
-        if (p.status === "captured") {
-          capturedTotal += Number(p.amount_minor ?? 0);
-          capturedCount += 1;
-          if (p.provider_subscription_id) {
-            recurringPaymentCount += 1;
-            recurringPaymentTotalMinor += Number(p.amount_minor ?? 0);
-          } else {
-            lifetimePaymentCount += 1;
-            lifetimePaymentTotalMinor += Number(p.amount_minor ?? 0);
-          }
-        } else if (p.status === "failed") failedPayments += 1;
-        else if (p.status === "refunded") refundedPayments += 1;
-      }
-
-      const activeUserIds = new Set((allDevices ?? []).filter((d: any) => d.revoked_at === null).map((d: any) => d.user_id));
-
-      const subscriptionBreakdown: Record<string, number> = {};
-      for (const s of subscriptions ?? []) {
-        subscriptionBreakdown[s.status] = (subscriptionBreakdown[s.status] ?? 0) + 1;
-      }
-
-      const webhookBreakdown: Record<string, number> = {};
-      for (const w of webhookEvents ?? []) {
-        webhookBreakdown[w.processing_status] = (webhookBreakdown[w.processing_status] ?? 0) + 1;
-      }
-
-      const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
-      const dayCounts = new Map<string, number>();
-      for (const p of profiles ?? []) {
-        const t = new Date(p.created_at).getTime();
-        if (t < fourteenDaysAgo) continue;
-        const key = new Date(p.created_at).toISOString().slice(0, 10);
-        dayCounts.set(key, (dayCounts.get(key) ?? 0) + 1);
-      }
-      const newUsersByDay = Array.from(dayCounts.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, count]) => ({ date, count }));
+      // Aggregate in PostgreSQL so PostgREST's row limit cannot truncate metrics.
+      // Overview is atomic: any query failure returns an error, never partial zeros.
+      const { data: overview, error } = await admin.rpc("admin_dashboard_overview");
+      if (error || !overview) return json(500, { error: "Failed to load admin overview" });
 
       await audit(admin, user.id, "admin.overview.read", {});
-
-      return json(200, {
-        totalUsers: totalUsers ?? 0,
-        newUsers30d: newUsers30d ?? 0,
-        activeUsers: activeUserIds.size,
-        activeDevices: activeDevices ?? 0,
-        totalDevices: totalDevices ?? 0,
-        lifetimeEntitlements,
-        monthlyEntitlements,
-        paymentTotalMinor: capturedTotal,
-        capturedPayments: capturedCount,
-        failedPayments,
-        refundedPayments,
-        totalPayments: (payments ?? []).length,
-        lifetimePaymentCount,
-        recurringPaymentCount,
-        lifetimePaymentTotalMinor,
-        recurringPaymentTotalMinor,
-        subscriptionBreakdown,
-        webhookBreakdown,
-        newUsersByDay,
-      });
+      return json(200, overview);
     }
 
     if (action === "users") {
@@ -228,9 +125,8 @@ Deno.serve(async (req: Request) => {
       let allAuthUsers: any[] = [];
       let authTotal: number | null = null;
       if (q) {
-        const maxUsers = 5000;
         const perPage = 1000;
-        for (let authPage = 1; authPage <= Math.ceil(maxUsers / perPage); authPage++) {
+        for (let authPage = 1; ; authPage++) {
           const { data: usersResult, error: usersError } = await admin.auth.admin.listUsers({
             page: authPage,
             perPage,
@@ -239,7 +135,6 @@ Deno.serve(async (req: Request) => {
           const batch = usersResult?.users ?? [];
           allAuthUsers = allAuthUsers.concat(batch);
           if (batch.length < perPage) break;
-          if (allAuthUsers.length >= maxUsers) break;
         }
       } else {
         const { data: usersResult, error: usersError } = await admin.auth.admin.listUsers({
@@ -255,21 +150,34 @@ Deno.serve(async (req: Request) => {
         ? allAuthUsers.filter((u: any) => (u.email ?? "").toLowerCase().includes(q))
         : allAuthUsers;
 
-      // Give profile display names a chance to match before enrichment too.
-      if (q && allAuthUsers.length > 0) {
-        const profileIds = allAuthUsers.map((u: any) => u.id);
-        const { data: profileRows } = await admin.from("profiles").select("user_id, display_name").in("user_id", profileIds);
-        const profileNameMap = new Map((profileRows ?? []).map((p: any) => [p.user_id, p.display_name ?? ""]));
-        matchingAuthUsers = matchingAuthUsers.filter((u: any) => true) || matchingAuthUsers;
-        const nameMatching = allAuthUsers.filter((u: any) =>
-          (profileNameMap.get(u.id) ?? "").toLowerCase().includes(q)
-        );
-        matchingAuthUsers = [
-          ...new Set([
-            ...matchingAuthUsers.map((u: any) => u.id),
-            ...nameMatching.map((u: any) => u.id),
-          ]),
-        ].map((id) => allAuthUsers.find((u: any) => u.id === id)).filter(Boolean);
+      // Search names independently; never put all auth IDs into a GET URL.
+      // Escape LIKE metacharacters to preserve literal substring search semantics.
+      if (q) {
+        const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+        const nameMatchingIds = new Set<string>();
+        const batchSize = 1000;
+        for (let offset = 0; ; ) {
+          const { data: profileRows, error: profilesError } = await admin.from("profiles")
+            .select("user_id, display_name")
+            .ilike("display_name", pattern)
+            .order("user_id")
+            .range(offset, offset + batchSize - 1);
+          if (profilesError) return json(500, { error: "Failed to search user profiles" });
+          if (!profileRows?.length) break;
+          // PostgREST also treats '*' as a LIKE wildcard. Keep the original
+          // literal, case-insensitive substring contract when merging matches.
+          for (const profile of profileRows) {
+            if ((profile.display_name ?? "").toLowerCase().includes(q)) {
+              nameMatchingIds.add(profile.user_id);
+            }
+          }
+          // Advance by returned rows even if the server's cap is below batchSize.
+          offset += profileRows.length;
+        }
+        const matchingIds = new Set(matchingAuthUsers.map((u: any) => u.id));
+        matchingAuthUsers = matchingAuthUsers.concat(allAuthUsers.filter((u: any) =>
+          nameMatchingIds.has(u.id) && !matchingIds.has(u.id)
+        ));
       }
 
       const total = matchingAuthUsers.length;

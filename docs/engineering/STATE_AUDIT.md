@@ -63,3 +63,19 @@
 - CONFIRMED: clean task commit `96a7866` and remote head `147fd3377295ff7df7009c088d3d8dea4d52f24a` diverged from `74ec17e`; user requested a merge commit with both changes preserved and no push. Runtime checkout now holds `feature/razorpay-recurring-sandbox`, sole registered worktree.
 - CONFIRMED: resolved all eight conflicting paths; retained both documentation histories and remote PricingPage cleanup. Atomic checkout/event migration is now 005, after remote 004's pending/resumed uniqueness upgrade. Both source and test contracts were integrated, including stale-capture paid-period enrichment without status resurrection.
 - CONFIRMED: merged website typecheck/build and 85 tests passed; fresh-install and original-index upgrade paths passed 87 SQL assertions each. Upgrade rollback on duplicate billable data and overlapping checkout/cancellation transactions were verified with synthetic fixtures. PostgreSQL 18.6 was exercised; CI remains PostgreSQL 16. No live services or secrets used, and no remote CI result is claimed.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:746787153074da2d3da4cab7171b9354172893c02d51ee6a1953e4851d968562 -->
+
+## P7-08 readiness repair round 1 — 2026-10-30
+
+- CONFIRMED: expected head `4052f9ba9c2d7dea88a9821aa198c2027f320a12`; origin is the active `eySRbS4zgHuW3gMFZB2/soravo_electron` repository. Assigned runtime checkout/branch `coderabbit/admin-dashboard-readiness-fixes/triage_r` was initially clean, sole registered named worktree. No merge/rebase was started. Branch/PR remote heads still matched after local validation.
+- CONFIRMED: audit insert checks and anon pgTAP permission assertion already exist. Fail-closed audit behavior is documented in the helper and bootstrap runbook, so it was preserved. Overview truncation, search ceiling/profile lookup handling, missing overview Retry and absent subscriptions/devices navigation were applicable and repaired.
+- CONFIRMED: migration 007 returns one JSON aggregate under a fixed empty search_path, grants EXECUTE only to service_role, and preserves metric definitions/response fields. 1,005-row synthetic fixtures validate complete counts/breakdowns, distinct active users, payment sums above 32-bit range, empty aggregates, UTC signup buckets and anon/authenticated denial. Creation and privileges commit atomically.
+- CONFIRMED: actual handler/query-builder tests validate search after account 5,000, name-result pagination under a smaller server cap, deduplication, literal wildcard handling, page-only enrichment, failure responses and fail-closed audit writes. UI/API tests validate retry recovery and subscriptions/devices first/last/back navigation.
+- VALIDATION: 28 scoped handler/API/component tests, 29 admin pgTAP assertions with full prerequisite migration replay, Deno check, website package typecheck/build and 3 admin Chromium browser tests passed. Initial new SQL fixture failed for omitted required plan_code; corrected and rerun successfully. Existing Pages redirect warning observed. No repository-wide verification selected; other website/desktop/billing suites were outside the affected scope. No prior validation record was available to reuse.
+- LIMITATIONS: search still enumerates all Auth pages; live Supabase deployment/provider integration and required CI/review policy on a published repair were not exercised. Migration 007 must precede the updated Edge Function. Manual integrated diff and security inspection completed. Host publishes; no push, comment/thread changes, approval, merge, deployment or external state mutation occurred. See external workspace validation record for exact inputs and commands.
+
+
+<!-- /coderabbit-ai-generated:v1 -->

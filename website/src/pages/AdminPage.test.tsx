@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AdminPage } from "./AdminPage";
 
@@ -51,6 +51,8 @@ const OVERVIEW_FIXTURE = {
 };
 
 describe("AdminPage", () => {
+  afterEach(cleanup);
+
   beforeEach(() => {
     vi.resetAllMocks();
     mockSignOut.mockResolvedValue(undefined);
@@ -112,5 +114,66 @@ describe("AdminPage", () => {
     const usersButton = screen.getAllByRole("button").find((btn) => btn.textContent?.trim().toLowerCase() === "users");
     fireEvent.click(usersButton!);
     await screen.findByText("person@example.com");
+  });
+
+  it("retries a failed overview request and restores the dashboard", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "admin-1" }, loading: false, signOut: mockSignOut });
+    mockOverview.mockRejectedValueOnce(new Error("Failed to load overview")).mockResolvedValue(OVERVIEW_FIXTURE);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText("Failed to load overview");
+    expect(screen.getByRole("link", { name: "Back to account" }).getAttribute("href")).toBe("/account");
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    await screen.findByText("Registered users");
+    expect(mockOverview).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Failed to load overview")).toBeNull();
+  });
+
+  it.each([
+    { section: "subscriptions", request: mockSubscriptions },
+    { section: "devices", request: mockDevices },
+  ])("navigates $section pages and respects the first and last page", async ({ section, request }) => {
+    mockUseAuth.mockReturnValue({ user: { id: "admin-1" }, loading: false, signOut: mockSignOut });
+    mockOverview.mockResolvedValue(OVERVIEW_FIXTURE);
+    request.mockImplementation(async (page: number, pageSize: number) => ({
+      [section]: [{
+        id: `row-${page}`,
+        userEmail: `page-${page}@example.com`,
+        status: "active",
+        device_id: `device-${page}`,
+        last_seen_at: "2026-10-01T00:00:00.000Z",
+      }],
+      page,
+      pageSize,
+      total: 26,
+    }));
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText("Registered users");
+    fireEvent.click(screen.getByRole("button", { name: section }));
+    await screen.findByText(/page-1@example.com/);
+    expect(request).toHaveBeenLastCalledWith(1, 25);
+    expect((screen.getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByText(/page-2@example.com/);
+    expect(request).toHaveBeenLastCalledWith(2, 25);
+    expect((screen.getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+    await screen.findByText(/page-1@example.com/);
+    expect(request).toHaveBeenLastCalledWith(1, 25);
+    expect((screen.getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

@@ -208,12 +208,12 @@ export async function fetchAdminPayments(page = 1, pageSize = 25): Promise<any> 
   return adminRequest<any>("payments", { page, pageSize });
 }
 
-export async function fetchAdminSubscriptions(): Promise<any> {
-  return adminRequest<any>("subscriptions");
+export async function fetchAdminSubscriptions(page = 1, pageSize = 25): Promise<any> {
+  return adminRequest<any>("subscriptions", { page, pageSize });
 }
 
-export async function fetchAdminDevices(): Promise<any> {
-  return adminRequest<any>("devices");
+export async function fetchAdminDevices(page = 1, pageSize = 25): Promise<any> {
+  return adminRequest<any>("devices", { page, pageSize });
 }
 
 export async function fetchAdminAudit(page = 1, pageSize = 25): Promise<any> {

@@ -742,3 +742,21 @@ PR #38.
 Scope: Edge Function duplicate-device repair, fail-closed audit policy, search debouncing, typed admin API helper, pgTAP assertion repair, bootstrap documentation, Edge Function CI gate.
 Verification: 130 website Vitest tests passed; 3 Playwright admin tests passed; typecheck/build passed; Deno check passed.
 Remaining: GitHub Actions database verification, CodeRabbit findings, owner bootstrap and preview deployment.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:4474a8696de9975950b731b41e95cf707e36aa1ebdf3b8c0120fc3f264c2dbdd -->
+
+## P7-08 readiness repair round 1 — 2026-10-30
+
+- Expected/input head: `4052f9ba9c2d7dea88a9821aa198c2027f320a12`. Worktree: runtime-isolated `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, assigned branch `coderabbit/admin-dashboard-readiness-fixes/triage_r`; initially clean, sole registered named worktree. UI/client files delegated under exclusive file scope; integrated diff reread and tested by the parent.
+- Replaced capped overview row fetches with service-role-only SQL aggregate `admin_dashboard_overview()` in migration 007, preserving response fields, metric definitions, UTC day buckets, all-or-error handling and fail-closed audit writes. Apply 007 before deploying the updated Edge Function. CI now applies 007 and includes its pgTAP regression tests.
+- Removed the 5,000-account search ceiling, pages filtered display-name matches independently, preserves literal substring matching/deduplication, and checks profile-search failures. Enrichment remains limited to the selected page (maximum 50 IDs); search still enumerates Auth pages because the existing Auth admin list API has no email substring filter.
+- Added overview Retry and independent subscriptions/devices pagination with boundary controls. The audit-insert and anonymous-role findings were already repaired at the input head; existing fail-closed policy remains unchanged. Supplied walkthrough and Autofix status comments contain no additional actionable defect.
+- Fresh validation: 28 scoped handler/API/component tests passed; PostgreSQL 16 migration replay plus 29 admin aggregate/access pgTAP assertions passed; Deno 2.5.6 check, website typecheck/build, and 3 admin Playwright tests passed. Initial SQL fixture omitted required subscription plan_code; corrected before the passing run. Playwright emitted the existing Pages redirect-rule warning; selected admin Chromium tests passed. No repository-wide or desktop checks ran. Website typecheck/build are the narrowest declared package checks. Inputs/commands are in the external workspace validation record.
+- Skills: `code-review` loaded. Supabase/Postgres/security/React/Playwright skills were considered but unavailable in the declared adjacent path/session catalog; current repository conventions and direct security/access checks used. Knowledge-base locations absent. Manual integrated diff and security inspection completed.
+
+- Remote branch and PR head refreshed and still matched the expected head after validation. Required remote CI/review policy on the published repair remain unverified; no publication, comment mutation, deployment, bootstrap or provider data/configuration change performed. Host owns publication and final review-thread handling.
+
+
+<!-- /coderabbit-ai-generated:v1 -->

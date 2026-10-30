@@ -76,4 +76,22 @@ describe("Admin API helpers", () => {
     const [, init] = mockFetch.mock.calls[0];
     expect(JSON.stringify(init)).not.toMatch(/service.?role/i);
   });
+
+  it.each([
+    { action: "subscriptions", request: fetchAdminSubscriptions },
+    { action: "devices", request: fetchAdminDevices },
+  ])("sends pagination for $action", async ({ action, request }) => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+    await request(2, 10);
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.objectContaining({ body: JSON.stringify({ action, page: 2, pageSize: 10 }) })
+    );
+
+    await request();
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.objectContaining({ body: JSON.stringify({ action, page: 1, pageSize: 25 }) })
+    );
+  });
 });

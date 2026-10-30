@@ -77,6 +77,9 @@ jobs:
       - name: Apply admin roles migration
         run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/006_admin_roles_and_safe_profile_updates.sql
 
+      - name: Apply admin overview aggregation migration
+        run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/007_admin_dashboard_overview.sql
+
       - name: Run pgTAP SQL tests
         run: |
            pg_prove \
@@ -84,4 +87,5 @@ jobs:
             website/supabase/tests/webhook_claim_idempotency.test.sql \
             website/supabase/tests/webhook_finalize_atomic.test.sql \
             website/supabase/tests/subscription_guards.test.sql \
-            website/supabase/tests/admin_role_rls.test.sql
+            website/supabase/tests/admin_role_rls.test.sql \
+            website/supabase/tests/admin_dashboard_overview.test.sql

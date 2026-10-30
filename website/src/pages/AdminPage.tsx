@@ -30,6 +30,8 @@ export function AdminPage() {
   const [usersSearchDraft, setUsersSearchDraft] = useState("");
   const [debouncedUsersQuery, setDebouncedUsersQuery] = useState("");
   const [paymentsPage, setPaymentsPage] = useState(1);
+  const [subscriptionsPage, setSubscriptionsPage] = useState(1);
+  const [devicesPage, setDevicesPage] = useState(1);
   const [auditPage, setAuditPage] = useState(1);
   const [sectionError, setSectionError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
@@ -80,10 +82,10 @@ export function AdminPage() {
           const data = await fetchAdminPayments(paymentsPage, 25);
           if (!cancelled) setPaymentsData(data);
         } else if (section === "subscriptions") {
-          const data = await fetchAdminSubscriptions();
+          const data = await fetchAdminSubscriptions(subscriptionsPage, 25);
           if (!cancelled) setSubscriptionsData(data);
         } else if (section === "devices") {
-          const data = await fetchAdminDevices();
+          const data = await fetchAdminDevices(devicesPage, 25);
           if (!cancelled) setDevicesData(data);
         } else if (section === "audit") {
           const data = await fetchAdminAudit(auditPage, 25);
@@ -96,7 +98,7 @@ export function AdminPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [section, authLoading, user, usersPage, usersQuery, paymentsPage, auditPage, error, retryNonce]);
+  }, [section, authLoading, user, usersPage, usersQuery, paymentsPage, subscriptionsPage, devicesPage, auditPage, error, retryNonce]);
 
   if (authLoading) return <p className="p-8 text-muted">Loading...</p>;
   if (!user) return <p className="p-8 text-muted">Please log in.</p>;
@@ -107,6 +109,13 @@ export function AdminPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-ink">Admin access denied</h1>
           <p className="mt-3 text-muted">{error}</p>
+          <button
+            type="button"
+            onClick={() => setRetryNonce((n) => n + 1)}
+            className="mt-6 rounded-full border border-ink/20 px-6 py-3 font-semibold text-ink"
+          >
+            Retry
+          </button>
           <Link to="/account" className="mt-6 inline-block rounded-full bg-ink px-6 py-3 font-semibold text-lime">
             Back to account
           </Link>
@@ -303,6 +312,24 @@ export function AdminPage() {
                 </li>
               ))}
             </ul>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                disabled={subscriptionsPage <= 1}
+                onClick={() => setSubscriptionsPage((p) => Math.max(1, p - 1))}
+                className="rounded border border-ink/20 px-3 py-1 text-sm"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={subscriptionsPage * 25 >= (subscriptionsData.total ?? 0)}
+                onClick={() => setSubscriptionsPage((p) => p + 1)}
+                className="rounded border border-ink/20 px-3 py-1 text-sm"
+              >
+                Next
+              </button>
+            </div>
           </section>
         )}
 
@@ -315,6 +342,24 @@ export function AdminPage() {
                 </li>
               ))}
             </ul>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                disabled={devicesPage <= 1}
+                onClick={() => setDevicesPage((p) => Math.max(1, p - 1))}
+                className="rounded border border-ink/20 px-3 py-1 text-sm"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={devicesPage * 25 >= (devicesData.total ?? 0)}
+                onClick={() => setDevicesPage((p) => p + 1)}
+                className="rounded border border-ink/20 px-3 py-1 text-sm"
+              >
+                Next
+              </button>
+            </div>
           </section>
         )}
 
