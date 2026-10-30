@@ -1017,3 +1017,46 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - Changes: moved Cloudflare API token out of the job-level environment so install/build/test steps do not receive it; added a final rebuild with repository VITE_* variables immediately before Wrangler upload; kept routing tests as the bounded test build.
 - Verification: website typecheck passed; npm test passed (121 tests); Playwright routing tests passed (36); simulated deployment rebuild contained configured Supabase values and no placeholder values.
 - CodeRabbit: fixed deployment-artifact finding via post-test rebuild; previous minor progress heading spacing finding addressed.
+
+## 2026-10-30 - Payment, authentication, and release review state
+
+### Razorpay
+- Owner-operated Razorpay Test Mode evidence: the $50.00 USD lifetime order is Paid and the corresponding $50.00 USD payment is Captured.
+- This confirms the one-time USD order/payment flow only.
+- Monthly checkout fails during recurring plan creation with HTTP 400, `BAD_REQUEST_ERROR`, `Currency provided is not supported`.
+- No monthly subscription/payment is created by that failed request.
+- Razorpay documentation indicates international recurring card payments can support international currencies for eligible accounts. UPI and eMandate are INR-only.
+- The precise account-level cause is not yet confirmed. Do not state that USD subscriptions are universally unsupported.
+- Action required: Razorpay must confirm international recurring-card activation, Test Mode eligibility, and supported currencies for this merchant account.
+- Preserve the existing $12/month pricing until the owner approves a change.
+
+### Payment protections
+- PR #34 documents entitlement-aware pricing and server-side lifetime checkout guards.
+- Implemented: lifetime and monthly duplicate-purchase guards, client-side PricingPage gating, and server-side `create-order` entitlement checks.
+- Implemented: fail-closed entitlement loading; entitlement-load failures return 500 and block checkout rather than proceeding.
+- Tested (OpenCode-reported, not owner-operated payment evidence): PricingPage test suite 7/7 passed; website test suite 145/145 passed; website typecheck passed.
+- Distinguish evidence: owner-operated Razorpay dashboard confirmation of Paid order and Captured payment is separate from repository test results.
+- PR #34 remains open and unmerged; current CodeRabbit findings still need review, including the monthly-checkout/revoked-lifetime contract question recorded in review thread.
+- Refund webhook processing and entitlement revocation remain outstanding before public launch.
+
+### Authentication
+- PR #35, branch `feature/auth-redirects-followup`, reported commit `8e51002` and later review activity; latest locally verified head `0b2477a`.
+- Reported (owner/OpenCode): typecheck and production build pass, 31/31 auth unit tests pass, and 8/8 auth Playwright tests pass.
+- Locally verified in this review: website typecheck and production build pass; website suite 147/147; auth Playwright suite 8/8.
+- Supabase Site URL and redirect allowlist configuration remain owner dashboard actions.
+- PR #32 remains open and is superseded in purpose by focused PR #35.
+- Latest CodeRabbit review findings on PR #35 were addressed in the follow-up push; callback credential cleanup now preserves existing React Router history state. PR #35 remains open and unmerged.
+
+### Resend
+- Resend SMTP is not configured yet.
+- `mail.soravo.xyz` still needs Resend verification and the exact provider-supplied DNS records.
+- Preserve the root-domain Zoho MX, SPF, and DKIM records.
+- Supabase custom SMTP configuration and a real confirmation-email delivery test remain outstanding.
+
+### Release blockers
+- Razorpay confirmation of international recurring-card eligibility and supported currency for this merchant account.
+- PR #34 and PR #35 review findings, CI, and merge gates.
+- Supabase dashboard Site URL and redirect allowlist configuration, plus an actual confirmation-link test.
+- Resend domain verification and SMTP delivery test.
+- Refund webhook processing and entitlement revocation before public launch.
+- No deployment or PR merge has been performed or claimed.
