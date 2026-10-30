@@ -136,6 +136,9 @@ export async function createOrder(planCode: PlanCode): Promise<CreateOrderResult
 /**
  * Read the signed-in user's entitlements through RLS.
  */
+
+const SUPABASE_FUNCTIONS = `${SUPABASE_URL}/functions/v1`;
+
 export async function listEntitlements(): Promise<
   { plan_code: string; status: string; lifetime: boolean; subscription_period_end: string | null }[]
 > {
@@ -149,4 +152,98 @@ export async function listEntitlements(): Promise<
 
   if (error) throw error;
   return data ?? [];
+}
+
+export interface AdminOverview {
+  totalUsers: number;
+  newUsers30d: number;
+  activeDevices: number;
+  lifetimeEntitlements: number;
+  monthlyEntitlements: number;
+  paymentTotalMinor: number;
+  capturedPayments: number;
+  failedPayments: number;
+  refundedPayments: number;
+  totalPayments: number;
+  subscriptionBreakdown: Record<string, number>;
+  webhookBreakdown: Record<string, number>;
+  newUsersByDay: { date: string; count: number }[];
+}
+
+export async function fetchAdminOverview(): Promise<AdminOverview> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+  const response = await fetch(`${SUPABASE_FUNCTIONS}/admin-dashboard`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ action: "overview" }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error ?? "Admin access denied");
+  return data;
+}
+
+export async function fetchAdminUsers(page = 1, pageSize = 25, q = ""): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+  const response = await fetch(`${SUPABASE_FUNCTIONS}/admin-dashboard`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ action: "users", page, pageSize, q }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error ?? "Admin access denied");
+  return data;
+}
+
+export async function fetchAdminPayments(page = 1, pageSize = 25): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+  const response = await fetch(`${SUPABASE_FUNCTIONS}/admin-dashboard`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ action: "payments", page, pageSize }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error ?? "Admin access denied");
+  return data;
+}
+
+export async function fetchAdminSubscriptions(): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+  const response = await fetch(`${SUPABASE_FUNCTIONS}/admin-dashboard`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ action: "subscriptions" }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error ?? "Admin access denied");
+  return data;
+}
+
+export async function fetchAdminDevices(): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+  const response = await fetch(`${SUPABASE_FUNCTIONS}/admin-dashboard`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ action: "devices" }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error ?? "Admin access denied");
+  return data;
+}
+
+export async function fetchAdminAudit(page = 1, pageSize = 25): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+  const response = await fetch(`${SUPABASE_FUNCTIONS}/admin-dashboard`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ action: "audit", page, pageSize }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error ?? "Admin access denied");
+  return data;
 }

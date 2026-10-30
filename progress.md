@@ -1017,3 +1017,6 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - Changes: moved Cloudflare API token out of the job-level environment so install/build/test steps do not receive it; added a final rebuild with repository VITE_* variables immediately before Wrangler upload; kept routing tests as the bounded test build.
 - Verification: website typecheck passed; npm test passed (121 tests); Playwright routing tests passed (36); simulated deployment rebuild contained configured Supabase values and no placeholder values.
 - CodeRabbit: fixed deployment-artifact finding via post-test rebuild; previous minor progress heading spacing finding addressed.
+
+## P7-08 owner-only admin dashboard
+P7-08 branch feature/P7-08-admin-dashboard-owner-only created from origin/main 329316e. Adds migration 006 admin_users with service-only access; protects profile updates; Edge Function admin-dashboard (server-side admin role check + audited reads); /admin React page with overview, users, payments, subscriptions, devices, audit tabs; tests and docs. Preview URL to be provided by deployment; no production changes.
