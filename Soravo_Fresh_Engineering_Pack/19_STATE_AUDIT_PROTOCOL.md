@@ -93,7 +93,18 @@ Cancellation deadline/guideline audit follow-up (2026-10-27): isolated runtime b
 
 ## 2026-10-30 — P7-08 readiness repair round 1
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:16de02ff72474c60eaa549487146019dd5ccabb6ce1558a778217fc152c6de5b -->
+
 Confirmed expected head `4052f9ba9c2d7dea88a9821aa198c2027f320a12`, clean initial state and sole named runtime-isolated checkout on `coderabbit/admin-dashboard-readiness-fixes/triage_r`. Scoped admin aggregate/search/retry/pagination repairs preserve authorization and fail-closed audit policy. Fresh 28 handler/API/UI tests, 29 pgTAP assertions after migration replay, Deno check, website typecheck/build and 3 admin browser tests passed. Exact commands, input hashes, initial fixture correction and outstanding review/remote-CI limitations are in `workspace-context/validation-record.md` outside Git. No integration, push or provider mutation performed. Detailed audit appended to `docs/engineering/STATE_AUDIT.md`.
+
+## 2026-10-30 — P7-08 readiness repair round 3
+
+Sole registered worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `feature/P7-08-admin-dashboard-hardening`, base `ca48d47231a2ca76526a8fd9a9bc0adee5a29bcd`; initially 0 uncommitted files; no configured upstream. Initial build-output size is unknown; `website/dist` measured 475795 bytes after the local build. Findings, scoped verification, migration order and limitations are in the matching handoff and external validation record. No integration, push or provider mutation performed.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 
 <!-- /coderabbit-ai-generated:v1 -->

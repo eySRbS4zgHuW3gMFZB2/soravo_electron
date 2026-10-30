@@ -11,9 +11,8 @@ let failure: string | null;
 let auditFailed: boolean;
 let overviewThrows: boolean;
 let authPages: number[];
-let profileOffsets: number[];
+let searchCalls: { search_text: string; page_number: number; page_size: number }[];
 let enrichmentIds: string[][];
-let searchPatterns: string[];
 let auditWrites: number;
 const overview = { totalUsers: 6005, activeUsers: 1005, paymentTotalMinor: 3015001250 };
 
@@ -33,13 +32,17 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     if (failure === "auth") return Response.json({ msg: "Synthetic failure" }, { status: 400 });
     return Response.json({ users: users.slice((page - 1) * perPage, page * perPage) });
   }
-  if (table === "profiles" && url.searchParams.has("display_name")) {
-    const offset = Number(url.searchParams.get("offset"));
-    profileOffsets.push(offset);
-    searchPatterns.push(url.searchParams.get("display_name")!);
+  if (url.pathname.endsWith("/rpc/admin_dashboard_search_users")) {
+    const args = JSON.parse(String(init?.body));
+    searchCalls.push(args);
     if (failure === "search") return Response.json({ message: "Synthetic failure" }, { status: 500 });
-    // Deliberately cap below the requested batch to exercise continued paging.
-    return Response.json(nameIds.slice(offset, offset + 600).map((user_id) => ({ user_id, display_name: displayName })));
+    const emailMatches = users.filter((user) => user.email.toLowerCase().includes(args.search_text));
+    const emailIds = new Set(emailMatches.map((user) => user.id));
+    const matches = emailMatches.concat(users.filter((user) =>
+      nameIds.includes(user.id) && displayName.toLowerCase().includes(args.search_text) && !emailIds.has(user.id)
+    ));
+    const offset = (args.page_number - 1) * args.page_size;
+    return Response.json({ total: matches.length, users: matches.slice(offset, offset + args.page_size) });
   }
   if (table === "admin_audit_events") {
     auditWrites++;
@@ -75,9 +78,8 @@ beforeEach(() => {
   auditFailed = false;
   overviewThrows = false;
   authPages = [];
-  profileOffsets = [];
+  searchCalls = [];
   enrichmentIds = [];
-  searchPatterns = [];
   auditWrites = 0;
   vi.stubGlobal("fetch", vi.fn(fakeFetch));
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -107,16 +109,24 @@ describe("admin dashboard handler", () => {
     expect(console.error).toHaveBeenCalled();
   });
 
+  it("fails closed when auditing a searched user page fails", async () => {
+    auditFailed = true;
+    const response = await request({ action: "users", q: "person-6004" });
+    expect(response.status).toBe(500);
+    expect(auditWrites).toBe(1);
+  });
+
   it("finds email matches beyond 5000 accounts", async () => {
     const response = await request({ action: "users", q: "PERSON-6004" });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ total: 1, users: [{ userId: "user-6004" }] });
-    expect(authPages).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(authPages).toEqual([]);
+    expect(searchCalls).toEqual([{ search_text: "person-6004", page_number: 1, page_size: 25 }]);
     expect(enrichmentIds).toHaveLength(4);
     expect(enrichmentIds.every((ids) => ids.join() === "user-6004")).toBe(true);
   });
 
-  it("merges email and paged name matches without duplicates, then enriches only the requested page", async () => {
+  it("returns email and name matches without duplicates, then enriches only the requested page", async () => {
     nameIds = users.slice(4800).map((u) => u.id);
     users[4800].email = "needle@example.invalid";
     const response = await request({ action: "users", q: "needle", page: 49, pageSize: 25 });
@@ -124,13 +134,14 @@ describe("admin dashboard handler", () => {
     expect(response.status).toBe(200);
     expect(data.total).toBe(1205);
     expect(data.users.map((u: { userId: string }) => u.userId)).toEqual(users.slice(6000).map((u) => u.id));
-    expect(profileOffsets).toEqual([0, 600, 1200, 1205]);
+    expect(authPages).toEqual([]);
+    expect(searchCalls).toEqual([{ search_text: "needle", page_number: 49, page_size: 25 }]);
     expect(enrichmentIds.every((ids) => ids.length === 5)).toBe(true);
   });
 
   it("treats LIKE wildcard characters as literal search text", async () => {
     expect((await request({ action: "users", q: "  50%_\\off  " })).status).toBe(200);
-    expect(searchPatterns).toEqual(["ilike.%50\\%\\_\\\\off%"]);
+    expect(searchCalls).toEqual([{ search_text: "50%_\\off", page_number: 1, page_size: 25 }]);
     expect(enrichmentIds).toEqual([]);
   });
 
@@ -145,7 +156,7 @@ describe("admin dashboard handler", () => {
 
   it.each(["auth", "search", "profiles", "entitlements", "payments", "devices"])("returns 500 on %s lookup failure", async (source) => {
     failure = source;
-    const response = await request({ action: "users", q: "person-6004" });
+    const response = await request({ action: "users", q: source === "auth" ? "" : "person-6004" });
     expect(response.status).toBe(500);
     expect(auditWrites).toBe(0);
   });

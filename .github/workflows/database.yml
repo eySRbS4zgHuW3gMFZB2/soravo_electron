@@ -80,6 +80,9 @@ jobs:
       - name: Apply admin overview aggregation migration
         run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/007_admin_dashboard_overview.sql
 
+      - name: Apply admin user search migration
+        run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/008_admin_user_search.sql
+
       - name: Run pgTAP SQL tests
         run: |
            pg_prove \
@@ -88,4 +91,5 @@ jobs:
             website/supabase/tests/webhook_finalize_atomic.test.sql \
             website/supabase/tests/subscription_guards.test.sql \
             website/supabase/tests/admin_role_rls.test.sql \
-            website/supabase/tests/admin_dashboard_overview.test.sql
+            website/supabase/tests/admin_dashboard_overview.test.sql \
+            website/supabase/tests/admin_user_search.test.sql

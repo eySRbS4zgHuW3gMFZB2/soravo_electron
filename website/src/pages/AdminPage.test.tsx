@@ -176,4 +176,60 @@ describe("AdminPage", () => {
     expect(request).toHaveBeenLastCalledWith(1, 25);
     expect((screen.getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it("submits user search without reloading the overview or losing input focus", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "admin-1" }, loading: false, signOut: mockSignOut });
+    mockOverview.mockResolvedValue(OVERVIEW_FIXTURE);
+    mockUsers.mockResolvedValue({ users: [], page: 1, pageSize: 25, total: 0 });
+    render(<MemoryRouter><AdminPage /></MemoryRouter>);
+
+    await screen.findByText("Registered users");
+    fireEvent.click(screen.getByRole("button", { name: "users" }));
+    const input = await screen.findByPlaceholderText("Search email or name");
+    input.focus();
+    fireEvent.change(input, { target: { value: "test@example.com" } });
+    fireEvent.submit(input.closest("form")!);
+
+    await waitFor(() => expect(mockUsers).toHaveBeenLastCalledWith(1, 25, "test@example.com"));
+    expect(mockOverview).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(input);
+    expect(screen.queryByText("Verifying admin access...")).toBeNull();
+  });
+
+  it("retries a failed section without reloading the overview", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "admin-1" }, loading: false, signOut: mockSignOut });
+    mockOverview.mockResolvedValue(OVERVIEW_FIXTURE);
+    mockUsers.mockRejectedValueOnce(new Error("Users unavailable"))
+      .mockResolvedValue({ users: [], page: 1, pageSize: 25, total: 0 });
+    render(<MemoryRouter><AdminPage /></MemoryRouter>);
+
+    await screen.findByText("Registered users");
+    fireEvent.click(screen.getByRole("button", { name: "users" }));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(mockUsers).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    expect(mockOverview).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears a section error when returning to a successful page", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "admin-1" }, loading: false, signOut: mockSignOut });
+    mockOverview.mockResolvedValue(OVERVIEW_FIXTURE);
+    mockSubscriptions.mockImplementation(async (page: number) => {
+      if (page === 2) throw new Error("Page unavailable");
+      return { subscriptions: [{ id: "one", userEmail: "first@example.com", status: "active" }], total: 26 };
+    });
+    render(<MemoryRouter><AdminPage /></MemoryRouter>);
+
+    await screen.findByText("Registered users");
+    fireEvent.click(screen.getByRole("button", { name: "subscriptions" }));
+    await screen.findByText(/first@example.com/);
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Page unavailable");
+    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+    await waitFor(() => expect(mockSubscriptions).toHaveBeenLastCalledWith(1, 25));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    expect(mockOverview).toHaveBeenCalledTimes(1);
+  });
+
 });

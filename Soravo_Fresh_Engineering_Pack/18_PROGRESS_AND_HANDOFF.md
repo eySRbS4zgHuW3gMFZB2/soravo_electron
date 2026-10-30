@@ -762,7 +762,26 @@ Remaining: GitHub Actions database verification, CodeRabbit findings, owner boot
 - Fresh validation: 28 scoped handler/API/component tests passed; PostgreSQL 16 migration replay plus 29 admin aggregate/access pgTAP assertions passed; Deno 2.5.6 check, website typecheck/build, and 3 admin Playwright tests passed. Initial SQL fixture omitted required subscription plan_code; corrected before the passing run. Playwright emitted the existing Pages redirect-rule warning; selected admin Chromium tests passed. No repository-wide or desktop checks ran. Website typecheck/build are the narrowest declared package checks. Inputs/commands are in the external workspace validation record.
 - Skills: `code-review` loaded. Supabase/Postgres/security/React/Playwright skills were considered but unavailable in the declared adjacent path/session catalog; current repository conventions and direct security/access checks used. Knowledge-base locations absent. Manual integrated diff and security inspection completed.
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:0800ec55965fb99240925f9bd4d2fc6916a24c5884d704acd5e609ddf48cec47 -->
+
 - Remote branch and PR head refreshed and still matched the expected head after validation. Required remote CI/review policy on the published repair remain unverified; no publication, comment mutation, deployment, bootstrap or provider data/configuration change performed. Host owns publication and final review-thread handling.
+
+## P7-08 readiness repair round 3 — 2026-10-30
+
+- Input head `ca48d47231a2ca76526a8fd9a9bc0adee5a29bcd`. Fixed the earlier worktree inventory, separated section reloads from overview retries, and cleared stale section errors on new requests.
+- Migration 008 adds a service-role-only search RPC. Matching remains literal, case-insensitive, deduplicated, and email-first; within each group it now uses creation time and ID for stable pagination, which can change page placement. Exact totals still require database-wide match counting. Apply migration 008 before the updated Edge Function.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:67aeb90d8407e3e0c9b3dcccd070b4111b29e2b65a89062df7830b2b4d2ade88 -->
+
+- Scoped verification: 32 handler/API/UI tests, PostgreSQL 16 migration replay and 132 database assertions, website typecheck/build, Deno check, and 3 admin Chromium tests passed.
+
+<!-- /coderabbit-ai-generated:v1 --> The first browser run required installation of Chromium; the passing rerun emitted the existing Pages redirect warning. No live Supabase integration or current-head remote CI/review policy was verified. Exact evidence is in `workspace-context/validation-record.md` outside Git.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 
 <!-- /coderabbit-ai-generated:v1 -->

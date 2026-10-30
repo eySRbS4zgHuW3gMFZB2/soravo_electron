@@ -35,6 +35,7 @@ export function AdminPage() {
   const [auditPage, setAuditPage] = useState(1);
   const [sectionError, setSectionError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
+  const [sectionNonce, setSectionNonce] = useState(0);
   const [usersData, setUsersData] = useState<any>(null);
   const [usersLoading, setUsersLoading] = useState(false);
   const [paymentsData, setPaymentsData] = useState<any>(null);
@@ -73,6 +74,7 @@ export function AdminPage() {
     if (authLoading || !user || error) return;
     let cancelled = false;
     (async () => {
+      setSectionError(null);
       try {
         if (section === "users") {
           setUsersLoading(true);
@@ -98,7 +100,7 @@ export function AdminPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [section, authLoading, user, usersPage, usersQuery, paymentsPage, subscriptionsPage, devicesPage, auditPage, error, retryNonce]);
+  }, [section, authLoading, user, usersPage, usersQuery, paymentsPage, subscriptionsPage, devicesPage, auditPage, error, sectionNonce]);
 
   if (authLoading) return <p className="p-8 text-muted">Loading...</p>;
   if (!user) return <p className="p-8 text-muted">Please log in.</p>;
@@ -142,7 +144,7 @@ export function AdminPage() {
             {sectionError}
             <button
               type="button"
-              onClick={() => setRetryNonce((n) => n + 1)}
+              onClick={() => setSectionNonce((n) => n + 1)}
               className="ml-3 underline"
             >
               Retry
@@ -210,7 +212,7 @@ export function AdminPage() {
                 e.preventDefault();
                 setUsersQuery(usersSearchDraft);
                 setUsersPage(1);
-                setRetryNonce((n) => n + 1);
+                setSectionNonce((n) => n + 1);
               }}
             >
               <input

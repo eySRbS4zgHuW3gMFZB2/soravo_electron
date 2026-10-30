@@ -120,69 +120,22 @@ Deno.serve(async (req: Request) => {
       const pageSize = numberParam(body.pageSize, 25, 50);
       const q = safeSearch(body.q).toLowerCase();
 
-      // Search must inspect all accounts, not just one page, so filtered
-      // results cannot leak records across page boundaries.
-      let allAuthUsers: any[] = [];
-      let authTotal: number | null = null;
+      let pageAuthUsers: any[];
+      let total: number;
       if (q) {
-        const perPage = 1000;
-        for (let authPage = 1; ; authPage++) {
-          const { data: usersResult, error: usersError } = await admin.auth.admin.listUsers({
-            page: authPage,
-            perPage,
-          });
-          if (usersError) return json(500, { error: "Failed to list users" });
-          const batch = usersResult?.users ?? [];
-          allAuthUsers = allAuthUsers.concat(batch);
-          if (batch.length < perPage) break;
-        }
-      } else {
-        const { data: usersResult, error: usersError } = await admin.auth.admin.listUsers({
-          page,
-          perPage: pageSize,
+        const { data, error } = await admin.rpc("admin_dashboard_search_users", {
+          search_text: q, page_number: page, page_size: pageSize,
         });
-        if (usersError) return json(500, { error: "Failed to list users" });
-        allAuthUsers = usersResult?.users ?? [];
-        authTotal = usersResult?.total ?? allAuthUsers.length;
+        if (error || !data) return json(500, { error: "Failed to search users" });
+        pageAuthUsers = data.users;
+        total = data.total;
+      } else {
+        const { data, error } = await admin.auth.admin.listUsers({ page, perPage: pageSize });
+        if (error) return json(500, { error: "Failed to list users" });
+        pageAuthUsers = data?.users ?? [];
+        total = data?.total ?? pageAuthUsers.length;
       }
 
-      let matchingAuthUsers = q
-        ? allAuthUsers.filter((u: any) => (u.email ?? "").toLowerCase().includes(q))
-        : allAuthUsers;
-
-      // Search names independently; never put all auth IDs into a GET URL.
-      // Escape LIKE metacharacters to preserve literal substring search semantics.
-      if (q) {
-        const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
-        const nameMatchingIds = new Set<string>();
-        const batchSize = 1000;
-        for (let offset = 0; ; ) {
-          const { data: profileRows, error: profilesError } = await admin.from("profiles")
-            .select("user_id, display_name")
-            .ilike("display_name", pattern)
-            .order("user_id")
-            .range(offset, offset + batchSize - 1);
-          if (profilesError) return json(500, { error: "Failed to search user profiles" });
-          if (!profileRows?.length) break;
-          // PostgREST also treats '*' as a LIKE wildcard. Keep the original
-          // literal, case-insensitive substring contract when merging matches.
-          for (const profile of profileRows) {
-            if ((profile.display_name ?? "").toLowerCase().includes(q)) {
-              nameMatchingIds.add(profile.user_id);
-            }
-          }
-          // Advance by returned rows even if the server's cap is below batchSize.
-          offset += profileRows.length;
-        }
-        const matchingIds = new Set(matchingAuthUsers.map((u: any) => u.id));
-        matchingAuthUsers = matchingAuthUsers.concat(allAuthUsers.filter((u: any) =>
-          nameMatchingIds.has(u.id) && !matchingIds.has(u.id)
-        ));
-      }
-
-      const total = matchingAuthUsers.length;
-      const start = q ? (page - 1) * pageSize : 0;
-      const pageAuthUsers = q ? matchingAuthUsers.slice(start, start + pageSize) : matchingAuthUsers;
       const ids = pageAuthUsers.map((u: any) => u.id);
 
       const [{ data: profiles, error: profilesError }, { data: entitlementRows, error: entitlementsError }, { data: paymentRows, error: paymentsError }, { data: deviceRows, error: deviceRowsError }] = await Promise.all([
@@ -234,7 +187,7 @@ Deno.serve(async (req: Request) => {
         users: enriched,
         page,
         pageSize,
-        total: q ? total : (authTotal ?? matchingAuthUsers.length),
+        total,
       });
     }
 

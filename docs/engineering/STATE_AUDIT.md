@@ -70,7 +70,13 @@
 
 ## P7-08 readiness repair round 1 — 2026-10-30
 
-- CONFIRMED: expected head `4052f9ba9c2d7dea88a9821aa198c2027f320a12`; origin is the active `eySRbS4zgHuW3gMFZB2/soravo_electron` repository. Assigned runtime checkout/branch `coderabbit/admin-dashboard-readiness-fixes/triage_r` was initially clean, sole registered named worktree. No merge/rebase was started. Branch/PR remote heads still matched after local validation.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:c0beba74e2c812d89a411b3f6daa552e1d7890389f7ca190abdab9294193f74c -->
+
+- CONFIRMED: expected head `4052f9ba9c2d7dea88a9821aa198c2027f320a12`; origin is the active `eySRbS4zgHuW3gMFZB2/soravo_electron` repository. The sole registered worktree was `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `coderabbit/admin-dashboard-readiness-fixes/triage_r`, based on `4052f9ba9c2d7dea88a9821aa198c2027f320a12`, with 0 uncommitted files initially. Historical upstream tracking and build-output size are unknown. No merge/rebase was started. Branch/PR remote heads still matched after local validation.
+
+<!-- /coderabbit-ai-generated:v1 -->
 - CONFIRMED: audit insert checks and anon pgTAP permission assertion already exist. Fail-closed audit behavior is documented in the helper and bootstrap runbook, so it was preserved. Overview truncation, search ceiling/profile lookup handling, missing overview Retry and absent subscriptions/devices navigation were applicable and repaired.
 - CONFIRMED: migration 007 returns one JSON aggregate under a fixed empty search_path, grants EXECUTE only to service_role, and preserves metric definitions/response fields. 1,005-row synthetic fixtures validate complete counts/breakdowns, distinct active users, payment sums above 32-bit range, empty aggregates, UTC signup buckets and anon/authenticated denial. Creation and privileges commit atomically.
 - CONFIRMED: actual handler/query-builder tests validate search after account 5,000, name-result pagination under a smaller server cap, deduplication, literal wildcard handling, page-only enrichment, failure responses and fail-closed audit writes. UI/API tests validate retry recovery and subscriptions/devices first/last/back navigation.
