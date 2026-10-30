@@ -60,6 +60,16 @@ function safeSearch(value: unknown): string {
   return value.trim().slice(0, 120);
 }
 
+async function emailsFor(admin: any, ids: string[]): Promise<Map<string, string | null>> {
+  const entries = await Promise.all(
+    ids.map(async (id) => {
+      const { data } = await admin.auth.admin.getUserById(id);
+      return [id, data?.user?.email ?? null] as const;
+    })
+  );
+  return new Map(entries);
+}
+
 async function audit(adminClient: any, actorId: string, action: string, extra: Record<string, unknown> = {}) {
   const { error } = await adminClient.from("admin_audit_events").insert({
     actor_user_id: actorId,
@@ -98,16 +108,16 @@ Deno.serve(async (req: Request) => {
     if (action === "overview") {
       const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const [
-        { count: totalUsers },
-        { count: newUsers30d },
-        { count: activeDevices },
-        { count: totalDevices },
-        { data: entitlements },
-        { data: payments },
-        { data: subscriptions },
-        { data: webhookEvents },
-        { data: profiles },
-        { data: allDevices },
+        { count: totalUsers, error: totalUsersError },
+        { count: newUsers30d, error: newUsers30dError },
+        { count: activeDevices, error: activeDevicesError },
+        { count: totalDevices, error: totalDevicesError },
+        { data: entitlements, error: entitlementsError },
+        { data: payments, error: paymentsError },
+        { data: subscriptions, error: subscriptionsError },
+        { data: webhookEvents, error: webhookEventsError },
+        { data: profiles, error: profilesError },
+        { data: allDevices, error: allDevicesError },
       ] = await Promise.all([
         admin.from("profiles").select("user_id", { count: "exact", head: true }),
         admin.from("profiles").select("user_id", { count: "exact", head: true }).gte("created_at", since30),
@@ -120,6 +130,14 @@ Deno.serve(async (req: Request) => {
         admin.from("profiles").select("created_at"),
         admin.from("devices").select("user_id, revoked_at"),
       ]);
+
+      if (
+        totalUsersError || newUsers30dError || activeDevicesError || totalDevicesError ||
+        entitlementsError || paymentsError || subscriptionsError || webhookEventsError ||
+        profilesError || allDevicesError
+      ) {
+        return json(500, { error: "Failed to load admin overview" });
+      }
 
       const lifetimeEntitlements = (entitlements ?? []).filter(
         (e: any) => e.lifetime === true || e.status === "lifetime_active"
@@ -233,13 +251,42 @@ Deno.serve(async (req: Request) => {
         authTotal = usersResult?.total ?? allAuthUsers.length;
       }
 
-      const ids = allAuthUsers.map((u: any) => u.id);
-      const [{ data: profiles }, { data: entitlementRows }, { data: paymentRows }, { data: deviceRows }] = await Promise.all([
-        ids.length ? admin.from("profiles").select("user_id, display_name, created_at").in("user_id", ids) : Promise.resolve({ data: [] }),
-        ids.length ? admin.from("entitlements").select("user_id, plan_code, status, lifetime, subscription_period_end").in("user_id", ids) : Promise.resolve({ data: [] }),
-        ids.length ? admin.from("payments").select("user_id, status, amount_minor").in("user_id", ids) : Promise.resolve({ data: [] }),
-        ids.length ? admin.from("devices").select("user_id, id, revoked_at").in("user_id", ids) : Promise.resolve({ data: [] }),
+      let matchingAuthUsers = q
+        ? allAuthUsers.filter((u: any) => (u.email ?? "").toLowerCase().includes(q))
+        : allAuthUsers;
+
+      // Give profile display names a chance to match before enrichment too.
+      if (q && allAuthUsers.length > 0) {
+        const profileIds = allAuthUsers.map((u: any) => u.id);
+        const { data: profileRows } = await admin.from("profiles").select("user_id, display_name").in("user_id", profileIds);
+        const profileNameMap = new Map((profileRows ?? []).map((p: any) => [p.user_id, p.display_name ?? ""]));
+        matchingAuthUsers = matchingAuthUsers.filter((u: any) => true) || matchingAuthUsers;
+        const nameMatching = allAuthUsers.filter((u: any) =>
+          (profileNameMap.get(u.id) ?? "").toLowerCase().includes(q)
+        );
+        matchingAuthUsers = [
+          ...new Set([
+            ...matchingAuthUsers.map((u: any) => u.id),
+            ...nameMatching.map((u: any) => u.id),
+          ]),
+        ].map((id) => allAuthUsers.find((u: any) => u.id === id)).filter(Boolean);
+      }
+
+      const total = matchingAuthUsers.length;
+      const start = q ? (page - 1) * pageSize : 0;
+      const pageAuthUsers = q ? matchingAuthUsers.slice(start, start + pageSize) : matchingAuthUsers;
+      const ids = pageAuthUsers.map((u: any) => u.id);
+
+      const [{ data: profiles, error: profilesError }, { data: entitlementRows, error: entitlementsError }, { data: paymentRows, error: paymentsError }, { data: deviceRows, error: deviceRowsError }] = await Promise.all([
+        ids.length ? admin.from("profiles").select("user_id, display_name, created_at").in("user_id", ids) : Promise.resolve({ data: [], error: null }),
+        ids.length ? admin.from("entitlements").select("user_id, plan_code, status, lifetime, subscription_period_end").in("user_id", ids) : Promise.resolve({ data: [], error: null }),
+        ids.length ? admin.from("payments").select("user_id, status, amount_minor").in("user_id", ids) : Promise.resolve({ data: [], error: null }),
+        ids.length ? admin.from("devices").select("user_id, id, revoked_at").in("user_id", ids) : Promise.resolve({ data: [], error: null }),
       ]);
+
+      if (profilesError || entitlementsError || paymentsError || deviceRowsError) {
+        return json(500, { error: "Failed to load admin users" });
+      }
 
       const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
       const entMap = new Map();
@@ -261,7 +308,7 @@ Deno.serve(async (req: Request) => {
         devicesByUser.set(d.user_id, cur);
       }
 
-      const enriched = allAuthUsers.map((u: any) => ({
+      const enriched = pageAuthUsers.map((u: any) => ({
         userId: u.id,
         email: u.email ?? null,
         signupDate: u.created_at ?? profileMap.get(u.id)?.created_at ?? null,
@@ -273,23 +320,13 @@ Deno.serve(async (req: Request) => {
         devices: devicesByUser.get(u.id) ?? { active: 0, total: 0 },
       }));
 
-      const filtered = q
-        ? enriched.filter((u: any) => (u.email ?? "").toLowerCase().includes(q) || (u.displayName ?? "").toLowerCase().includes(q))
-        : enriched;
-
-      // Paginate in memory for search; for direct listing we already fetched
-      // only the requested page.
-      const total = filtered.length;
-      const start = q ? (page - 1) * pageSize : 0;
-      const paged = q ? filtered.slice(start, start + pageSize) : filtered;
-
-      await audit(admin, user.id, "admin.users.read", { page, q: q ? "provided" : "none", resultCount: paged.length });
+      await audit(admin, user.id, "admin.users.read", { page, q: q ? "provided" : "none", resultCount: enriched.length });
 
       return json(200, {
-        users: paged,
+        users: enriched,
         page,
         pageSize,
-        total: q ? total : (authTotal ?? allAuthUsers.length),
+        total: q ? total : (authTotal ?? matchingAuthUsers.length),
       });
     }
 
@@ -305,10 +342,7 @@ Deno.serve(async (req: Request) => {
       if (error) return json(500, { error: "Failed to list payments" });
 
       const userIds = Array.from(new Set((paymentRows ?? []).map((p: any) => p.user_id)));
-      const { data: usersResult } = userIds.length
-        ? await admin.auth.admin.listUsers({ perPage: 1000 })
-        : { data: { users: [] } };
-      const emailMap = new Map((usersResult?.users ?? []).map((u: any) => [u.id, u.email]));
+      const emailMap = userIds.length ? await emailsFor(admin, userIds) : new Map();
       const payments = (paymentRows ?? []).map((p: any) => ({
         ...p,
         userEmail: emailMap.get(p.user_id) ?? null,
@@ -319,45 +353,53 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "subscriptions") {
-      const { data: subs, error } = await admin
+      const page = numberParam(body.page, 1, 1000);
+      const pageSize = numberParam(body.pageSize, 25, 50);
+      const from = (page - 1) * pageSize;
+      const { data: subs, error, count } = await admin
         .from("subscriptions")
-        .select("*")
+        .select("id, user_id, provider, provider_subscription_id, plan_code, status, current_period_start, current_period_end, paid_count, total_count, charge_at, ended_at, created_at, updated_at, last_event_created_at", { count: "exact" })
         .order("created_at", { ascending: false })
-        .limit(100);
+        .range(from, from + pageSize - 1);
       if (error) return json(500, { error: "Failed to list subscriptions" });
 
       const userIds = Array.from(new Set((subs ?? []).map((s: any) => s.user_id)));
-      const { data: usersResult } = userIds.length
-        ? await admin.auth.admin.listUsers({ perPage: 1000 })
-        : { data: { users: [] } };
-      const emailMap = new Map((usersResult?.users ?? []).map((u: any) => [u.id, u.email]));
+      const emailMap = userIds.length ? await emailsFor(admin, userIds) : new Map();
       const subscriptions = (subs ?? []).map((s: any) => ({
         ...s,
         userEmail: emailMap.get(s.user_id) ?? null,
       }));
-      await audit(admin, user.id, "admin.subscriptions.read", { resultCount: subscriptions.length });
-      return json(200, { subscriptions });
+      await audit(admin, user.id, "admin.subscriptions.read", { page, resultCount: subscriptions.length });
+      return json(200, { subscriptions, page, pageSize, total: count ?? subscriptions.length });
     }
 
     if (action === "devices") {
-      const { data: deviceRows, error } = await admin
+      const page = numberParam(body.page, 1, 1000);
+      const pageSize = numberParam(body.pageSize, 25, 50);
+      const from = (page - 1) * pageSize;
+      const { data: deviceRows, error, count } = await admin
         .from("devices")
-        .select("*")
+        .select("id, user_id, device_id, label, platform, app_version, first_seen_at, last_seen_at, revoked_at", { count: "exact" })
         .order("last_seen_at", { ascending: false })
-        .limit(100);
+        .range(from, from + pageSize - 1);
       if (error) return json(500, { error: "Failed to list devices" });
 
       const userIds = Array.from(new Set((deviceRows ?? []).map((d: any) => d.user_id)));
-      const { data: usersResult } = userIds.length
-        ? await admin.auth.admin.listUsers({ perPage: 1000 })
-        : { data: { users: [] } };
-      const emailMap = new Map((usersResult?.users ?? []).map((u: any) => [u.id, u.email]));
+      const emailMap = userIds.length ? await emailsFor(admin, userIds) : new Map();
       const devices = (deviceRows ?? []).map((d: any) => ({
-        ...d,
+        id: d.id,
+        user_id: d.user_id,
         userEmail: emailMap.get(d.user_id) ?? null,
+        device_id: d.device_id,
+        label: d.label,
+        platform: d.platform,
+        app_version: d.app_version,
+        first_seen_at: d.first_seen_at,
+        last_seen_at: d.last_seen_at,
+        revoked_at: d.revoked_at,
       }));
-      await audit(admin, user.id, "admin.devices.read", { resultCount: devices.length });
-      return json(200, { devices });
+      await audit(admin, user.id, "admin.devices.read", { page, resultCount: devices.length });
+      return json(200, { devices, page, pageSize, total: count ?? devices.length });
     }
 
     if (action === "audit") {
@@ -372,10 +414,7 @@ Deno.serve(async (req: Request) => {
       if (error) return json(500, { error: "Failed to list audit events" });
 
       const actorIds = Array.from(new Set((events ?? []).map((e: any) => e.actor_user_id).filter(Boolean)));
-      const { data: usersResult } = actorIds.length
-        ? await admin.auth.admin.listUsers({ perPage: 1000 })
-        : { data: { users: [] } };
-      const emailMap = new Map((usersResult?.users ?? []).map((u: any) => [u.id, u.email]));
+      const emailMap = actorIds.length ? await emailsFor(admin, actorIds) : new Map();
       const auditEvents = (events ?? []).map((e: any) => ({
         ...e,
         actorEmail: emailMap.get(e.actor_user_id) ?? null,

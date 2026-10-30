@@ -27,7 +27,12 @@ export function AdminPage() {
   const [overview, setOverview] = useState<any>(null);
   const [usersPage, setUsersPage] = useState(1);
   const [usersQuery, setUsersQuery] = useState("");
+  const [usersSearchDraft, setUsersSearchDraft] = useState("");
   const [debouncedUsersQuery, setDebouncedUsersQuery] = useState("");
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [auditPage, setAuditPage] = useState(1);
+  const [sectionError, setSectionError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
   const [usersData, setUsersData] = useState<any>(null);
   const [usersLoading, setUsersLoading] = useState(false);
   const [paymentsData, setPaymentsData] = useState<any>(null);
@@ -36,9 +41,12 @@ export function AdminPage() {
   const [auditData, setAuditData] = useState<any>(null);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedUsersQuery(usersQuery), 300);
+    const timer = window.setTimeout(() => {
+      setUsersQuery(usersSearchDraft);
+      setUsersPage(1);
+    }, 300);
     return () => window.clearTimeout(timer);
-  }, [usersQuery]);
+  }, [usersSearchDraft]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -46,6 +54,7 @@ export function AdminPage() {
     (async () => {
       setLoading(true);
       setError(null);
+      setSectionError(null);
       try {
         const data = await fetchAdminOverview();
         if (!cancelled) setOverview(data);
@@ -56,7 +65,7 @@ export function AdminPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [authLoading, user]);
+  }, [authLoading, user, retryNonce]);
 
   useEffect(() => {
     if (authLoading || !user || error) return;
@@ -65,10 +74,10 @@ export function AdminPage() {
       try {
         if (section === "users") {
           setUsersLoading(true);
-          const data = await fetchAdminUsers(usersPage, 25, debouncedUsersQuery);
+          const data = await fetchAdminUsers(usersPage, 25, usersQuery);
           if (!cancelled) setUsersData(data);
         } else if (section === "payments") {
-          const data = await fetchAdminPayments(1, 25);
+          const data = await fetchAdminPayments(paymentsPage, 25);
           if (!cancelled) setPaymentsData(data);
         } else if (section === "subscriptions") {
           const data = await fetchAdminSubscriptions();
@@ -77,17 +86,17 @@ export function AdminPage() {
           const data = await fetchAdminDevices();
           if (!cancelled) setDevicesData(data);
         } else if (section === "audit") {
-          const data = await fetchAdminAudit(1, 25);
+          const data = await fetchAdminAudit(auditPage, 25);
           if (!cancelled) setAuditData(data);
         }
       } catch (e) {
-        if (!cancelled) setError(deniedMessage(e instanceof Error ? e.message : null));
+        if (!cancelled) setSectionError(deniedMessage(e instanceof Error ? e.message : null));
       } finally {
         if (!cancelled) setUsersLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [section, authLoading, user, usersPage, debouncedUsersQuery, error]);
+  }, [section, authLoading, user, usersPage, usersQuery, paymentsPage, auditPage, error, retryNonce]);
 
   if (authLoading) return <p className="p-8 text-muted">Loading...</p>;
   if (!user) return <p className="p-8 text-muted">Please log in.</p>;
@@ -119,6 +128,18 @@ export function AdminPage() {
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <h1 className="text-2xl font-bold text-ink">Administrator dashboard</h1>
+        {sectionError && (
+          <div role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            {sectionError}
+            <button
+              type="button"
+              onClick={() => setRetryNonce((n) => n + 1)}
+              className="ml-3 underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
         <div className="mt-4 flex flex-wrap gap-2">
           {SECTIONS.map((s) => (
             <button
@@ -174,21 +195,28 @@ export function AdminPage() {
 
         {section === "users" && (
           <section className="mt-8">
-            <div className="flex gap-2">
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setUsersQuery(usersSearchDraft);
+                setUsersPage(1);
+                setRetryNonce((n) => n + 1);
+              }}
+            >
               <input
                 className="rounded border border-ink/20 px-3 py-1"
                 placeholder="Search email or name"
-                value={usersQuery}
-                onChange={(e) => setUsersQuery(e.target.value)}
+                value={usersSearchDraft}
+                onChange={(e) => setUsersSearchDraft(e.target.value)}
               />
               <button
-                type="button"
-                onClick={() => void fetchAdminUsers(usersPage, 25, usersQuery).then(setUsersData).catch(() => {})}
+                type="submit"
                 className="rounded bg-ink px-3 py-1 text-sm text-lime"
               >
                 Search
               </button>
-            </div>
+            </form>
             {usersLoading && <p className="mt-4 text-muted">Loading users...</p>}
             <ul className="mt-4 space-y-2">
               {usersData?.users?.map((u: any) => (
@@ -203,6 +231,7 @@ export function AdminPage() {
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
+                disabled={usersPage <= 1}
                 onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
                 className="rounded border border-ink/20 px-3 py-1 text-sm"
               >
@@ -210,6 +239,7 @@ export function AdminPage() {
               </button>
               <button
                 type="button"
+                disabled={usersData ? usersPage * 25 >= (usersData.total ?? 0) : false}
                 onClick={() => setUsersPage((p) => p + 1)}
                 className="rounded border border-ink/20 px-3 py-1 text-sm"
               >
@@ -243,6 +273,24 @@ export function AdminPage() {
                 ))}
               </tbody>
             </table>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                disabled={paymentsPage <= 1}
+                onClick={() => setPaymentsPage((p) => Math.max(1, p - 1))}
+                className="rounded border border-ink/20 px-3 py-1 text-sm"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={paymentsData ? paymentsPage * 25 >= (paymentsData.total ?? 0) : false}
+                onClick={() => setPaymentsPage((p) => p + 1)}
+                className="rounded border border-ink/20 px-3 py-1 text-sm"
+              >
+                Next
+              </button>
+            </div>
           </section>
         )}
 
@@ -279,6 +327,24 @@ export function AdminPage() {
                 </li>
               ))}
             </ul>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                disabled={auditPage <= 1}
+                onClick={() => setAuditPage((p) => Math.max(1, p - 1))}
+                className="rounded border border-ink/20 px-3 py-1 text-sm"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={auditData ? auditPage * 25 >= (auditData.total ?? 0) : false}
+                onClick={() => setAuditPage((p) => p + 1)}
+                className="rounded border border-ink/20 px-3 py-1 text-sm"
+              >
+                Next
+              </button>
+            </div>
           </section>
         )}
       </main>
