@@ -1046,3 +1046,11 @@ Remaining: CodeRabbit AI review completion, owner bootstrap, preview verificatio
 
 ## P7-08 admin dashboard hardening (2026-10-30)
 Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening, based on feature/P7-08-admin-dashboard-owner-only (8ee01ad). Reused existing admin implementation; hardened admin overview metrics (registered/active users, registered/active devices, lifetime vs recurring payment counters); fixed user search pagination to avoid partial-record leakage; corrected admin role self-grant constraint for approved owner bootstrap; added Vitest component/API tests and Playwright read-only navigation; added migration 006 to DB workflow and pinned ubuntu-24.04. Verification: 130 Vitest tests passed; Playwright admin 3 passed; website typecheck and production build passed. Outstanding owner actions: approve exact admin account, perform controlled SQL bootstrap, verify preview deployment.
+
+## P7-08 final security corrections (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+SHA: a767cbfba8276fe176d740ebd2f8421660046c4b
+Changes: Edge Function authorization now requires role='owner'; emailsFor errors are propagated.
+Validation: Vitest 158 passed, Playwright 3 passed, typecheck/build passed, Deno check passed.
+Tests added: anonymous, admin-role, revoked-owner, owner-access, email-lookup-failure.
+No merge, deployment, bootstrap, or privilege grants performed.
