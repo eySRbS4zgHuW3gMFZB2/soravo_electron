@@ -510,3 +510,20 @@ body {
   font-size: 12px;
   white-space: nowrap;
 }
+
+.auth-loading { padding: 40px; }
+.auth-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0e0f0c; }
+.auth-card { width: 420px; padding: 40px; border-radius: 24px; background: #fff; }
+.auth-card h1 { font-size: 2rem; margin-bottom: 8px; }
+.auth-sub { color: #666; margin-bottom: 24px; }
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-form input { padding: 12px 16px; border: 1px solid #ccc; border-radius: 12px; }
+.auth-password { display: flex; gap: 8px; }
+.auth-primary { padding: 12px 16px; border-radius: 999px; background: #0e0f0c; color: #9fe870; border: none; }
+.auth-secondary { padding: 12px 16px; border-radius: 999px; background: #f2f2f2; border: none; }
+.auth-error { color: #b00020; font-size: 14px; }
+.auth-info { color: #1e5e19; font-size: 14px; }
+.auth-actions { display: flex; gap: 8px; flex-direction: column; }
+.auth-links { display: flex; gap: 12px; flex-wrap: wrap; }
+.auth-links button { background: none; border: none; text-decoration: underline; cursor: pointer; }
+

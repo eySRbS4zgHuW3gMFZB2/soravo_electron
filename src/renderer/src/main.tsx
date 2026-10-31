@@ -2,7 +2,8 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import App from './App'
-import HubApp from './HubApp'
+import { AuthProvider } from './auth/authContext'
+import { DesktopAuth } from './auth/DesktopAuth'
 import { installAppShortcuts } from './appShortcuts'
 import './styles.css'
 import './hub.css'
@@ -24,7 +25,13 @@ async function main() {
   }
 
   createRoot(rootEl!).render(
-    <React.StrictMode>{isHub ? <HubApp /> : <App />}</React.StrictMode>
+    <React.StrictMode>
+      {isHub ? (
+        <AuthProvider><DesktopAuth /></AuthProvider>
+      ) : (
+        <App />
+      )}
+    </React.StrictMode>
   )
 }
 

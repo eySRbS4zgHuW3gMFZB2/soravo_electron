@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Emitter, Manager, State};
 
 mod hotkeys;
+mod secure_store;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -2230,7 +2231,10 @@ pub fn run() {
             delete_snippet,
             quit,
             hotkeys::validate_binding,
-            hotkeys::binding_help
+            hotkeys::binding_help,
+            secure_store::secure_store_set,
+            secure_store::secure_store_get,
+            secure_store::secure_store_delete
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
