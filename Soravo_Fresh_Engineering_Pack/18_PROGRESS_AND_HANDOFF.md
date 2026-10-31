@@ -738,3 +738,12 @@ pm run tauri:dev with MSVC 2017 env; RUSTUP_TOOLCHAIN=1.90.0-x86_64-pc-windows-m
 - Authentication/entitlement/device-registration: not verified; pending manual owner login.
 - Target Supabase: Soravo_fresh (vfrhplskegqqdxbykyvx)
 - PR/log branch for this launch documentation: docs/desktop-dev-launch
+
+## 2026-10-30 — Desktop auth onboarding research
+
+- PR: 41
+- Branch: feature/desktop-auth-onboarding
+- Status: PARTIAL (research note only)
+- REA evidence ID: ev_3367ac70bb6c029e4d610fde5cb97e22dfbfaccdb3c0bdd23a3c204dd2baccaf
+- No implementation, deployment, or privilege changes performed.
+

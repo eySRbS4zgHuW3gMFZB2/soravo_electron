@@ -1040,3 +1040,10 @@ pm run tauri:dev via cmd /c C:\Users\kaya\AppData\Local\Temp\opencode\launch.bat
 - Supabase target for app: Soravo_fresh (vfrhplskegqqdxbykyvx), existing owner account to be signed in manually; no secrets printed.
 - Stop instruction: close the Soravo app window or terminate the background Tauri dev process (npm/cargo) in the terminal; stop the Vite child process if needed. Do not close this terminal while testing.
 - No production deployment, release, account creation, entitlement modification, or privilege grant performed.
+
+## Desktop auth onboarding research — 2026-10-30 (TASK DESKTOP-AUTH-ONBOARDING-01)
+- Branch: feature/desktop-auth-onboarding (PR 41)
+- REA evidence ID: ev_3367ac70bb6c029e4d610fde5cb97e22dfbfaccdb3c0bdd23a3c204dd2baccaf
+- Wispr version inspected: 1.6.1337 (Electron, ASAR)
+- Implementation status: PARTIAL (research only)
+- Files: docs/reverse-engineering/WISPR_FLOW_ONBOARDING_NOTES.md
