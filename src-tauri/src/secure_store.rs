@@ -1,3 +1,22 @@
+// Keys are lowercase ASCII letters, digits, hyphens and underscores, 1–251
+// bytes long. Windows device names are excluded. This preserves existing
+// filenames for valid keys without case-folding or replacement collisions.
+#[cfg(any(target_os = "windows", test))]
+fn secret_filename(key: &str) -> Result<String, String> {
+    let reserved = matches!(key, "con" | "prn" | "aux" | "nul")
+        || (key.len() == 4
+            && (key.starts_with("com") || key.starts_with("lpt"))
+            && key.as_bytes()[3].is_ascii_digit());
+    if key.is_empty()
+        || key.len() > 251
+        || reserved
+        || !key.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-' || c == b'_')
+    {
+        return Err("invalid secure store key".into());
+    }
+    Ok(format!("{}.bin", key))
+}
+
 #[cfg(target_os = "windows")]
 mod inner {
     use std::fs;
@@ -5,15 +24,37 @@ mod inner {
     use tauri::AppHandle;
     use tauri::Manager;
     use winapi::um::dpapi::{CryptProtectData, CryptUnprotectData, CRYPTPROTECT_UI_FORBIDDEN};
+    use winapi::um::winbase::LocalFree;
     use winapi::um::wincrypt::CRYPT_INTEGER_BLOB;
 
+    struct DpapiOutput(CRYPT_INTEGER_BLOB);
+
+    impl DpapiOutput {
+        fn bytes(&self) -> Result<&[u8], String> {
+            if self.0.cbData == 0 {
+                return Ok(&[]);
+            }
+            if self.0.pbData.is_null() {
+                return Err("DPAPI returned an invalid buffer".into());
+            }
+            Ok(unsafe { std::slice::from_raw_parts(self.0.pbData, self.0.cbData as usize) })
+        }
+    }
+
+    impl Drop for DpapiOutput {
+        fn drop(&mut self) {
+            if !self.0.pbData.is_null() {
+                unsafe { LocalFree(self.0.pbData as _); }
+            }
+        }
+    }
+
     fn secret_path(app: &AppHandle, key: &str) -> Result<PathBuf, String> {
+        let filename = super::secret_filename(key)?;
         let mut p = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
         p.push("secure");
         fs::create_dir_all(&p).map_err(|e| e.to_string())?;
-        // Keep key names simple and safe.
-        let safe = key.chars().map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' }).collect::<String>();
-        p.push(format!("{}.bin", safe));
+        p.push(filename);
         Ok(p)
     }
 
@@ -33,11 +74,10 @@ mod inner {
             CryptProtectData(&mut in_blob, std::ptr::null(), std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), CRYPTPROTECT_UI_FORBIDDEN, &mut out_blob)
         };
         if ok == 0 { return Err("CryptProtectData failed".into()); }
-        let bytes = unsafe { std::slice::from_raw_parts(out_blob.pbData, out_blob.cbData as usize) };
-        let encoded = to_hex(bytes);
+        let output = DpapiOutput(out_blob);
+        let encoded = to_hex(output.bytes()?);
         let p = secret_path(&app, &key)?;
         fs::write(p, encoded).map_err(|e| e.to_string())?;
-        // no LocalFree needed for minimal process lifetime? LocalFree should be called.
         Ok(())
     }
 
@@ -52,8 +92,8 @@ mod inner {
             CryptUnprotectData(&mut in_blob, std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), CRYPTPROTECT_UI_FORBIDDEN, &mut out_blob)
         };
         if ok == 0 { return Err("CryptUnprotectData failed".into()); }
-        let out = unsafe { std::slice::from_raw_parts(out_blob.pbData, out_blob.cbData as usize) };
-        let text = String::from_utf8(out.to_vec()).map_err(|e| e.to_string())?;
+        let output = DpapiOutput(out_blob);
+        let text = String::from_utf8(output.bytes()?.to_vec()).map_err(|e| e.to_string())?;
         Ok(Some(text))
     }
 
@@ -64,7 +104,6 @@ mod inner {
     }
 }
 
-#[cfg(target_os = "windows")]
 #[cfg(target_os = "windows")]
 #[tauri::command]
 pub fn secure_store_set(app: tauri::AppHandle, key: String, value: String) -> Result<(), String> {
@@ -101,9 +140,19 @@ pub fn secure_store_delete(_app: tauri::AppHandle, _key: String) -> Result<(), S
     Err("unsupported".into())
 }
 
-#[cfg(not(target_os = "windows"))]
-pub fn secure_store_set(_app: tauri::AppHandle, _key: String, _value: String) -> Result<(), String> { Err("unsupported".into()) }
-#[cfg(not(target_os = "windows"))]
-pub fn secure_store_get(_app: tauri::AppHandle, _key: String) -> Result<Option<String>, String> { Err("unsupported".into()) }
-#[cfg(not(target_os = "windows"))]
-pub fn secure_store_delete(_app: tauri::AppHandle, _key: String) -> Result<(), String> { Err("unsupported".into()) }
+#[cfg(test)]
+mod tests {
+    use super::secret_filename;
+
+    #[test]
+    fn filenames_preserve_valid_keys_and_reject_ambiguous_or_unsafe_ones() {
+        assert_eq!(secret_filename("desktop-session").unwrap(), "desktop-session.bin");
+        assert_eq!(secret_filename("desktop-auth-pending").unwrap(), "desktop-auth-pending.bin");
+        assert_ne!(secret_filename("a-b").unwrap(), secret_filename("a_b").unwrap());
+        for key in ["", "A", "a/b", "a.b", "..", "é", "con", "lpt1", "com9"] {
+            assert!(secret_filename(key).is_err(), "accepted {key:?}");
+        }
+        assert!(secret_filename(&"a".repeat(251)).is_ok());
+        assert!(secret_filename(&"a".repeat(252)).is_err());
+    }
+}

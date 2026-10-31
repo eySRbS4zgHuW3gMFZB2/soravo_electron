@@ -43,4 +43,4 @@ futures = "0.3"
 # already in the tree through rdev, so this adds no new download.
 [target.'cfg(target_os = "windows")'.dependencies.winapi]
 version = "0.3"
-features = ["winuser", "minwindef", "libloaderapi", "errhandlingapi", "processthreadsapi", "dpapi"]
+features = ["winuser", "minwindef", "libloaderapi", "errhandlingapi", "processthreadsapi", "dpapi", "winbase"]

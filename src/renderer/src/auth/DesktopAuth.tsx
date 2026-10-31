@@ -114,7 +114,7 @@ export function DesktopAuth() {
   }, [])
 
   if (loading) return <div className="auth-loading">Loading Soravo…</div>
-  if (session) return <HubApp />
+  if (session) return <HubApp onSignOut={() => void signOut()} />
 
   return (
     <div className="auth-shell">

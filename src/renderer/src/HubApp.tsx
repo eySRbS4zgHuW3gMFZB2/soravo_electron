@@ -54,7 +54,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Info as InfoIcon } from 'lucide-react'
+import { Info as InfoIcon, LogOut as LogOutIcon } from 'lucide-react'
 import { RefreshIcon } from '@/components/pages/icons'
 
 type Page = 'dictation' | 'history' | 'insights' | 'dictionary' | 'snippets' | 'style' | 'models' | 'scratchpad'
@@ -134,13 +134,15 @@ function Sidebar({
   go,
   open,
   onOpenSettings,
-  onOpenHelp
+  onOpenHelp,
+  onSignOut
 }: {
   page: Page
   go: (p: Page) => void
   open: boolean
   onOpenSettings: () => void
   onOpenHelp: () => void
+  onSignOut: () => void
 }) {
   // Nav items are full-bleed rows, so they must not inherit the button's
   // default centring or inset padding. Each one carries a floating label that
@@ -206,6 +208,7 @@ function Sidebar({
         </div>
         {footItem('Settings', <SettingsIcon />, onOpenSettings)}
         {footItem('Help', <HelpIcon />, onOpenHelp, 'hub-nav-external')}
+        {footItem('Sign out', <LogOutIcon />, onSignOut)}
       </div>
     </aside>
   )
@@ -1116,7 +1119,7 @@ function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   )
 }
 
-export default function HubApp() {
+export default function HubApp({ onSignOut }: { onSignOut: () => void }) {
   const [page, setPage] = useState<Page>('dictation')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -1336,6 +1339,7 @@ export default function HubApp() {
             open={sidebarOpen}
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenHelp={() => setHelpOpen(true)}
+            onSignOut={onSignOut}
           />
           <main className="hub-content">
             {page === 'dictation' && (
