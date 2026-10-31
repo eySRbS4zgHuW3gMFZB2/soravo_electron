@@ -1,7 +1,14 @@
 # Progress and Handoff — Mandatory Living Record
 
-**Last updated:** 2026-10-27 (pack published to branch `docs/engineering-pack`; pull request open, awaiting owner approval to merge)  
-**Current status:** The pack is committed and pushed on `docs/engineering-pack`, with a pull request open into `main`. `main` is untouched. No repository rename, DNS change, production change, deployment, Supabase data change or secret operation has been performed. Implementation has started; completed tasks are recorded in the dated entries below.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:1e86d09e96ab0d3243cf421dd82cc502ea8b444b695e4842c5c3a69b217e3b8b -->
+
+**Last updated:** 2026-10-31 (backend admin deployment recorded on 2026-10-30)
+
+**Current status:** On 2026-10-30, migrations 006–008 and the admin-dashboard Edge Function were deployed to Soravo_fresh; preview smoke checks are recorded below. Production site cutover and admin bootstrap have not occurred; no admin user was created or granted an admin role. The production site, DNS, and email configuration remain untouched until separately approved cutover after the launch checklist and rollback rehearsal; bootstrap remains pending owner approval of the account.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 ## Owner-approved decisions
 

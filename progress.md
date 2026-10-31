@@ -1101,5 +1101,11 @@ PR #38 remains open and unmerged; no deployment performed.
 - Smoke tests: OPTIONS 200; unauthenticated POST 401; invalid JWT 401.
 - Cloudflare preview: https://ad8df800.soravo-web-preview.pages.dev/admin returned 200 (SPA).
 - Security advisor notes: protect_profile_sensitive_fields lacks search_path (warning), pre-existing extension/function advisor items unrelated; RLS-enabled-no-policy is intended for service-role-only tables.
-- No merge, production deployment, admin bootstrap, or privileges granted.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:720c889b1f09345255b03d81205b2f68424d376e845de8bfff80f1943020ae8e -->
+
+- No merge, production deployment, or admin bootstrap performed; no admin user was created or granted an admin role. Migrations 006–008 applied service_role-only grants as described above.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
