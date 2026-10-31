@@ -63,3 +63,15 @@
 - CONFIRMED: clean task commit `96a7866` and remote head `147fd3377295ff7df7009c088d3d8dea4d52f24a` diverged from `74ec17e`; user requested a merge commit with both changes preserved and no push. Runtime checkout now holds `feature/razorpay-recurring-sandbox`, sole registered worktree.
 - CONFIRMED: resolved all eight conflicting paths; retained both documentation histories and remote PricingPage cleanup. Atomic checkout/event migration is now 005, after remote 004's pending/resumed uniqueness upgrade. Both source and test contracts were integrated, including stale-capture paid-period enrichment without status resurrection.
 - CONFIRMED: merged website typecheck/build and 85 tests passed; fresh-install and original-index upgrade paths passed 87 SQL assertions each. Upgrade rollback on duplicate billable data and overlapping checkout/cancellation transactions were verified with synthetic fixtures. PostgreSQL 18.6 was exercised; CI remains PostgreSQL 16. No live services or secrets used, and no remote CI result is claimed.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:9a9122134d107a17386457f46bbe3627ad234a0defea44e7f196693f7ddc4269 -->
+
+## Desktop authentication review-fix audit — 2026-10-31
+
+- CONFIRMED: initially clean assigned checkout on `coderabbit/changes/8fe5a4cb`, base `2e8f7e534a9e5bb858a3eb1341bab154c0a025fb`; no separate worktree was created. All four reported issues were present. Existing accepted desktop key filenames are preserved.
+- CONFIRMED: renderer build and focused secure-store test passed. Full Rust suite: 39 passed, 1 failed in unchanged Windows-specific Caps Lock logic on Linux. Windows DPAPI and authenticated desktop UI were not exercised. Existing sign-out does not remove the separate stored desktop session.
+- Skill selection: CodeRabbit review skill loaded; Rust, Tauri, Supabase and security specialist skills were unavailable. Progress and handoff files could not be updated by the Markdown helper because their existing content is not UTF-8.
+
+<!-- /coderabbit-ai-generated:v1 -->
