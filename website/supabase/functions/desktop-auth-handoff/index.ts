@@ -67,8 +67,8 @@ Deno.serve(async (req: Request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const expirySecret = Deno.env.get("DESKTOP_AUTH_EXPIRY_SECRET");
-  if (!supabaseUrl || !anonKey || !serviceKey || !expirySecret) return json(500, { error: "Server misconfigured" });
+  const authSecret = Deno.env.get("DESKTOP_AUTH_SECRET");
+  if (!supabaseUrl || !anonKey || !serviceKey || !authSecret) return json(500, { error: "Server misconfigured" });
 
   let body: any;
   try {
