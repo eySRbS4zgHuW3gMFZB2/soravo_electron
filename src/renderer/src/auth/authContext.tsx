@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { desktopSecureStorage } from './storage'
 
 type User = { id: string; email?: string | null; email_confirmed_at?: string | null }
 type Session = { access_token: string; refresh_token?: string; user: User } | null
@@ -52,9 +53,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) await supabase.auth.signOut({ scope: 'local' })
-    setSession(null)
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) await supabase.auth.signOut({ scope: 'local' })
+    } finally {
+      try {
+        await desktopSecureStorage.removeItem('desktop-session')
+      } finally {
+        setSession(null)
+      }
+    }
   }, [])
 
   return (
