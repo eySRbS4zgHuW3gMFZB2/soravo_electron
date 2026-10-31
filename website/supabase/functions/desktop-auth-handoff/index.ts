@@ -44,7 +44,7 @@ async function getKey(): Promise<CryptoKey> {
 async function encryptSession(value: unknown): Promise<string> {
   const key = await getKey();
   const iv = randomBytes(12);
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(value)));
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as unknown as BufferSource }, key, new TextEncoder().encode(JSON.stringify(value)) as unknown as BufferSource);
   const out = new Uint8Array(iv.length + ciphertext.byteLength);
   out.set(iv);
   out.set(new Uint8Array(ciphertext), iv.length);
@@ -56,7 +56,7 @@ async function decryptSession(value: string): Promise<unknown> {
   const iv = bytes.slice(0, 12);
   const ciphertext = bytes.slice(12);
   const key = await getKey();
-  const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext as unknown as BufferSource);
+  const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv as unknown as BufferSource }, key, ciphertext as unknown as BufferSource);
   return JSON.parse(new TextDecoder().decode(plaintext));
 }
 
