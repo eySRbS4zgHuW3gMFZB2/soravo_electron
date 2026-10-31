@@ -77,18 +77,19 @@ async function processCallbackUrls(urls: string[], setInfo: (s: string | null) =
       }
       await window.soravo.secureStoreDelete(PENDING_KEY)
       const body = await tokenResponse.json().catch(() => ({}))
-      if (body?.session?.access_token && body?.session?.refresh_token) {
-        const { error } = await supabase.auth.setSession({
-          access_token: body.session.access_token,
-          refresh_token: body.session.refresh_token,
-        })
-        if (error) {
-          setInfo('Authentication completed, but the session could not be stored.')
-          return
-        }
-      } else {
-        setInfo('Authentication completed, but no session was returned.')
+      if (!body?.token_hash) {
+        setInfo('Authentication completed, but no session token was returned.')
+        return
       }
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: body.token_hash,
+        type: 'email',
+      })
+      if (error) {
+        setInfo('Authentication completed, but the session could not be established.')
+        return
+      }
+      setInfo('Authentication successful. Supabase session established independently.')
     } catch {
       setInfo('Authentication callback could not be processed safely.')
     }

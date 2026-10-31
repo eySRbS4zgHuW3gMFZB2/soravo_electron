@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.desktop_auth_handoffs (
   code_hash text NOT NULL UNIQUE,
   code_challenge text NOT NULL,
   state text NOT NULL,
-  encrypted_session text NOT NULL,
+  token_hash text NOT NULL,
   expires_at timestamptz NOT NULL,
   consumed_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()

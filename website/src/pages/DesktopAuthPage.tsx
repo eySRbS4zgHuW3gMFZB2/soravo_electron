@@ -45,7 +45,6 @@ export function DesktopAuthPage() {
             code_challenge: challenge,
             code_challenge_method: method,
             intent,
-            refresh_token: session?.refresh_token ?? null,
           },
         });
         if (!mountedRef.current) return;
