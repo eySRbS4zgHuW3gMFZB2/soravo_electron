@@ -3,8 +3,14 @@ import { listen } from '@tauri-apps/api/event'
 import HubApp from '../HubApp'
 import { useAuth } from './authContext'
 
-const HOSTED_AUTH_BASE = 'https://soravo.xyz/auth/desktop'
-const EXCHANGE_ENDPOINT = 'https://soravo.xyz/auth/desktop/exchange'
+const env = (import.meta as any).env || {}
+const DESKTOP_AUTH_ORIGIN =
+  env.VITE_DESKTOP_AUTH_ORIGIN ||
+  (import.meta.env.DEV ? 'http://127.0.0.1:5174' : '')
+const HOSTED_AUTH_BASE = DESKTOP_AUTH_ORIGIN ? `${DESKTOP_AUTH_ORIGIN}/auth/desktop` : ''
+const EXCHANGE_ENDPOINT =
+  env.VITE_DESKTOP_AUTH_EXCHANGE_ENDPOINT ||
+  (import.meta.env.DEV ? 'http://127.0.0.1:5174/api/desktop-auth/exchange' : '')
 const PENDING_KEY = 'desktop-auth-pending'
 
 function bytesToBase64Url(bytes: Uint8Array) {
@@ -46,6 +52,7 @@ export function DesktopAuth() {
 
   const startAuth = useCallback(async (intent: 'signin' | 'signup' | 'reset') => {
     setInfo(null)
+    if (!HOSTED_AUTH_BASE) { setInfo('Desktop authentication origin is not configured.'); return }
     setPending(true)
     try {
       const state = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)))
