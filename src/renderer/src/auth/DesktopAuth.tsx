@@ -121,6 +121,7 @@ export function DesktopAuth() {
 
   useEffect(() => {
     let cancelled = false
+    let unlisten: (() => void) | null = null
     getCurrent().then((urls) => {
       if (cancelled) return
       if (urls && urls.length) void processCallbackUrls(urls, setInfo)
@@ -128,11 +129,13 @@ export function DesktopAuth() {
     onOpenUrl((urls) => {
       if (cancelled) return
       if (urls && urls.length) void processCallbackUrls(urls, setInfo)
-    }).then((unlisten) => {
-      if (cancelled) unlisten()
+    }).then((fn) => {
+      if (cancelled) fn()
+      else unlisten = fn
     }).catch(() => {})
     return () => {
       cancelled = true
+      if (unlisten) unlisten()
     }
   }, [])
 
