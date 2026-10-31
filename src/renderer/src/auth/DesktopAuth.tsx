@@ -1,82 +1,126 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
+import { listen } from '@tauri-apps/api/event'
 import HubApp from '../HubApp'
 import { useAuth } from './authContext'
 
+const HOSTED_AUTH_BASE = 'https://soravo.xyz/auth/desktop'
+const EXCHANGE_ENDPOINT = 'https://soravo.xyz/auth/desktop/exchange'
+const PENDING_KEY = 'desktop-auth-pending'
+
+function bytesToBase64Url(bytes: Uint8Array) {
+  let s = ''
+  for (const b of bytes) s += String.fromCharCode(b)
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+async function randomVerifier(length = 128) {
+  const bytes = new Uint8Array(length)
+  crypto.getRandomValues(bytes)
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
+  return Array.from(bytes).map((b) => chars[b % chars.length]).join('')
+}
+
+async function sha256Base64Url(text: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return bytesToBase64Url(new Uint8Array(digest))
+}
+
+function parseCallbackUrl(url: string) {
+  try {
+    const u = new URL(url)
+    if (!u.protocol.startsWith('soravo')) return null
+    if (!u.pathname.includes('auth/callback')) return null
+    const code = u.searchParams.get('code')
+    const state = u.searchParams.get('state')
+    if (!code || !state) return null
+    return { code, state }
+  } catch {
+    return null
+  }
+}
+
 export function DesktopAuth() {
-  const { session, user, loading, error, signIn, signUp, resetPassword, signOut } = useAuth()
-  const [mode, setMode] = useState<'welcome' | 'signin' | 'signup' | 'reset' | 'confirm'>('welcome')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  const { session, loading, signOut } = useAuth()
   const [info, setInfo] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [pending, setPending] = useState(false)
+
+  const startAuth = useCallback(async (intent: 'signin' | 'signup' | 'reset') => {
+    setInfo(null)
+    setPending(true)
+    try {
+      const state = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)))
+      const verifier = await randomVerifier()
+      const challenge = await sha256Base64Url(verifier)
+      await window.soravo.secureStoreSet(PENDING_KEY, JSON.stringify({ state, verifier, createdAt: Date.now() }))
+      const url = `${HOSTED_AUTH_BASE}?intent=${intent}&state=${encodeURIComponent(state)}&code_challenge=${challenge}&code_challenge_method=S256&redirect=${encodeURIComponent('soravo://auth/callback')}`
+      await window.soravo.openLink(url)
+      setInfo('Continue in your system browser. Return to Soravo will be detected automatically.')
+    } catch (e: any) {
+      // Note: do not expose secrets or URL query contents.
+      setInfo('Could not open system browser for authentication.')
+    } finally {
+      setPending(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    let unlisten: (() => void) | null = null
+    listen('tauri://deep-link', async (event) => {
+      const urls = Array.isArray(event.payload) ? event.payload : [String(event.payload)]
+      for (const raw of urls) {
+        const parsed = parseCallbackUrl(String(raw))
+        if (!parsed) continue
+        try {
+          const pendingRaw = await window.soravo.secureStoreGet(PENDING_KEY)
+          if (!pendingRaw) { setInfo('No authentication request is pending.'); return }
+          const { state: expectedState, verifier } = JSON.parse(pendingRaw)
+          if (parsed.state !== expectedState) { setInfo('Authentication state mismatch.'); await window.soravo.secureStoreDelete(PENDING_KEY); return }
+          let tokenResponse: Response | null = null
+          try {
+            tokenResponse = await fetch(EXCHANGE_ENDPOINT, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code: parsed.code, code_verifier: verifier, state: parsed.state }),
+            })
+          } catch {
+            tokenResponse = null
+          }
+          await window.soravo.secureStoreDelete(PENDING_KEY)
+          if (!tokenResponse || !tokenResponse.ok) {
+            setInfo('Authentication could not be completed. Missing or unsupported desktop token-exchange endpoint.')
+            return
+          }
+          // A valid exchange returns a JSON body plus session material handled by the website contract.
+          const body = await tokenResponse.json().catch(() => ({}))
+          if (body?.session && body.session.access_token) {
+            await window.soravo.secureStoreSet('desktop-session', JSON.stringify(body.session))
+            window.location.reload()
+          } else {
+            setInfo('Authentication completed, but no session was returned.')
+          }
+        } catch {
+          setInfo('Authentication callback could not be processed safely.')
+        }
+      }
+    }).then((fn) => { unlisten = fn })
+    return () => { if (unlisten) unlisten() }
+  }, [])
 
   if (loading) return <div className="auth-loading">Loading Soravo…</div>
-
-  if (session && user) return <HubApp />
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setInfo(null)
-    setSubmitting(true)
-    try {
-      if (mode === 'signup') {
-        await signUp(email.trim(), password)
-        setInfo('Check your email for confirmation, then sign in.')
-        setMode('confirm')
-      } else if (mode === 'signin') {
-        await signIn(email.trim(), password)
-      } else if (mode === 'reset') {
-        await resetPassword(email.trim())
-        setInfo('Password reset email sent.')
-        setMode('signin')
-      }
-    } catch (err: any) {
-      // error already set by context
-    } finally {
-      setSubmitting(false)
-    }
-  }
+  if (session) return <HubApp />
 
   return (
     <div className="auth-shell">
       <div className="auth-card">
         <h1>Soravo</h1>
-        <p className="auth-sub">Local-first dictation with your own account.</p>
-        {mode === 'welcome' && (
-          <>
-            <p className="auth-copy">Sign in to manage your subscription and device. Your audio stays on this device.</p>
-            <div className="auth-actions">
-              <button className="auth-primary" onClick={() => setMode('signin')}>Sign in</button>
-              <button className="auth-secondary" onClick={() => setMode('signup')}>Create account</button>
-            </div>
-          </>
-        )}
-        {(mode === 'signin' || mode === 'signup' || mode === 'reset') && (
-          <form onSubmit={submit} className="auth-form">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
-            {mode !== 'reset' && (
-              <div className="auth-password">
-                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required />
-                <button type="button" onClick={() => setShowPassword((v) => !v)}>{showPassword ? 'Hide' : 'Show'}</button>
-              </div>
-            )}
-            {error && <div className="auth-error">{error}</div>}
-            {info && <div className="auth-info">{info}</div>}
-            <button className="auth-primary" type="submit" disabled={submitting}>{submitting ? 'Please wait…' : mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Send reset link' : 'Sign in'}</button>
-            <div className="auth-links">
-              {mode === 'signin' && <><button type="button" onClick={() => setMode('signup')}>Create account</button><button type="button" onClick={() => setMode('reset')}>Forgot password</button></>}
-              {mode !== 'signin' && <button type="button" onClick={() => setMode('signin')}>Back to sign in</button>}
-              {mode === 'signin' && <button type="button" onClick={signOut}>Sign out</button>}
-            </div>
-          </form>
-        )}
-        {mode === 'confirm' && (
-          <div className="auth-confirm">
-            <p>{info || 'Check your email and then sign in.'}</p>
-            <button className="auth-primary" onClick={() => setMode('signin')}>Back to sign in</button>
-          </div>
-        )}
+        <p className="auth-sub">Local-first dictation with secure browser sign-in.</p>
+        <p className="auth-copy">Credentials are entered in the system browser, not in the desktop app.</p>
+        <div className="auth-actions">
+          <button className="auth-primary" disabled={pending} onClick={() => void startAuth('signin')}>Sign in</button>
+          <button className="auth-secondary" disabled={pending} onClick={() => void startAuth('signup')}>Create account</button>
+          <button className="auth-secondary" disabled={pending} onClick={() => void startAuth('reset')}>Reset password</button>
+        </div>
+        {info && <div className="auth-info">{info}</div>}
       </div>
     </div>
   )

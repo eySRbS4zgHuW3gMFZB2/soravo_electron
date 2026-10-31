@@ -67,5 +67,14 @@
     "windows": {
       "bundleVCRuntime": true
     }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "soravo"
+        ]
+      }
+    }
   }
 }
