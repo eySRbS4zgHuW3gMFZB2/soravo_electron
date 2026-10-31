@@ -7,6 +7,7 @@ export function DesktopAuthPage() {
   const auth = useAuth();
   const location = useLocation();
   const issuedRef = useRef(false);
+  const mountedRef = useRef(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("Validating desktop authentication request...");
   const [callbackUrl, setCallbackUrl] = useState<string | null>(null);
@@ -17,19 +18,22 @@ export function DesktopAuthPage() {
   const method = params.get("code_challenge_method")?.trim() ?? "";
   const intent = params.get("intent")?.trim() ?? "signin";
 
-  let cancelled = false;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!state || !challenge || method !== "S256") {
       setError("Missing or invalid desktop authentication parameters.");
-      issuedRef.current = false;
     }
   }, [state, challenge, method]);
 
   useEffect(() => {
     if (!auth.user || error || issuedRef.current) return;
     issuedRef.current = true;
-    let active = true;
     (async () => {
       try {
         setStatus("Creating secure desktop handoff...");
@@ -44,26 +48,20 @@ export function DesktopAuthPage() {
             refresh_token: session?.refresh_token ?? null,
           },
         });
-        if (!active) return;
+        if (!mountedRef.current) return;
         if (invokeError || !data?.code) {
           issuedRef.current = false;
           setError("Could not create the desktop handoff.");
           return;
         }
-        const callback = `soravo://auth/callback?code=${encodeURIComponent(data.code)}&state=${encodeURIComponent(state)}`;
-        setCallbackUrl(callback);
+        setCallbackUrl(`soravo://auth/callback?code=${encodeURIComponent(data.code)}&state=${encodeURIComponent(state)}`);
         setStatus("Handoff ready. Open Soravo desktop to finish sign-in.");
       } catch {
-        if (!active) return;
+        if (!mountedRef.current) return;
         issuedRef.current = false;
         setError("Could not create the desktop handoff.");
       }
     })();
-    return () => {
-      active = false;
-      cancelled = true;
-      void cancelled;
-    };
   }, [auth.user, error, state, challenge, method, intent, auth.session]);
 
   if (error) {

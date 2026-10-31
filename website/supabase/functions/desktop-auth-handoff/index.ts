@@ -34,9 +34,9 @@ function sha256Hex(value: string): Promise<string> {
   );
 }
 
-// 32-byte AES key derived from server-only secret.
 async function getKey(): Promise<CryptoKey> {
-  const secret = Deno.env.get("DESKTOP_AUTH_EXPIRY_SECRET") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const secret = Deno.env.get("DESKTOP_AUTH_SECRET");
+  if (!secret) throw new Error("DESKTOP_AUTH_SECRET missing");
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
   return crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt", "decrypt"]);
 }
@@ -44,7 +44,7 @@ async function getKey(): Promise<CryptoKey> {
 async function encryptSession(value: unknown): Promise<string> {
   const key = await getKey();
   const iv = randomBytes(12);
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as unknown as BufferSource }, key, new TextEncoder().encode(JSON.stringify(value)) as unknown as BufferSource);
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as BufferSource }, key, new TextEncoder().encode(JSON.stringify(value)));
   const out = new Uint8Array(iv.length + ciphertext.byteLength);
   out.set(iv);
   out.set(new Uint8Array(ciphertext), iv.length);
@@ -56,7 +56,7 @@ async function decryptSession(value: string): Promise<unknown> {
   const iv = bytes.slice(0, 12);
   const ciphertext = bytes.slice(12);
   const key = await getKey();
-  const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv as unknown as BufferSource }, key, ciphertext as unknown as BufferSource);
+  const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv as BufferSource }, key, ciphertext as unknown as BufferSource);
   return JSON.parse(new TextDecoder().decode(plaintext));
 }
 
@@ -67,7 +67,8 @@ Deno.serve(async (req: Request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !anonKey || !serviceKey) return json(500, { error: "Server misconfigured" });
+  const expirySecret = Deno.env.get("DESKTOP_AUTH_EXPIRY_SECRET");
+  if (!supabaseUrl || !anonKey || !serviceKey || !expirySecret) return json(500, { error: "Server misconfigured" });
 
   let body: any;
   try {
@@ -77,7 +78,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const authHeader = req.headers.get("Authorization");
-  // ISSUE
+
   if (body?.action === "issue") {
     if (!authHeader?.startsWith("Bearer ")) return json(401, { error: "Missing authorization" });
     const token = authHeader.slice(7).trim();
@@ -112,7 +113,6 @@ Deno.serve(async (req: Request) => {
     return json(200, { code: rawCode, state, expires_at: expiresAt });
   }
 
-  // EXCHANGE
   if (body?.action === "exchange") {
     const code = body?.code;
     const verifier = body?.code_verifier;
@@ -133,7 +133,6 @@ Deno.serve(async (req: Request) => {
     }
     if (record.state !== state) return json(401, { error: "State mismatch" });
 
-    // NOTE: PKCE S256 requires base64url(SHA256(verifier)), not a hex conversion.
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
     const challenge = bytesToBase64(new Uint8Array(digest)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     if (challenge !== record.code_challenge) return json(401, { error: "PKCE verification failed" });
