@@ -1,16 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { listen } from '@tauri-apps/api/event'
+import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link'
 import HubApp from '../HubApp'
 import { useAuth } from './authContext'
+import { supabase } from './supabaseClient'
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config'
 
 const env = (import.meta as any).env || {}
 const DESKTOP_AUTH_ORIGIN =
   env.VITE_DESKTOP_AUTH_ORIGIN ||
   (import.meta.env.DEV ? 'http://127.0.0.1:5174' : '')
 const HOSTED_AUTH_BASE = DESKTOP_AUTH_ORIGIN ? `${DESKTOP_AUTH_ORIGIN}/auth/desktop` : ''
-const EXCHANGE_ENDPOINT =
-  env.VITE_DESKTOP_AUTH_EXCHANGE_ENDPOINT ||
-  (import.meta.env.DEV ? 'http://127.0.0.1:5174/api/desktop-auth/exchange' : '')
+const EXCHANGE_ENDPOINT = `${SUPABASE_URL}/functions/v1/desktop-auth-handoff`
 const PENDING_KEY = 'desktop-auth-pending'
 
 function bytesToBase64Url(bytes: Uint8Array) {
@@ -34,14 +34,64 @@ async function sha256Base64Url(text: string) {
 function parseCallbackUrl(url: string) {
   try {
     const u = new URL(url)
-    if (!u.protocol.startsWith('soravo')) return null
-    if (!u.pathname.includes('auth/callback')) return null
+    if (u.protocol !== 'soravo:' || u.host !== 'auth' || u.pathname !== '/callback') return null
     const code = u.searchParams.get('code')
     const state = u.searchParams.get('state')
     if (!code || !state) return null
     return { code, state }
   } catch {
     return null
+  }
+}
+
+async function processCallbackUrls(urls: string[], setInfo: (s: string | null) => void) {
+  for (const raw of urls) {
+    const parsed = parseCallbackUrl(String(raw))
+    if (!parsed) continue
+    try {
+      const pendingRaw = await window.soravo.secureStoreGet(PENDING_KEY)
+      if (!pendingRaw) { setInfo('No authentication request is pending.'); continue }
+      const { state: expectedState, verifier } = JSON.parse(pendingRaw)
+      if (parsed.state !== expectedState) {
+        setInfo('Authentication state mismatch.')
+        await window.soravo.secureStoreDelete(PENDING_KEY)
+        continue
+      }
+      let tokenResponse: Response | null = null
+      try {
+        tokenResponse = await fetch(EXCHANGE_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ action: 'exchange', code: parsed.code, code_verifier: verifier, state: parsed.state }),
+        })
+      } catch {
+        tokenResponse = null
+      }
+      if (!tokenResponse || !tokenResponse.ok) {
+        setInfo('Authentication could not be completed.')
+        return
+      }
+      await window.soravo.secureStoreDelete(PENDING_KEY)
+      const body = await tokenResponse.json().catch(() => ({}))
+      if (body?.session?.access_token && body?.session?.refresh_token) {
+        const { error } = await supabase.auth.setSession({
+          access_token: body.session.access_token,
+          refresh_token: body.session.refresh_token,
+        })
+        if (error) {
+          setInfo('Authentication completed, but the session could not be stored.')
+          return
+        }
+      } else {
+        setInfo('Authentication completed, but no session was returned.')
+      }
+    } catch {
+      setInfo('Authentication callback could not be processed safely.')
+    }
   }
 }
 
@@ -62,8 +112,7 @@ export function DesktopAuth() {
       const url = `${HOSTED_AUTH_BASE}?intent=${intent}&state=${encodeURIComponent(state)}&code_challenge=${challenge}&code_challenge_method=S256&redirect=${encodeURIComponent('soravo://auth/callback')}`
       await window.soravo.openLink(url)
       setInfo('Continue in your system browser. Return to Soravo will be detected automatically.')
-    } catch (e: any) {
-      // Note: do not expose secrets or URL query contents.
+    } catch {
       setInfo('Could not open system browser for authentication.')
     } finally {
       setPending(false)
@@ -71,50 +120,24 @@ export function DesktopAuth() {
   }, [])
 
   useEffect(() => {
-    let unlisten: (() => void) | null = null
-    listen('tauri://deep-link', async (event) => {
-      const urls = Array.isArray(event.payload) ? event.payload : [String(event.payload)]
-      for (const raw of urls) {
-        const parsed = parseCallbackUrl(String(raw))
-        if (!parsed) continue
-        try {
-          const pendingRaw = await window.soravo.secureStoreGet(PENDING_KEY)
-          if (!pendingRaw) { setInfo('No authentication request is pending.'); return }
-          const { state: expectedState, verifier } = JSON.parse(pendingRaw)
-          if (parsed.state !== expectedState) { setInfo('Authentication state mismatch.'); await window.soravo.secureStoreDelete(PENDING_KEY); return }
-          let tokenResponse: Response | null = null
-          try {
-            tokenResponse = await fetch(EXCHANGE_ENDPOINT, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code: parsed.code, code_verifier: verifier, state: parsed.state }),
-            })
-          } catch {
-            tokenResponse = null
-          }
-          await window.soravo.secureStoreDelete(PENDING_KEY)
-          if (!tokenResponse || !tokenResponse.ok) {
-            setInfo('Authentication could not be completed. Missing or unsupported desktop token-exchange endpoint.')
-            return
-          }
-          // A valid exchange returns a JSON body plus session material handled by the website contract.
-          const body = await tokenResponse.json().catch(() => ({}))
-          if (body?.session && body.session.access_token) {
-            await window.soravo.secureStoreSet('desktop-session', JSON.stringify(body.session))
-            window.location.reload()
-          } else {
-            setInfo('Authentication completed, but no session was returned.')
-          }
-        } catch {
-          setInfo('Authentication callback could not be processed safely.')
-        }
-      }
-    }).then((fn) => { unlisten = fn })
-    return () => { if (unlisten) unlisten() }
+    let cancelled = false
+    getCurrent().then((urls) => {
+      if (cancelled) return
+      if (urls && urls.length) void processCallbackUrls(urls, setInfo)
+    }).catch(() => {})
+    onOpenUrl((urls) => {
+      if (cancelled) return
+      if (urls && urls.length) void processCallbackUrls(urls, setInfo)
+    }).then((unlisten) => {
+      if (cancelled) unlisten()
+    }).catch(() => {})
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   if (loading) return <div className="auth-loading">Loading Soravo…</div>
-  if (session) return <HubApp onSignOut={() => void signOut()} />
+  if (session) return <HubApp onSignOut={signOut} />
 
   return (
     <div className="auth-shell">

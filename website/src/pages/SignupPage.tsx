@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../lib/auth";
+import { useAuth, sanitizeReturnTo } from "../lib/auth";
 
 /**
  * Render signup with the plan query parameter and a confirmation message on success.
@@ -11,6 +11,8 @@ export function SignupPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const plan = searchParams.get("plan") || "monthly";
+  const returnTo = searchParams.get("returnTo");
+  const safeReturnTo = sanitizeReturnTo(returnTo);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,6 +79,11 @@ export function SignupPage() {
           <Link to="/login" className="mt-6 inline-block text-ink underline">
             Back to login
           </Link>
+          {returnTo ? (
+            <Link to={safeReturnTo} className="mt-3 inline-block text-ink underline">
+              Continue to Soravo
+            </Link>
+          ) : null}
         </div>
       </div>
     );

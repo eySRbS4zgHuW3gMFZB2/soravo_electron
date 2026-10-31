@@ -16,9 +16,6 @@ ALTER TABLE public.desktop_auth_handoffs ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.desktop_auth_handoffs FROM anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.desktop_auth_handoffs TO service_role;
 
-CREATE INDEX IF NOT EXISTS idx_desktop_auth_handoffs_code_hash
-  ON public.desktop_auth_handoffs (code_hash);
-
 CREATE INDEX IF NOT EXISTS idx_desktop_auth_handoffs_expires_at
   ON public.desktop_auth_handoffs (expires_at);
 

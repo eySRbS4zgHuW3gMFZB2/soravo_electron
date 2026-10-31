@@ -44,3 +44,5 @@ futures = "0.3"
 [target.'cfg(target_os = "windows")'.dependencies.winapi]
 version = "0.3"
 features = ["winuser", "minwindef", "libloaderapi", "errhandlingapi", "processthreadsapi", "dpapi", "winbase"]
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-single-instance = { version = "2.0.0", features = ["deep-link"] }

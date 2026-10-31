@@ -434,25 +434,29 @@ fn app_version(app: tauri::AppHandle) -> String {
 /// itself rather than widening a capability.
 #[tauri::command]
 fn open_link(url: String) -> Result<(), String> {
-    if !url.starts_with("https://") {
-        return Err(format!("Refusing to open {}: only https links are allowed", url));
+    let allowed = url.starts_with("https://")
+        || (cfg!(debug_assertions) && (url.starts_with("http://127.0.0.1") || url.starts_with("http://localhost")));
+    if !allowed {
+        return Err(format!("Refusing to open {}: unsupported origin", url));
     }
+
     #[cfg(target_os = "windows")]
-    let mut command = std::process::Command::new("cmd");
+    {
+        std::process::Command::new("rundll32")
+            .arg("url.dll,FileProtocolHandler")
+            .arg(&url)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    }
     #[cfg(target_os = "macos")]
-    let mut command = std::process::Command::new("open");
+    {
+        std::process::Command::new("open").arg(&url).spawn().map(|_| ()).map_err(|e| e.to_string())
+    }
     #[cfg(all(unix, not(target_os = "macos")))]
-    let mut command = std::process::Command::new("xdg-open");
-    #[cfg(target_os = "windows")]
     {
-        command.arg("/C").arg("start").arg("").arg(&url);
+        std::process::Command::new("xdg-open").arg(&url).spawn().map(|_| ()).map_err(|e| e.to_string())
     }
-    #[cfg(not(target_os = "windows"))]
-    {
-        command.arg(&url);
-    }
-    command.spawn().map_err(|e| e.to_string())?;
-    Ok(())
 }
 
 /// The resolved models folder, for the front end to show and to open.
@@ -2107,6 +2111,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {}))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,

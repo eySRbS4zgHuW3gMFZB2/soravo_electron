@@ -87,12 +87,15 @@ Deno.serve(async (req: Request) => {
 
     const state = body?.state;
     const codeChallenge = body?.code_challenge;
-    if (typeof state !== "string" || typeof codeChallenge !== "string") return json(400, { error: "Invalid request" });
+    const refreshToken = body?.refresh_token;
+    if (typeof state !== "string" || typeof codeChallenge !== "string" || typeof refreshToken !== "string") {
+      return json(400, { error: "Invalid request" });
+    }
 
     const rawCode = Array.from(randomBytes(32)).map((b) => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".charAt(b % 62)).join("");
     const codeHash = await sha256Hex(rawCode);
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000).toISOString();
-    const sessionPayload = { access_token: token, user_id: user.id };
+    const sessionPayload = { access_token: token, refresh_token: refreshToken, user_id: user.id };
     const encrypted = await encryptSession(sessionPayload);
 
     const admin = createClient(supabaseUrl, serviceKey);
@@ -130,9 +133,6 @@ Deno.serve(async (req: Request) => {
     }
     if (record.state !== state) return json(401, { error: "State mismatch" });
 
-    const expectedChallenge = await sha256Hex(verifier).then((hex) =>
-      btoa(String.fromCharCode(...hex.match(/.{2}/g)!.map((h) => parseInt(h, 16)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
-    );
     // NOTE: PKCE S256 requires base64url(SHA256(verifier)), not a hex conversion.
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
     const challenge = bytesToBase64(new Uint8Array(digest)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
