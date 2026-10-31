@@ -54,7 +54,6 @@ async function processCallbackUrls(urls: string[], setInfo: (s: string | null) =
       const { state: expectedState, verifier } = JSON.parse(pendingRaw)
       if (parsed.state !== expectedState) {
         setInfo('Authentication state mismatch.')
-        await window.soravo.secureStoreDelete(PENDING_KEY)
         continue
       }
       let tokenResponse: Response | null = null
