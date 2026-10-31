@@ -2119,6 +2119,11 @@ pub fn run() {
         ))
         .manage(AppState::default())
         .setup(|app| {
+            #[cfg(any(target_os = "linux", all(debug_assertions, target_os = "windows")))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                let _ = app.deep_link().register_all();
+            }
             // Open database
             let state = app.state::<AppState>();
             if let Ok(conn) = open_db(app.handle()) {

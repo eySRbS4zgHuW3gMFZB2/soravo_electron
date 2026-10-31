@@ -140,13 +140,13 @@ Deno.serve(async (req: Request) => {
 
     const consumed = await admin
       .from("desktop_auth_handoffs")
-      .update({ consumed_at: new Date().toISOString() })
+      .delete()
       .eq("id", record.id)
       .is("consumed_at", null)
-      .select("id");
+      .select("encrypted_session");
     if (!consumed.data || consumed.data.length !== 1) return json(409, { error: "Code already consumed" });
 
-    const session = await decryptSession(record.encrypted_session);
+    const session = await decryptSession(consumed.data[0].encrypted_session);
     return json(200, { session, state: record.state });
   }
 
