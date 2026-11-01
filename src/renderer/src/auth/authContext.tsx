@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { createInitialSessionGuard } from './desktopAuthPrimitives'
+import { desktopSecureStorage } from './storage'
 
 type User = { id: string; email?: string | null; email_confirmed_at?: string | null }
 type Session = { access_token: string; refresh_token?: string; user: User } | null
@@ -82,15 +83,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     setError(null)
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      const { error: localSignOutError } = await supabase.auth.signOut({ scope: 'local' })
-      if (localSignOutError) {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        const { error: localSignOutError } = await supabase.auth.signOut({ scope: 'local' })
+        if (localSignOutError) throw localSignOutError
+      }
+    } finally {
+      try {
+        await desktopSecureStorage.removeItem('desktop-session')
+      } catch (storageError) {
         setError('Could not clear the desktop session from secure storage.')
-        throw localSignOutError
+        throw storageError
+      } finally {
+        setSession(null)
       }
     }
-    setSession(null)
   }, [])
 
   return (
