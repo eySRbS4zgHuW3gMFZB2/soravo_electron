@@ -75,3 +75,41 @@
 - Skill selection: CodeRabbit review skill loaded; Rust, Tauri, Supabase and security specialist skills were unavailable. Progress and handoff files could not be updated by the Markdown helper because their existing content is not UTF-8.
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+## Windows browser-to-desktop authentication repair — 2026-10-31
+
+- CONFIRMED at base `a86ed22acbaeb3f52920164760fc111ff68546ba`: hub deep-link registration was late, callback paths were not deduplicated/serialized, session hydration could overwrite later auth events, and secure-storage read failures appeared as signed-out.
+- FIXED on task branch `fix/SORAVO-DESKTOP-AUTH-REPAIR-30-desktop-auth` (planning commit `ded4df5f8b9d72e3293825f37956c6009f5aa375`): early callback broker, validated PKCE transaction, session restore guard, DPAPI error propagation, terminal pending cleanup, matching magiclink verifyOtp, browser refresh before issue.
+- CONFIRMED: conditional handoff delete is intended atomic single use; no local Postgres available to test actual concurrent exchanges. Edge handler tests use a mock contract.
+- INFERRED: callback delivery and session hydration races plausibly explain intermittent return-to-app behavior; no live session test establishes root cause.
+- PASS: app typecheck/build; website typecheck/build; focused handler/contract tests 13/13; website unit suite 130/130 before handler extraction and focused suite 13/13 after; diff whitespace check.
+- BASELINE FAILURES: four auth Playwright form cases fail because `website/e2e/auth.spec.ts` mocks port 5173 while configured web server is 5174; mismatch exists at base. Three desktop route tests passed; real credential test skipped.
+- BLOCKED/UNVERIFIED: Windows native app runtime, DPAPI restart persistence, hosted handoff, and actual DB concurrency; no local Supabase/Deno/Postgres, and remote writes were out of scope. Rust tests could not complete because of linker/compiler environment mismatches; no result claimed. CodeRabbit review pending.
+- CONTRACT DECISION: document `29_WEB_DESKTOP_AUTH_CONTRACT.md` specifies 60-second handoff but existing deployed code uses 120 seconds; implementation preserves existing lifetime pending separate owner decision.
+
+### Validation addendum — 2026-10-31 (supersedes earlier status above)
+- PASS: Rust `cargo test --lib` on MSVC 1.90: 38/38; desktop typecheck/build PASS; website typecheck/build PASS; full website unit suite 136/136; focused desktop handoff/contract tests 15/15; Playwright Chromium auth suites 13 passed / 1 skipped (real credential flow skipped). The Playwright rerun includes the fixed 5174 origin and password-recovery `returnTo` check. `git diff --check` PASS.
+- PASS: `npm run tauri:dev` finished compiling and launched `src-tauri/target/debug/soravo.exe`; the native window rendered signed-out actions. The existing stored pending transaction rendered an expired-request status. UI automation could not capture the window after initial accessibility state due Windows.Graphics.Capture failure; no native sign-in click or live callback is claimed.
+- Implemented then removed after security review: code-less background polling was vulnerable to an attacker-chosen PKCE verifier on a crafted auth URL. Final flow requires the authenticated browser user to select “Continue to Soravo”, then “Open Soravo”. Browser session refresh/retry and signup/login recovery/reset return routing remain in place. The Edge handler supports issue and exchange only.
+- REVIEW: The previous CodeRabbit review identified the code-less polling risk; the final security addendum records its removal. Current integrated-diff review is pending.
+- NOT ACCEPTED as full live handoff: the supplied test account completed browser login and reached desktop-auth confirmation, but no handoff was issued and the security-fixed function/config are not deployed. Hosted handler runtime, database single-use concurrency, and native deep-link completion remain unverified.
+
+### Final security and validation addendum — 2026-10-31 (supersedes prior polling status)
+- SECURITY: CodeRabbit identified an account-takeover path in code-less state polling: a crafted desktop-auth URL could bind a victim's browser session to an attacker-chosen PKCE verifier. Removed polling completely from the renderer and Edge handler. Browser handoff issuance now occurs only after the authenticated user clicks “Continue to Soravo”; the one-time code is then exchanged only through the app's stored state/verifier and explicit Soravo protocol callback.
+- DECISION: clickless desktop completion after website login was removed because it made a transferable victim token retrievable by a caller who chose the challenge. The user must confirm the desktop handoff in the authenticated browser and then accept the browser's Open Soravo prompt. This is an intentional security requirement.
+- PASS: Rust `cargo test --lib` 38/38; desktop and website typecheck/build; website unit suite 135/135; focused contracts 14/14; Playwright Chromium auth suites 14/14 with supplied test credentials, including live login, desktop return, and no handoff before user confirmation.
+- PASS: Rust `cargo test --lib` 38/38 earlier in this task; `git diff --check` pass. Tauri dev runtime built and launched earlier; initial accessibility tree rendered. Native screenshot/input automation failed on Windows.Graphics.Capture, so no desktop click/deep-link acceptance is claimed.
+- NOT ACCEPTED as live full handoff: latest Edge handler/config are not deployed, and no hosted handoff was issued. The real credential run deliberately stopped before “Continue to Soravo” to avoid exercising a stale deployed function. No actual app deep-link callback against the hosted backend or DB concurrency test was performed.
+- REVIEW: a final CodeRabbit review of the security-fixed diff is running; triage its completed findings before integration.
+
+### Fixed-redirect handoff addendum — 2026-10-31
+- Supabase email confirmation and recovery now use static exact callback paths (`/auth/desktop-confirm`, `/reset-password`); sanitized `returnTo` stays in same-origin local storage and is consumed after confirmation/reset. Local `supabase/config.toml` lists exact localhost URLs only. Hosted Auth URL configuration still needs the corresponding exact production paths; no wildcard redirect was added.
+- Final credential-backed Playwright pass: 16/16. Website typecheck/build and 135 Vitest cases pass; focused handler/contract tests 14/14. Real password login against the supplied test project returns to desktop confirmation and does not issue a handoff until user confirmation.
+- Remaining production acceptance: deploy the security-fixed Edge Function/config and add the exact hosted Auth redirect URLs, then run issue/exchange with the test account and exercise the Soravo OS callback. No hosted change or handoff was made.
+
+### Deployed handoff compatibility fix — 2026-10-31
+- Found the live `desktop-auth-handoff` Edge Function is version 1 and its successful exchange response contains `token_hash` and `state` but omits `otp_type`. The desktop client required that field, so it discarded a valid callback after consuming the code. The deployed function issues only `magiclink` tokens.
+- Updated the desktop response parser to infer `magiclink` only when `otp_type` is omitted; any explicit unexpected type still fails validation. Added coverage for legacy omission, explicit type, and malformed payloads.
+- PASS: desktop typecheck/build; website typecheck/build; website unit suite 138/138; diff check. Native callback retry not completed because Windows Graphics Capture/input failed on the app window; user can retry sign-in with the rebuilt hot-reloaded app.
+- Windows/browser protocol prompts are controlled by the registered handler and browser consent state; the callback reached Soravo in the reported attempt, so the missing prompt was not the cause of the failed desktop session.
+- Code review follow-up: moved `pg_cron` scheduling out of migration replay into `website/supabase/operations/cleanup_expired_desktop_auth_handoffs.sql`, which is run once in hosted Supabase; migrations 009/010 are now replayed by database CI without requiring `pg_cron` in the plain PostgreSQL service. Database migrations could not be exercised locally (no psql/Docker); CI will verify replay.

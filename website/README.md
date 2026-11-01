@@ -4,10 +4,12 @@ Local development notes.
 
 ## Environment files
 
-- `website/.env` is for Vite client variables only:
+- `website/.env.local` is the recommended local Vite config file (Vite also loads `website/.env`):
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_ANON_KEY`
   - These are public/publishable values. Security depends on RLS, not secrecy.
+  - The desktop development app opens the local website at `http://127.0.0.1:5174`; start it with `npm run dev` from `website/` so Vite loads this file.
+  - Playwright reads these same values so its local server and request interceptors target the same Supabase project.
 - `website/supabase/.env.local` is for local Supabase Edge Function development only.
   - It is ignored by git.
   - From the `website/` directory, start Edge Functions with the CLI's supported env file option:
@@ -20,6 +22,13 @@ Local development notes.
     - `RAZORPAY_KEY_SECRET` (server-only, test mode only)
     - `RAZORPAY_WEBHOOK_SECRET` (server-only)
 - `website/supabase/.env.local.example` contains placeholders only and is safe to commit.
+
+## Desktop auth handoff cleanup
+
+Migrations 009 and 010 create the one-time desktop handoff table and remove
+already-expired rows during replay. After applying them to a hosted Supabase
+project, run `supabase/operations/cleanup_expired_desktop_auth_handoffs.sql`
+once in that project's SQL editor to enable the `pg_cron` cleanup job.
 
 ## Deployed Edge Function secrets
 

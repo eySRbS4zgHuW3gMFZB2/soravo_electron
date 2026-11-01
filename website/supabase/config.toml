@@ -1,0 +1,16 @@
+# Local Supabase project configuration for the Soravo project.
+project_id = "vfrhplskegqqdxbykyvx"
+
+[auth]
+site_url = "http://localhost:5174"
+additional_redirect_urls = [
+  "http://localhost:5174/account",
+  "http://localhost:5174/reset-password",
+  "http://localhost:5174/auth/desktop-confirm",
+]
+
+[functions.desktop-auth-handoff]
+# Desktop exchange requests have no user JWT; the handler validates their
+# one-time code, state, and PKCE verifier. Issue requests authenticate the
+# browser access token with getUser().
+verify_jwt = false

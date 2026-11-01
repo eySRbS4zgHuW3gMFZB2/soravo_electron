@@ -53,7 +53,7 @@ export function SignupPage() {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await signUp(email, password, displayName);
+      const { error } = await signUp(email, password, displayName, returnTo ? safeReturnTo : undefined);
       if (error) {
         setError(error);
       } else {

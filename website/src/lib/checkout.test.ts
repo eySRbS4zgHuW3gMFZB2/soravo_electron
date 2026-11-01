@@ -3,6 +3,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://placeholder.supabase.co";
+
 const { mockAuth } = vi.hoisted(() => ({
   mockAuth: {
     getSession: vi.fn(),
@@ -45,7 +47,7 @@ describe("Checkout order creation", () => {
     const result = await createOrder("monthly");
     expect(result.order_id).toBe("order_123");
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://placeholder.supabase.co/functions/v1/create-order",
+      `${SUPABASE_URL}/functions/v1/create-order`,
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({

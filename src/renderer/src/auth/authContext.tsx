@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { createInitialSessionGuard } from './desktopAuthPrimitives'
 
 type User = { id: string; email?: string | null; email_confirmed_at?: string | null }
 type Session = { access_token: string; refresh_token?: string; user: User } | null
@@ -24,13 +25,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) { setSession(data.session as Session); setLoading(false) }
+    const guard = createInitialSessionGuard()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'INITIAL_SESSION') {
+        if (mounted && guard.shouldApplyInitialSession()) {
+          setSession(nextSession as Session)
+          setLoading(false)
+        }
+        return
+      }
+      guard.markAuthEvent()
+      if (!mounted) return
+      setSession(nextSession as Session)
+      setError(null)
+      setLoading(false)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s as Session)
+
+    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
+      if (!mounted || !guard.shouldApplyInitialSession()) return
+      if (sessionError) {
+        setError('Could not restore the saved desktop session from secure storage.')
+      } else {
+        setSession(data.session as Session)
+        setError(null)
+      }
+      setLoading(false)
+    }).catch(() => {
+      if (!mounted || !guard.shouldApplyInitialSession()) return
+      setError('Could not restore the saved desktop session from secure storage.')
+      setLoading(false)
     })
-    return () => { mounted = false; subscription.unsubscribe() }
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -52,8 +81,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
+    setError(null)
     const { error } = await supabase.auth.signOut()
-    if (error) await supabase.auth.signOut({ scope: 'local' })
+    if (error) {
+      const { error: localSignOutError } = await supabase.auth.signOut({ scope: 'local' })
+      if (localSignOutError) {
+        setError('Could not clear the desktop session from secure storage.')
+        throw localSignOutError
+      }
+    }
     setSession(null)
   }, [])
 

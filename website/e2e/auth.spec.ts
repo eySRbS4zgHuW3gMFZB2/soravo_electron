@@ -1,7 +1,7 @@
 import { test, expect, type Route } from "@playwright/test";
 
-const SUPABASE = "https://placeholder.supabase.co";
-const ORIGIN = "http://localhost:5173";
+const SUPABASE = process.env.VITE_SUPABASE_URL || "https://placeholder.supabase.co";
+const ORIGIN = "http://localhost:5174";
 
 const CORS_HEADERS = {
   "access-control-allow-origin": ORIGIN,
@@ -46,6 +46,22 @@ test.describe("auth flows (mocked Supabase)", () => {
     await expect(page.getByRole("heading", { name: /check your email/i })).toBeVisible();
   });
 
+  test("signup confirmation returns to the desktop handoff route", async ({ page }) => {
+    let redirectTo = "";
+    await page.route(`${SUPABASE}/auth/v1/signup*`, async (route) => {
+      redirectTo = new URL(route.request().url()).searchParams.get("redirect_to") ?? "";
+      await fulfillJson(route, 200, { id: "u1", email: "a@example.com", confirmation_sent_at: new Date().toISOString() });
+    });
+    const desktopReturn = "/auth/desktop?state=" + "YQ".repeat(21) + "Y" + "&code_challenge=" + "YQ".repeat(21) + "Y" + "&code_challenge_method=S256";
+    await page.goto(`/signup?returnTo=${encodeURIComponent(desktopReturn)}`);
+    await page.getByLabel("Email").fill("a@example.com");
+    await page.getByLabel("Password").fill("password123");
+    await page.getByRole("button", { name: /create account/i }).click();
+    await expect(page.getByRole("heading", { name: /check your email/i })).toBeVisible();
+    expect(redirectTo).toBe("http://localhost:5174/auth/desktop-confirm");
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("soravo:pending-auth-return-to"))).toContain(desktopReturn);
+  });
+
   test("signup surfaces duplicate-email errors", async ({ page }) => {
     await page.route(`${SUPABASE}/auth/v1/signup*`, async (route) => {
       await fulfillJson(route, 400, { error: "User already registered", error_code: "user_already_exists" });
@@ -68,6 +84,14 @@ test.describe("auth flows (mocked Supabase)", () => {
     await expect(page.getByText(/invalid login credentials/i)).toBeVisible();
   });
 
+  test("login password recovery preserves the desktop return route", async ({ page }) => {
+    const desktopReturn = "/auth/desktop?state=" + "YQ".repeat(21) + "Y" + "&code_challenge=" + "YQ".repeat(21) + "Y" + "&code_challenge_method=S256";
+    await page.goto(`/login?returnTo=${encodeURIComponent(desktopReturn)}`);
+    await page.getByRole("link", { name: /forgot password/i }).click();
+    await expect(page).toHaveURL(/\/forgot-password\?/);
+    expect(new URL(page.url()).searchParams.get("returnTo")).toBe(desktopReturn);
+  });
+
   test("forgot password shows success message", async ({ page }) => {
     await page.route(`${SUPABASE}/auth/v1/recover*`, async (route) => {
       await fulfillJson(route, 200, {});
@@ -76,6 +100,21 @@ test.describe("auth flows (mocked Supabase)", () => {
     await page.getByLabel("Email").fill("a@example.com");
     await page.getByRole("button", { name: /send reset link/i }).click();
     await expect(page.getByRole("status")).toBeVisible();
+  });
+
+  test("desktop password recovery uses a fixed allowlisted URL and stores the safe return route locally", async ({ page }) => {
+    let redirectTo = "";
+    await page.route(`${SUPABASE}/auth/v1/recover*`, async (route) => {
+      redirectTo = new URL(route.request().url()).searchParams.get("redirect_to") ?? "";
+      await fulfillJson(route, 200, {});
+    });
+    const desktopReturn = "/auth/desktop?state=" + "YQ".repeat(21) + "Y" + "&code_challenge=" + "YQ".repeat(21) + "Y" + "&code_challenge_method=S256";
+    await page.goto(`/forgot-password?returnTo=${encodeURIComponent(desktopReturn)}`);
+    await page.getByLabel("Email").fill("a@example.com");
+    await page.getByRole("button", { name: /send reset link/i }).click();
+    await expect(page.getByRole("status")).toBeVisible();
+    expect(redirectTo).toBe("http://localhost:5174/reset-password");
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("soravo:pending-auth-return-to"))).toContain(desktopReturn);
   });
 
   test("reset password page reports invalid link without a session", async ({ page }) => {
