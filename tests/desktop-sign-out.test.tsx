@@ -6,8 +6,12 @@ const auth = vi.hoisted(() => ({
   getSession: vi.fn(),
   onAuthStateChange: vi.fn(),
   signOut: vi.fn(),
+  storageKey: 'sb-vfrhplskegqqdxbykyvx-auth-token',
 }))
-vi.mock('../src/renderer/src/auth/supabaseClient', () => ({ supabase: { auth } }))
+vi.mock('../src/renderer/src/auth/supabaseClient', () => ({
+  supabase: { auth },
+  DESKTOP_SESSION_STORAGE_KEY: auth.storageKey,
+}))
 
 import { AuthProvider, useAuth } from '../src/renderer/src/auth/authContext'
 
@@ -19,7 +23,7 @@ afterEach(() => {
 })
 
 it('removes the stored desktop session on sign-out', async () => {
-  const stored = new Map([['desktop-session', 'saved session']])
+  const stored = new Map([[auth.storageKey, 'saved session']])
   const secureStoreDelete = vi.fn(async (key: string) => { stored.delete(key) })
   vi.stubGlobal('window', { soravo: { secureStoreDelete } })
   auth.getSession.mockResolvedValue({ data: { session: { access_token: 'token', user: { id: 'user' } } } })
@@ -36,7 +40,7 @@ it('removes the stored desktop session on sign-out', async () => {
   await act(async () => { await current!.signOut() })
 
   expect(auth.signOut).toHaveBeenCalledOnce()
-  expect(secureStoreDelete).toHaveBeenCalledWith('desktop-session')
-  expect(stored.has('desktop-session')).toBe(false)
+  expect(secureStoreDelete).toHaveBeenCalledWith(auth.storageKey)
+  expect(stored.has(auth.storageKey)).toBe(false)
   expect(current?.session).toBeNull()
 })

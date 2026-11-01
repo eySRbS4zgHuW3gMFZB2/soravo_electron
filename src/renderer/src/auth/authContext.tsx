@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { supabase } from './supabaseClient'
+import { DESKTOP_SESSION_STORAGE_KEY, supabase } from './supabaseClient'
 import { createInitialSessionGuard } from './desktopAuthPrimitives'
 import { desktopSecureStorage } from './storage'
 
@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       try {
-        await desktopSecureStorage.removeItem('desktop-session')
+        await desktopSecureStorage.removeItem(DESKTOP_SESSION_STORAGE_KEY)
       } catch (storageError) {
         setError('Could not clear the desktop session from secure storage.')
         throw storageError

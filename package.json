@@ -15,7 +15,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "typecheck": "tsc --noEmit -p tsconfig.web.json",
-    "test": "vitest run --root . --exclude 'website/**'"
+    "test": "vitest run --root . --exclude \"website/**\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",

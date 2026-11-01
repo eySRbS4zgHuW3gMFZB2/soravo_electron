@@ -23,6 +23,12 @@ Local development notes.
     - `RAZORPAY_WEBHOOK_SECRET` (server-only)
 - `website/supabase/.env.local.example` contains placeholders only and is safe to commit.
 
+The website TypeScript check covers browser sources in `website/src`. The
+desktop-auth Edge Function under `website/supabase/functions/` uses Deno and is
+outside that Vite TypeScript project; run
+`deno check supabase/functions/desktop-auth-handoff/index.ts` from `website/`
+when validating Edge Function changes.
+
 ## Desktop auth handoff cleanup
 
 Migrations 009 and 010 create the one-time desktop handoff table and remove
