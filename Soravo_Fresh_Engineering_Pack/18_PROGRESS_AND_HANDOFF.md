@@ -876,3 +876,16 @@ No secrets or production infra changes occurred. At the end of round 6, the loca
 
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:a681117581ad43f438a52666749107d0b938ed6d83ed3e602484cb4d601a38c9 -->
+
+## PR #41 Supabase pair and session isolation - 2026-11-02
+
+- Process, desktop and website settings are selected as complete URL/key pairs in that order, with defaults when no complete pair exists. The validated URL drives both the CSP and the session key.
+- Root HTTPS Supabase project-ref keys remain unchanged. Other URLs use a full-URL SHA-256 key. Existing custom-URL sessions require sign-in again; ambiguous old encrypted records are left in place.
+- Focused desktop tests (32), renderer typecheck and synthetic environment builds passed. Reused unchanged handoff/platform results. Detailed evidence is in `workspace-context/validation-record.md` outside Git. Live services, real Windows secure storage and current-patch remote CI remain unverified; the owner screenshot reference is unavailable. No push or deployment.
+
+
+<!-- /coderabbit-ai-generated:v1 -->

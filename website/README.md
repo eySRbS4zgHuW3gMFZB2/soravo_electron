@@ -79,11 +79,13 @@ Both lifecycle events and payment-triggered active updates use the provider webh
 
 <!-- coderabbit-ai-generated:v1 -->
 
-<!-- coderabbit-ai-generated-section:v1:4ba222b01174cf409724a5dd7a925301e969f64f5900c5064d3df7108dd466b1 -->
+<!-- coderabbit-ai-generated-section:v1:3456fc57b829fc0774d779a58a01b4d068e64c75186f442f15c86646c6f905ce -->
 
 ## Desktop Supabase configuration
 
-The desktop Vite build reads the public Supabase URL and anon/publishable key from `website/.env.local` (or `website/.env`) as a fallback. Process environment values take precedence, followed by values in `src/renderer/.env.local` or `src/renderer/.env`. Configure the URL and key for the same project. Desktop-only settings such as `VITE_DESKTOP_AUTH_ORIGIN` remain in the renderer environment. Without overrides the desktop uses its existing default URL and public key.
+The desktop Vite build selects the first complete public Supabase URL and anon/publishable key pair from the process environment, renderer environment files, then `website/.env.local` or `website/.env`. Incomplete pairs are skipped; when none is complete, the existing default pair is used. Configure both values for the same project. Desktop-only settings such as `VITE_DESKTOP_AUTH_ORIGIN` remain in the renderer environment.
+
+Root HTTPS project URLs at `<project-ref>.supabase.co` retain their existing session keys. Other URLs now use a key derived from the full URL, so existing custom-project sessions require sign-in again. Old encrypted records are not migrated or deleted because prior keys may be shared by multiple URLs.
 
 
 <!-- /coderabbit-ai-generated:v1 -->

@@ -1173,3 +1173,16 @@ No secrets or production infra changes occurred. At the end of round 6, the loca
 
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:04cf668f75111f4f9917a6b17bae81a32aaf5b71a559b64cad16185a7f085a5c -->
+
+## PR #41 Supabase pair and session isolation - 2026-11-02
+
+- Select the first complete URL/key pair from process, desktop and website configuration; skip incomplete pairs and fall back to the existing defaults. Vite derives the renderer, CSP and session key from the same validated URL.
+- Preserve root HTTPS Supabase project-ref session keys. Other URLs use a bounded SHA-256 key of the full normalized URL, separating ports and paths. This requested change requires users with existing custom-URL sessions to sign in again; old encrypted records are retained because older keys may have been shared by several URLs.
+- Focused desktop tests (32), renderer typecheck and synthetic mixed-environment builds passed; reused unchanged handoff and platform results. Local verification did not exercise real Windows secure storage, deployed services or current-patch remote CI. The owner screenshot reference remains unavailable. Read-only subagents audited configuration and storage-key compatibility; previously loaded CodeRabbit skill and unavailable repository-adjacent Supabase/security skills remain applicable. No push or deployment.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
