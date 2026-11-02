@@ -8,6 +8,7 @@ vi.mock('../src/renderer/src/auth/authContext', () => ({ useAuth: () => ({ sessi
 vi.mock('../src/renderer/src/auth/supabaseClient', () => ({ supabase: {} }))
 vi.mock('../src/renderer/src/auth/desktopAuthDeepLinks', () => ({ getDesktopAuthDeepLinkWarning: () => null, subscribeToDesktopAuthCallbacks: () => () => {} }))
 import { DesktopAuth } from '../src/renderer/src/auth/DesktopAuth'
+import { DesktopRemoteSignOutError } from '../src/renderer/src/auth/signOutErrors'
 
 let renderer: ReactTestRenderer | undefined
 afterEach(() => { renderer?.unmount(); vi.unstubAllGlobals(); auth.session = null; vi.resetAllMocks() })
@@ -29,4 +30,20 @@ it('shows an error when sign-out fails and the session remains active', async ()
   await act(async () => { renderer = create(<DesktopAuth />) })
   await act(async () => { renderer!.root.findByType('button').props.onClick() })
   expect(renderer!.root.findByProps({ role: 'alert' }).children.join('')).toContain('Sign-out could not be completed')
+})
+
+it('reports a remote sign-out error after the local session is cleared', async () => {
+  auth.session = { user: { id: 'user' } }
+  auth.signOut.mockImplementation(async () => {
+    auth.session = null
+    throw new DesktopRemoteSignOutError(new Error('remote failure'))
+  })
+  vi.stubGlobal('window', { soravo: { secureStoreGet: vi.fn().mockResolvedValue(null) } })
+  await act(async () => { renderer = create(<DesktopAuth />) })
+  await act(async () => {
+    renderer!.root.findByType('button').props.onClick()
+    await Promise.resolve()
+    renderer!.update(<DesktopAuth />)
+  })
+  expect(renderer!.root.findByProps({ role: 'status' }).children.join('')).toContain('Signed out on this device')
 })

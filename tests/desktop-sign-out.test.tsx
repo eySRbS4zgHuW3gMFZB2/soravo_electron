@@ -58,13 +58,17 @@ it('waits for an in-flight session operation before deleting the stored session'
   expect(current().session).toBeNull()
 })
 
-it('propagates local sign-out errors without clearing the UI session', async () => {
+it('clears the UI after secure deletion and reports the Supabase error', async () => {
   installLocks()
   const failure = new Error('sign-out failed')
   auth.signOut.mockResolvedValue({ error: failure })
-  const current = await mount(vi.fn(async () => {}))
-  await act(async () => { await expect(current().signOut()).rejects.toBe(failure) })
-  expect(current().user?.id).toBe('user')
+  const remove = vi.fn(async () => {})
+  const current = await mount(remove)
+  await act(async () => {
+    await expect(current().signOut()).rejects.toMatchObject({ name: 'DesktopRemoteSignOutError', cause: failure })
+  })
+  expect(remove).toHaveBeenCalledWith(auth.storageKey)
+  expect(current().session).toBeNull()
 })
 
 it('does not delete or clear the UI when cross-context locking is unavailable', async () => {

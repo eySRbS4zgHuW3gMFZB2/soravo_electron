@@ -838,3 +838,15 @@ No secrets or production infra changes occurred. At the end of round 6, the loca
 
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:3dcc213d6f81c86d29e42900e0df2cd28f72137aca85a34a7abbbd3d07c92a65 -->
+
+## PR #41 review follow-up - 2026-11-02
+
+- The requested sign-out behavior changes the previous UI guarantee: after secure storage deletion succeeds, clear the session even if Supabase sign-out fails, and report the remote error. When both sign-out and storage deletion fail, both errors are reported. Non-loopback Supabase HTTP URLs are rejected and the CSP and renderer share the validated URL.
+- Targeted desktop tests (18), renderer typecheck, HTTPS/loopback builds and public-HTTP rejection passed. Reused the unchanged 14-test handoff result. Exact inputs and checks are in `workspace-context/validation-record.md` outside Git. Linux secure storage, live provider integration and current-patch remote CI remain unverified.
+- The owner screenshot reference was unavailable. Code-review skill loaded; repository-adjacent Supabase/security skills unavailable. A read-only subagent checked earlier launch, platform and handoff repairs. No push or deployment.
+
+<!-- /coderabbit-ai-generated:v1 -->

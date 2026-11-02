@@ -3,6 +3,7 @@ import { DESKTOP_SESSION_STORAGE_KEY, supabase } from './supabaseClient'
 import { createInitialSessionGuard } from './desktopAuthPrimitives'
 import { desktopSecureStorage } from './storage'
 import { desktopSessionLock } from './sessionLock'
+import { DesktopRemoteSignOutError } from './signOutErrors'
 
 type User = { id: string; email?: string | null; email_confirmed_at?: string | null }
 type Session = { access_token: string; refresh_token?: string; user: User } | null
@@ -104,9 +105,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (signOutError && storageError) throw new AggregateError([signOutError, storageError], 'Sign out failed')
-    if (signOutError) throw signOutError
     if (storageError) throw storageError
     setSession(null)
+    if (signOutError) throw new DesktopRemoteSignOutError(signOutError)
   }, [])
 
   return (

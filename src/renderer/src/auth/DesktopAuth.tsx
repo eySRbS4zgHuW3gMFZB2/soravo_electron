@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import HubApp from '../HubApp'
 import { useAuth } from './authContext'
+import { DesktopRemoteSignOutError } from './signOutErrors'
 import { supabase } from './supabaseClient'
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config'
 import {
@@ -201,8 +202,10 @@ export function DesktopAuth() {
     <HubApp onSignOut={() => {
       setSignOutError(null)
       setInfo(null)
-      void signOut().catch(() => {
-        const message = 'Sign-out could not be completed. Try again.'
+      void signOut().catch((error: unknown) => {
+        const message = error instanceof DesktopRemoteSignOutError
+          ? 'Signed out on this device, but the sign-out service reported an error.'
+          : 'Sign-out could not be completed. Try again.'
         setSignOutError(message)
         setInfo(message)
       })

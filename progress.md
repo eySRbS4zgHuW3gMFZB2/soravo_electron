@@ -1135,3 +1135,15 @@ No secrets or production infra changes occurred. At the end of round 6, the loca
 
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:c11c6d15b0f5edc262285afe1bbb6135433a04b4e75112fd56655fab9b2a8e43 -->
+
+## PR #41 review follow-up - 2026-11-02
+
+- Clear the desktop UI session after successful locked storage deletion even if Supabase sign-out fails; retain the underlying error and report the partial failure. This intentionally changes the preceding repair's UI behavior; when both sign-out and storage deletion fail, both errors are reported.
+- Require HTTPS for non-loopback Supabase URLs and share the validated, normalized URL between the renderer and CSP. Targeted desktop tests (18), renderer typecheck, loopback/HTTPS builds and public-HTTP rejection passed. Existing expired-handoff tests were reused.
+- Code-review skill loaded; repository-adjacent Supabase/security skills unavailable. A read-only subagent independently checked the earlier launch, platform and handoff fixes. The owner screenshot identifier was unavailable; no provider or remote state was changed.
+
+<!-- /coderabbit-ai-generated:v1 -->
