@@ -1193,3 +1193,6 @@ Targeted repair: .github/workflows/release.yml now validates and passes VITE_DES
 Validation performed: root TypeScript and build passed; root tests 3 passed; website TypeScript/build passed; website tests 184 passed.
 Blocked/not verified: Rust tests remain blocked by mixed toolchain/dependency environment; no release build was executed; the release environment variable itself must be configured by the owner if absent.
 No production site, DNS, Supabase, Cloudflare deployment, PR merge, auto-merge or push to main was performed by this task before the intended authorized push.
+PR #41 Windows release auth-origin validation repair - 2026-11-02
+Changed .github/workflows/release.yml only: validation now uses case-sensitive PowerShell comparisons and rejects noncanonical origins before npm run tauri:build.
+Validation: focused origin cases passed; typecheck/build passed; Rust tests remain environmentally blocked. No push occurred yet.

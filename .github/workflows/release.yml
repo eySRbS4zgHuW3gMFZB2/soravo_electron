@@ -116,13 +116,13 @@ jobs:
           if (-not [System.Uri]::TryCreate($origin, [System.UriKind]::Absolute, [ref]$uri)) {
             throw "VITE_DESKTOP_AUTH_ORIGIN is not an absolute URL: $origin"
           }
-          if ($uri.Scheme -ne "https") {
+          if ($uri.Scheme -cne "https") {
             throw "VITE_DESKTOP_AUTH_ORIGIN must use https: $origin"
           }
-          if ($uri.Host -ne "soravo.xyz") {
+          if ($uri.Host -cne "soravo.xyz") {
             throw "VITE_DESKTOP_AUTH_ORIGIN must be the approved soravo.xyz origin: $origin"
           }
-          if ($origin -ne "https://soravo.xyz") {
+          if ($origin -cne "https://soravo.xyz") {
             throw "VITE_DESKTOP_AUTH_ORIGIN must not include a path, query, fragment or trailing slash: $origin"
           }
           Write-Host "Validated desktop authentication origin: $origin"
