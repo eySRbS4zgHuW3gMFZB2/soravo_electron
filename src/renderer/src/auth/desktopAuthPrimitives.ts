@@ -120,19 +120,19 @@ export function createInitialSessionGuard() {
   }
 }
 
+export type DesktopAuthCallbackOutcome = 'complete' | 'retryable'
+type CallbackEntry = { callback: DesktopAuthCallback; fingerprint: string }
+type CallbackHandler = (callback: DesktopAuthCallback) => Promise<DesktopAuthCallbackOutcome>
+
 export class DesktopAuthCallbackBroker {
-  private queue: DesktopAuthCallback[] = []
+  private queue: CallbackEntry[] = []
   private seenFingerprints = new Set<string>()
-  private handler: ((callback: DesktopAuthCallback) => void) | null = null
+  private handler: CallbackHandler | null = null
   private publishTail = Promise.resolve()
   private failed = false
 
   publish(urls: string[] | null): Promise<void> {
-    this.publishTail = this.publishTail
-      .then(() => this.publishSerially(urls))
-      .catch(() => {
-        this.failed = true
-      })
+    this.schedule(() => this.publishSerially(urls))
     return this.publishTail
   }
 
@@ -140,13 +140,29 @@ export class DesktopAuthCallbackBroker {
     return this.failed
   }
 
-  subscribe(handler: (callback: DesktopAuthCallback) => void) {
+  subscribe(handler: CallbackHandler) {
     this.handler = handler
-    const queued = this.queue
-    this.queue = []
-    for (const callback of queued) handler(callback)
+    this.schedule(async () => {
+      while (this.handler && this.queue.length) {
+        const entry = this.queue.shift()!
+        await this.dispatch(entry, this.handler)
+      }
+    })
     return () => {
       if (this.handler === handler) this.handler = null
+    }
+  }
+
+  private schedule(operation: () => Promise<void>) {
+    this.publishTail = this.publishTail.then(operation).catch(() => { this.failed = true })
+  }
+
+  private async dispatch(entry: CallbackEntry, handler: CallbackHandler) {
+    try {
+      if (await handler(entry.callback) === 'retryable') this.seenFingerprints.delete(entry.fingerprint)
+    } catch {
+      // An unexpected failure may occur after exchange; do not permit replay.
+      this.failed = true
     }
   }
 
@@ -154,19 +170,22 @@ export class DesktopAuthCallbackBroker {
     for (const rawUrl of (urls ?? []).slice(0, 8)) {
       const callback = parseDesktopAuthCallback(rawUrl)
       if (!callback) continue
-
       const fingerprint = await createCallbackFingerprint(callback)
       if (this.seenFingerprints.has(fingerprint)) continue
-      this.seenFingerprints.add(fingerprint)
-      if (this.seenFingerprints.size > 64) {
-        const oldest = this.seenFingerprints.values().next().value
-        if (oldest) this.seenFingerprints.delete(oldest)
+      // Retain processed fingerprints; fail closed rather than evicting them.
+      if (this.seenFingerprints.size >= 1024) {
+        this.failed = true
+        return
       }
-
-      if (this.handler) this.handler(callback)
+      this.seenFingerprints.add(fingerprint)
+      const entry = { callback, fingerprint }
+      if (this.handler) await this.dispatch(entry, this.handler)
       else {
-        if (this.queue.length === 8) this.queue.shift()
-        this.queue.push(callback)
+        if (this.queue.length === 8) {
+          const evicted = this.queue.shift()!
+          this.seenFingerprints.delete(evicted.fingerprint)
+        }
+        this.queue.push(entry)
       }
     }
   }

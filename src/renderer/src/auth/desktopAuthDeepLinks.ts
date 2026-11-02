@@ -1,7 +1,7 @@
 import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link'
-import { DesktopAuthCallbackBroker, type DesktopAuthCallback } from './desktopAuthPrimitives'
+import { DesktopAuthCallbackBroker, type DesktopAuthCallback, type DesktopAuthCallbackOutcome } from './desktopAuthPrimitives'
 
-type CallbackHandler = (callback: DesktopAuthCallback) => void
+type CallbackHandler = (callback: DesktopAuthCallback) => Promise<DesktopAuthCallbackOutcome>
 
 const broker = new DesktopAuthCallbackBroker()
 let initializePromise: Promise<void> | null = null

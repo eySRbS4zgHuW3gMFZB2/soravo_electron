@@ -74,8 +74,9 @@ describe('desktop authentication contracts', () => {
     const broker = new DesktopAuthCallbackBroker()
     const url = `soravo://auth/callback?code=${code}&state=${state}`
     await broker.publish([url, url])
-    const handler = vi.fn()
+    const handler = vi.fn(async () => 'complete' as const)
     broker.subscribe(handler)
+    await broker.publish([])
     expect(handler).toHaveBeenCalledTimes(1)
     expect(handler).toHaveBeenCalledWith({ code, state })
     await broker.publish([url])

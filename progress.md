@@ -1159,3 +1159,17 @@ No secrets or production infra changes occurred. At the end of round 6, the loca
 - Linux secure storage is unavailable and non-loopback IPv6 keys remain incompatible with the native store. Live providers and current-patch remote CI are unverified. Owner screenshot reference remains unavailable. No push or deployment.
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:fb155752ec351ad239c4a6a41f3fc2fa0b913850332a1860c4e30eff19de6a6d -->
+
+## PR #41 callback and schema follow-up - 2026-11-02
+
+- Reject non-loopback IPv6 Supabase URLs; retain IPv6 loopback. Await callback processing and release fingerprints only for retryable outcomes; consumed or terminal responses stay recorded, with a fail-closed 1024-entry cap. Desktop Vite configuration now falls back to the website's public Supabase URL and key.
+- Migration 011 upgrades already-applied admin schemas: grantor deletion clears attribution rather than being blocked and the profile guard reads JWT claims. This is the requested change to the original 006 behavior. Apply 011 before relying on these fixes; unrelated foreign keys can still block user deletion.
+- Targeted desktop tests (39), website handoff tests (14), both typechecks, scoped Vite builds and synthetic website/process/default configuration checks passed. Fresh PostgreSQL 16 replay and 142 pgTAP assertions passed, including a renamed legacy constraint and claims-backed authenticated updates. Remote CI and live provider integration remain unverified.
+- Read-only subagents audited the callback, environment and migration contracts; CodeRabbit review skill was loaded previously and repository-adjacent Supabase/security skills were unavailable. The owner screenshot reference remains unavailable. No push or deployment.
+
+
+<!-- /coderabbit-ai-generated:v1 -->

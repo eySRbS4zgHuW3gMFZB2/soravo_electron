@@ -862,3 +862,17 @@ No secrets or production infra changes occurred. At the end of round 6, the loca
 - Linux secure storage is unavailable and non-loopback IPv6 keys remain incompatible with the native store. Live providers and remote CI for this patch were not checked. The owner screenshot identifier remains unavailable. No push or deployment.
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:7daa2707ffa2aab9575ac469c0c1602dc489664345565f8a8a9f1f8b85cc1f4d -->
+
+## PR #41 callback and schema follow-up - 2026-11-02
+
+- Block unsupported IPv6 Supabase hosts, serialize callback outcomes with retry-safe fingerprint retention and a fail-closed 1024-entry cap, and load the website's public Supabase configuration as desktop fallback.
+- Apply migration 011 to previously deployed schemas. It changes the original grantor foreign key from blocking deletion to clearing attribution, and replaces the profile guard with the existing JWT-claims-based safeguards. Other foreign keys can still block deletion.
+- Targeted desktop tests (39), website handoff tests (14), both typechecks, scoped Vite builds, configuration checks, and PostgreSQL 16 replay with 142 pgTAP assertions passed. Detailed inputs and commands are in `workspace-context/validation-record.md` outside Git. Live provider integration and current-patch remote CI remain unverified.
+- Read-only subagents audited auth, environment and migration contracts; CodeRabbit review skill was loaded previously and repository-adjacent Supabase/security skills were unavailable. Owner screenshot reference remains unavailable. No push or deployment.
+
+
+<!-- /coderabbit-ai-generated:v1 -->

@@ -11,6 +11,7 @@ import {
   parseDesktopAuthTokenResponse,
   parsePendingDesktopAuth,
   type DesktopAuthCallback,
+  type DesktopAuthCallbackOutcome,
 } from './desktopAuthPrimitives'
 import {
   getDesktopAuthDeepLinkWarning,
@@ -77,18 +78,18 @@ async function readTokenResponse(response: Response) {
   return { tokenHash: null, otpType: null }
 }
 
-async function processCallback(callback: DesktopAuthCallback, setInfo: (s: string | null) => void) {
+async function processCallback(callback: DesktopAuthCallback, setInfo: (s: string | null) => void): Promise<DesktopAuthCallbackOutcome> {
   let pendingRaw: string | null
   try {
     pendingRaw = await window.soravo.secureStoreGet(PENDING_KEY)
   } catch {
     setInfo('Soravo could not read the sign-in request from Windows secure storage.')
-    return
+    return 'retryable'
   }
 
   if (!pendingRaw) {
     setInfo('No sign-in request is waiting in Soravo. Start sign-in again.')
-    return
+    return 'complete'
   }
 
   const pending = parsePendingDesktopAuth(pendingRaw)
@@ -97,15 +98,15 @@ async function processCallback(callback: DesktopAuthCallback, setInfo: (s: strin
       await clearPendingTransaction()
     } catch {
       setInfo('The saved sign-in request is invalid and could not be cleared. Restart Soravo and try again.')
-      return
+      return 'complete'
     }
     setInfo('The saved sign-in request expired or is invalid. Start sign-in again.')
-    return
+    return 'complete'
   }
 
   if (callback.state !== pending.state) {
        setInfo("This response does not match Soravo's sign-in request. Start sign-in again.")
-    return
+    return 'complete'
   }
 
   let response: Response
@@ -125,8 +126,8 @@ async function processCallback(callback: DesktopAuthCallback, setInfo: (s: strin
       }),
     })
   } catch {
-    setInfo('Soravo could not reach the sign-in service. Check your connection and start sign-in again.')
-    return
+    setInfo('Soravo could not reach the sign-in service. Check your connection and try again.')
+    return 'retryable'
   }
 
   if (!response.ok) {
@@ -135,17 +136,22 @@ async function processCallback(callback: DesktopAuthCallback, setInfo: (s: strin
         await clearPendingTransaction()
       } catch {
         setInfo('The sign-in response could not be used and its saved request could not be cleared. Start sign-in again.')
-        return
+        return 'complete'
       }
       setInfo('The sign-in response expired or was already used. Start sign-in again.')
-      return
+      return 'complete'
     }
-    setInfo('The sign-in service could not complete the request. Start sign-in again.')
-    return
+    if (response.status >= 500 || response.status === 429) {
+      setInfo('The sign-in service could not complete the request. Try again.')
+      return 'retryable'
+    }
+    setInfo('The sign-in response could not be used. Start sign-in again.')
+    return 'complete'
   }
 
   const { tokenHash, otpType } = await readTokenResponse(response)
   await finishAuthentication(tokenHash, otpType, setInfo)
+  return 'complete'
 }
 
 export function DesktopAuth() {
@@ -157,9 +163,13 @@ export function DesktopAuth() {
   const callbackQueue = useRef(Promise.resolve())
 
   const handleCallback = useCallback((callback: DesktopAuthCallback) => {
-    callbackQueue.current = callbackQueue.current
-      .then(() => processCallback(callback, setInfo))
-      .catch(() => setInfo('Authentication could not be completed safely. Start sign-in again.'))
+    const result = callbackQueue.current.then(() => processCallback(callback, setInfo))
+      .catch((): DesktopAuthCallbackOutcome => {
+        setInfo('Authentication could not be completed safely. Start sign-in again.')
+        return 'complete'
+      })
+    callbackQueue.current = result.then(() => {})
+    return result
   }, [])
 
   const startAuth = useCallback(async (intent: 'signin' | 'signup' | 'reset') => {
