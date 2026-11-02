@@ -942,10 +942,10 @@ function SettingsModal({
                   S
                 </span>
                 <div className="account-profile-text">
-                  <p className="account-profile-name">Local profile</p>
+                  <p className="account-profile-name">Signed-in account</p>
                   <p className="account-profile-sub">
-                    This device is the whole account. Nothing is signed in and nothing is sent
-                    anywhere.
+                    This account is used for identity and entitlements. Audio
+                    and transcripts stay on this device.
                   </p>
                 </div>
               </div>

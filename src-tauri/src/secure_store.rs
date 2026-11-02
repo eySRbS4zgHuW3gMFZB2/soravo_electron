@@ -102,7 +102,9 @@ mod inner {
         let output = DpapiOutput(out_blob);
         let encoded = to_hex(output.bytes()?);
         let p = secret_path(&app, &key)?;
-        fs::write(p, encoded).map_err(|e| e.to_string())?;
+        let temp = p.with_extension("tmp");
+        fs::write(&temp, encoded).map_err(|e| e.to_string())?;
+        fs::rename(&temp, &p).map_err(|e| e.to_string())?;
         Ok(())
     }
 
