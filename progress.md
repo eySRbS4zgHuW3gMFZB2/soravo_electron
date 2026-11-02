@@ -1059,13 +1059,13 @@ Branch: feature/P7-08-admin-dashboard-hardening
 SHA: ed68eb85da0f37b81009e7c510af82bfabc60e83
 Changes: Mocked realistic Supabase auth pagination headers and added auth total/page assertions.
 Validation: Vitest 162 passed; typecheck/build passed; Deno check passed; Playwright 3 passed.
-No merge, deployment, bootstrap, or privileges changed.
+No remote merge, commit, push, deployment, bootstrap, or privileges changed before this point. Any recorded local merge is a local integration artifact, not a GitHub merge.
 
 ## P7-08 CodeRabbit follow-up fixes (2026-10-30)
 Branch: feature/P7-08-admin-dashboard-hardening
 Changes: disabled users pagination while loading; preserved zero/unavailable auth totals with exact-count fallback; neutral heading for non-authorization dashboard failures.
 Validation: website Vitest 162 passed; TypeScript passed.
-No merge, deployment, bootstrap, or privileges changed.
+No remote merge, commit, push, deployment, bootstrap, or privileges changed before this point. Any recorded local merge is a local integration artifact, not a GitHub merge.
 
 
 ## P7-08 CodeRabbit test mock findings (2026-10-30)
@@ -1100,3 +1100,9 @@ Validation: root TypeScript/build passed; desktop tests 3/3; website TypeScript/
 Rust: cargo check and cargo test were attempted with MSVC 1.90.0 and an isolated target directory; compilation/test remain environmentally blocked by mixed toolchain/dependency build issues. No Rust test pass is claimed.
 CodeRabbit review rounds 1-6 completed; remaining findings are documented as deferred, out of scope, cosmetic or platform-boundary items. No unresolved in-scope critical issue was identified after fixes.
 No commit, push, merge, deployment, DNS change or remote Supabase change was performed before this point.
+
+PR #41 CodeRabbit final follow-up - 2026-11-01
+Final round 6 run after fixes. Remaining findings: 6 minor/major/trivial items, including two DesktopAuth string encoding issues, two markdown history issues, two design-style findings, two Rust lib test assertions, one admin migration guard and one AdminPage accessibility/effect suggestion.
+Final targeted fix: authContext sign-out uses scope local only and cleanup signaling updated; DesktopAuth user-visible sign-in string repaired.
+Validation after final edits: root TypeScript, 3 desktop tests, root build; website TypeScript, 184 website tests, website build all passed. Rust tests remain environmentally blocked.
+No secrets or production infra changes occurred. Local merge remains uncommitted from earlier push? Clarify: final local edits remain uncommitted after round 6.

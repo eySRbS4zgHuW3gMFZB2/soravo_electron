@@ -103,7 +103,7 @@ async function processCallback(callback: DesktopAuthCallback, setInfo: (s: strin
   }
 
   if (callback.state !== pending.state) {
-    setInfo('This response does not match SoravoÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s sign-in request. Start sign-in again.')
+       setInfo("This response does not match Soravo's sign-in request. Start sign-in again.")
     return
   }
 
@@ -184,7 +184,7 @@ export function DesktopAuth() {
 
   useEffect(() => subscribeToDesktopAuthCallbacks(handleCallback), [handleCallback])
 
-  if (loading) return <div className="auth-loading">Loading SoravoÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</div>
+   if (loading) return <div className="auth-loading">Loading Soravo...</div>
   if (session) return <HubApp onSignOut={() => { void signOut().catch(() => setInfo('Signed out, but Soravo could not remove the saved session from Windows secure storage. Restart Soravo and sign out again.')) }} />
 
   return (
