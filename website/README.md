@@ -8,7 +8,7 @@ Local development notes.
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_ANON_KEY`
   - These are public/publishable values. Security depends on RLS, not secrecy.
-  - The desktop development app opens the local website at `http://127.0.0.1:5174`; start it with `npm run dev` from `website/` so Vite loads this file.
+  - `npm run tauri:dev` from the repository root starts the website Vite server on `http://127.0.0.1:5174` together with the desktop app, so the desktop sign-in route is available automatically. To run the website separately, use `npm run dev` from `website/`.
   - Playwright reads these same values so its local server and request interceptors target the same Supabase project.
 - `website/supabase/.env.local` is for local Supabase Edge Function development only.
   - It is ignored by git.

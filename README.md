@@ -65,7 +65,7 @@ To download additional models, place them in `third-party/models/` and update th
 npm run tauri:dev
 ```
 
-Starts Vite dev server + Tauri dev build. Pill overlay + hub window open automatically.
+Starts the website Vite server, the desktop Vite app, and the Tauri dev build from the same checkout. The launcher waits for `/auth/desktop` and rejects occupied dev ports so Vite cannot silently move to a different port and pair a stale renderer with a different Tauri binary. Pill overlay + hub window open automatically. Install website dependencies once with `npm ci --prefix website` after installing the root dependencies.
 
 ## Build Production
 
