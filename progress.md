@@ -1147,3 +1147,15 @@ No secrets or production infra changes occurred. At the end of round 6, the loca
 - Code-review skill loaded; repository-adjacent Supabase/security skills unavailable. A read-only subagent independently checked the earlier launch, platform and handoff fixes. The owner screenshot identifier was unavailable; no provider or remote state was changed.
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:fb14c6d6fb4d0a7d3b9efe5147a52a5ba7e40b80086aa60d052ae8219e825966 -->
+
+## PR #41 URL and session-key follow-up - 2026-11-02
+
+- Reject Supabase URLs with queries or fragments and normalize empty delimiters. Give IPv6 loopback a secure-store-compatible key outside the existing key namespace; all other host keys remain unchanged.
+- Targeted desktop tests (27), renderer typecheck, IPv6 build/CSP/key checks, and query/fragment build rejection passed. Prior handoff and platform results were reused. A read-only subagent inspected the native storage-key contract; CodeRabbit review skill was loaded in the previous follow-up, and repository-adjacent Supabase/security skills remain unavailable.
+- Linux secure storage is unavailable and non-loopback IPv6 keys remain incompatible with the native store. Live providers and current-patch remote CI are unverified. Owner screenshot reference remains unavailable. No push or deployment.
+
+<!-- /coderabbit-ai-generated:v1 -->

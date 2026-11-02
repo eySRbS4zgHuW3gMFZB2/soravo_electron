@@ -8,6 +8,9 @@ describe('desktop Supabase URL validation', () => {
     ['http://127.1:54321', 'http://127.0.0.1:54321'],
     ['http://127.9.8.7:54321', 'http://127.9.8.7:54321'],
     ['http://[::1]:54321', 'http://[::1]:54321'],
+    ['https://project.example/path?', 'https://project.example/path'],
+    ['https://project.example/path#', 'https://project.example/path'],
+    ['https://project.example/path%3Fsegment', 'https://project.example/path%3Fsegment'],
   ])('accepts and normalizes %s', (input, expected) => {
     expect(validateSupabaseUrl(input)).toBe(expected)
   })
@@ -15,6 +18,8 @@ describe('desktop Supabase URL validation', () => {
   it.each([
     'http://example.com', 'http://localhost.example.com', 'http://128.0.0.1',
     'http://[::2]', 'https://user:password@example.com', 'ftp://localhost',
+    'https://project.example/?tag=desktop', 'https://project.example/path#fragment',
+    'http://localhost:54321/?x=1#part',
   ])('rejects unsafe URL %s', (input) => {
     expect(() => validateSupabaseUrl(input)).toThrow()
   })

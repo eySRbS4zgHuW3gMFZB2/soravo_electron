@@ -850,3 +850,15 @@ No secrets or production infra changes occurred. At the end of round 6, the loca
 - The owner screenshot reference was unavailable. Code-review skill loaded; repository-adjacent Supabase/security skills unavailable. A read-only subagent checked earlier launch, platform and handoff repairs. No push or deployment.
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:0d4db9824d2409c4b9454284f3ab9333116e304520705acf8ecaab6d99e3b215 -->
+
+## PR #41 URL and session-key follow-up - 2026-11-02
+
+- Supabase URL validation rejects query strings and fragments, and normalizes empty delimiters. IPv6 loopback now uses a secure-store-compatible key distinct from the legacy namespace; other host keys are unchanged for existing sessions.
+- Targeted desktop tests (27), renderer typecheck, IPv6 build/CSP/key checks, and query/fragment build rejection passed. Reused the earlier handoff and platform results. Exact inputs are in `workspace-context/validation-record.md` outside Git.
+- Linux secure storage is unavailable and non-loopback IPv6 keys remain incompatible with the native store. Live providers and remote CI for this patch were not checked. The owner screenshot identifier remains unavailable. No push or deployment.
+
+<!-- /coderabbit-ai-generated:v1 -->
