@@ -112,8 +112,8 @@ Sole registered worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`
 ## State audit — AUTH-DEV-SERVER-01 — 2026-11-02
 
 - Remote `origin`; integration base `origin/main` at `1604cf219bc80ba25d9d85b64aacd37e760a9149` (PR #41 merge).
-- Task worktree: `C:\Users\kaya\Desktop\Hydra\soravo\.worktrees\AUTH-DEV-SERVER-01`; branch `fix/AUTH-DEV-SERVER-01`; task worktree contains tracked edits to README, task breakdown, Tauri dev config and website README plus untracked `scripts/tauri-dev.mjs`.
-- The existing checkout at `C:\Users\kaya\Desktop\Hydra\soravo` remains on `feature/desktop-auth-onboarding` with user modifications and untracked E2E files; it was not edited or cleaned by this task.
+- Task worktree: `.worktrees/AUTH-DEV-SERVER-01`; the initial branch was `fix/AUTH-DEV-SERVER-01`, renamed to `feature/AUTH-DEV-SERVER-01` for runtime PR #42, then changed to `docs/AUTH-DEV-SERVER-01` for docs PR #43.
+- The existing checkout at `.` remained on `feature/desktop-auth-onboarding` with user modifications and untracked E2E files; it was not edited or cleaned by this task.
 - Ignored test setup in task worktree: node_modules junctions to existing dependencies and `website/.env.local` with public Vite Supabase config only; no E2E credentials were copied. These are not staged or committed.
 - Port 5173 was already listening on `::1` under PID 4520 before task test setup. The first route smoke reused the existing desktop Vite server, which was later found to be from the user checkout, so it did not validate the callback. Task website Vite PID 6316 was stopped after that finding. Windows denied stopping existing PID 4520; the Soravo app PID 3052 remains open and uses a debug executable registered from the older controlled-cleanup worktree. The owner needs to close these old dev processes before the same-worktree Tauri test can start.
 - Free disk at worktree creation was approximately 3.0 GB; no separate Rust target or Rust build was created. `git diff --check` passed. No branch integration, push, deploy or external service mutation occurred.
@@ -124,10 +124,17 @@ Sole registered worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`
 - Rust build diagnosis: the ambient setup initially selected GNU and failed linking (`export ordinal too large`). MSVC compilation then used mixed toolchain artifacts. Loading VS 2017 `vcvars64.bat`, pinning `RUSTC` to installed 1.90 MSVC, setting `CARGO_BUILD_TARGET=x86_64-pc-windows-msvc`, and using an isolated target directory resolved `cargo check --locked`. `cargo test --lib --locked` passed 38/38; a full Cargo test pass is not claimed.
 - `npm run tauri:dev` is running from this task worktree. Soravo process PID 7836 runs from the isolated target directory. The app logged successful development deep-link registration; `HKCU\\Software\\Classes\\soravo\\shell\\open\\command` points to that exact executable. Port 5173 (desktop) and 5174 (website) both respond; `/auth/desktop` returns HTTP 200.
 - UI automation can inspect the desktop sign-in window, but screen capture failed and accessibility click geometry is unavailable. The app is left open at sign-in for the owner to complete the browser-to-app round-trip. No test credentials were copied; task worktree ignored `.env.local` has only public Vite config. Existing main checkout remains untouched.
-- Tracked changes remain uncommitted in `fix/AUTH-DEV-SERVER-01`; no push, merge, deploy, or production service mutation occurred.
+- At this initial snapshot, there were 9 dirty entries in `fix/AUTH-DEV-SERVER-01` (8 tracked modifications and the untracked launcher); no push, merge, deploy, or production service mutation had occurred yet.
 
 ### Owner E2E confirmation — 2026-11-02
 
 - Owner tested the running task-worktree app: Sign in opened the website, authentication completed, and Open Soravo returned the signed-in state to the desktop app. This satisfies the end-to-end acceptance check; no disposable credentials were handled by the agent.
 - Runtime commits `0bc0a64` and `17dddcb` were squash-merged through PR #42 as `9fa4c130589eba83b87f5ea59caf69859f35c2a1`. CodeRabbit identified that Linux release startup must continue after a deep-link registration error; the locked plugin source confirmed that registration can fail while writing the desktop handler. The code now makes the error fatal in debug builds and logs/continues in Linux release. CodeRabbit, engineering-pack, Windows packaging, and Linux packaging checks passed.
 - Documentation changes remain in the task worktree for a separate docs branch. No deployment or production service mutation occurred.
+
+### Final worktree audit — 2026-11-02
+
+- Task worktree: `.worktrees/AUTH-DEV-SERVER-01`; current branch `docs/AUTH-DEV-SERVER-01`; base `9fa4c130589eba83b87f5ea59caf69859f35c2a1` (runtime PR #42 merge); upstream `origin/docs/AUTH-DEV-SERVER-01`; dirty entries at docs commit `f28bd5a6e4502c45fbeba9dafdd44700d8ea653f`: 0. The initial branch and runtime branch were based on `1604cf219bc80ba25d9d85b64aacd37e760a9149` (`origin/main`).
+- Task worktree build output size: unknown (isolated target output was on a non-repository volume and was not measured).
+- Existing checkout: `.`, branch `feature/desktop-auth-onboarding`, HEAD `a86ed22acbaeb3f52920164760fc111ff68546ba`, upstream `origin/feature/desktop-auth-onboarding`, 18 dirty entries, build output size 14,235,524,230 bytes; base SHA unknown. It remained untouched.
+- Runtime PR #42 and docs PR #43 were pushed to GitHub; the docs review follow-up corrects the startup-window description, records branch progression, and documents the worktree audit fields.
