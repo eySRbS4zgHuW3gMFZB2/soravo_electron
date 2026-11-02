@@ -151,6 +151,8 @@ export function DesktopAuth() {
   const { session, loading, error: authError, signOut } = useAuth()
   const [info, setInfo] = useState<string | null>(() => getDesktopAuthDeepLinkWarning())
   const [pending, setPending] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
+  const [storageStatus, setStorageStatus] = useState<'checking' | 'available' | 'unsupported' | 'error'>('checking')
   const callbackQueue = useRef(Promise.resolve())
 
   const handleCallback = useCallback((callback: DesktopAuthCallback) => {
@@ -184,8 +186,29 @@ export function DesktopAuth() {
 
   useEffect(() => subscribeToDesktopAuthCallbacks(handleCallback), [handleCallback])
 
-   if (loading) return <div className="auth-loading">Loading Soravo...</div>
-  if (session) return <HubApp onSignOut={() => { void signOut().catch(() => setInfo('Signed out, but Soravo could not remove the saved session from Windows secure storage. Restart Soravo and sign out again.')) }} />
+  useEffect(() => {
+    let active = true
+    void window.soravo.secureStoreGet(PENDING_KEY).then(() => {
+      if (active) setStorageStatus('available')
+    }).catch((error: unknown) => {
+      if (active) setStorageStatus(error === 'unsupported' ? 'unsupported' : 'error')
+    })
+    return () => { active = false }
+  }, [])
+
+  if (loading) return <div className="auth-loading">Loading Soravo...</div>
+  if (session) return <>
+    <HubApp onSignOut={() => {
+      setSignOutError(null)
+      setInfo(null)
+      void signOut().catch(() => {
+        const message = 'Sign-out could not be completed. Try again.'
+        setSignOutError(message)
+        setInfo(message)
+      })
+    }} />
+    {signOutError && <div className="auth-signout-error" role="alert">{signOutError}</div>}
+  </>
 
   return (
     <div className="auth-shell">
@@ -193,11 +216,13 @@ export function DesktopAuth() {
         <h1>Soravo</h1>
         <p className="auth-sub">Local-first dictation with secure browser sign-in.</p>
         <p className="auth-copy">Credentials are entered in the system browser, not in the desktop app.</p>
+        {storageStatus === 'unsupported' && <div className="auth-error" role="alert">Desktop sign-in currently requires Windows secure storage.</div>}
+        {storageStatus === 'error' && <div className="auth-error" role="alert">Could not access secure storage. Restart Soravo and try again.</div>}
         {authError && <div className="auth-error" role="alert">{authError}</div>}
         <div className="auth-actions">
-          <button className="auth-primary" disabled={pending} onClick={() => void startAuth('signin')}>Sign in</button>
-          <button className="auth-secondary" disabled={pending} onClick={() => void startAuth('signup')}>Create account</button>
-          <button className="auth-secondary" disabled={pending} onClick={() => void startAuth('reset')}>Reset password</button>
+          <button className="auth-primary" disabled={pending || storageStatus !== 'available'} onClick={() => void startAuth('signin')}>Sign in</button>
+          <button className="auth-secondary" disabled={pending || storageStatus !== 'available'} onClick={() => void startAuth('signup')}>Create account</button>
+          <button className="auth-secondary" disabled={pending || storageStatus !== 'available'} onClick={() => void startAuth('reset')}>Reset password</button>
         </div>
         {info && <div className="auth-info" role="status">{info}</div>}
       </div>

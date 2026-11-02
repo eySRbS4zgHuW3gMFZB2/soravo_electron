@@ -1,9 +1,11 @@
+import { DEFAULT_SUPABASE_URL } from './defaultSupabaseUrl'
+
 // Public, non-secret SORAVO Supabase client configuration.
 // The service role key must never be used in the desktop application.
 const env = (import.meta as any).env || {}
 
 export const SUPABASE_URL =
-  env.VITE_SUPABASE_URL || 'https://vfrhplskegqqdxbykyvx.supabase.co'
+  env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL
 export const SUPABASE_PUBLISHABLE_KEY =
   env.VITE_SUPABASE_ANON_KEY ||
   env.VITE_SUPABASE_PUBLISHABLE_KEY ||

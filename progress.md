@@ -1091,6 +1091,21 @@ Integration: cleanup worktree merged with origin/main in a local non-committed m
 Manual owner verification of desktop browser sign-in is already recorded and remains valid; authentication architecture was preserved.
 CodeRabbit round 1 completed 14 findings; valid follow-up fixes remain in progress for UTF-8/mojibake, admin spec mocking, admin bootstrap wording, HubApp copy, DesktopAuth sign-out messaging, SQL trigger guard GUC, and YAML Deno job.
 
+## Windows desktop development launch - 2026-10-30
+- Host OS: Windows 11 (x86_64)
+- App workspace: `<workspace>`
+- Development command: npm run tauri:dev via cmd /c `<workspace-temp>\launch.bat`
+- Launch script environment: Visual Studio 2017 BuildTools vcvars64.bat; PATH includes `<user>\.cargo\bin`; RUSTUP_TOOLCHAIN=1.90.0-x86_64-pc-windows-msvc
+- rustc: 1.90.1 (rustup MSVC)
+- cargo: active via rustup 1.90.0 MSVC target
+- Vite dev server: http://localhost:5173 (started)
+- Rust build result: succeeded after 5m15s (target\debug\soravo.exe launched)
+- Application window/toolchain evidence: log reports VITE ready and Running target\debug\soravo.exe; Tauri process is running.
+- Authentication/entitlement/device-registration verification: not yet performed (manual owner test pending).
+- Supabase target for app: Soravo_fresh (vfrhplskegqqdxbykyvx), existing owner account to be signed in manually; no secrets printed.
+- Stop instruction: close the Soravo app window or terminate the background Tauri dev process (npm/cargo) in the terminal; stop the Vite child process if needed. Do not close this terminal while testing.
+- No production deployment, release, account creation, entitlement modification, or privilege grant performed.
+
 PR #41 integration update - 2026-11-01
 Integrated origin/main into the PR desktop-auth cleanup worktree via a local non-committed merge.
 Conflicts resolved: .github/workflows/database.yml, Soravo_Fresh_Engineering_Pack/18_PROGRESS_AND_HANDOFF.md, docs/engineering/STATE_AUDIT.md, progress.md.
@@ -1099,10 +1114,24 @@ Owner-recorded manual browser sign-in verification remains successful.
 Validation: root TypeScript/build passed; desktop tests 3/3; website TypeScript/build passed; website tests 184/184; GitHub Actions configuration and migration ordering reconciled locally.
 Rust: cargo check and cargo test were attempted with MSVC 1.90.0 and an isolated target directory; compilation/test remain environmentally blocked by mixed toolchain/dependency build issues. No Rust test pass is claimed.
 CodeRabbit review rounds 1-6 completed; remaining findings are documented as deferred, out of scope, cosmetic or platform-boundary items. No unresolved in-scope critical issue was identified after fixes.
-No commit, push, merge, deployment, DNS change or remote Supabase change was performed before this point.
+No commit, push, remote merge, deployment, DNS change or remote Supabase change was performed before this point.
 
 PR #41 CodeRabbit final follow-up - 2026-11-01
-Final round 6 run after fixes. Remaining findings: 6 minor/major/trivial items, including two DesktopAuth string encoding issues, two markdown history issues, two design-style findings, two Rust lib test assertions, one admin migration guard and one AdminPage accessibility/effect suggestion.
+Final round 6 run after fixes. Remaining findings: 10 minor/major/trivial items, including two DesktopAuth string encoding issues, two markdown history issues, two design-style findings, two Rust lib test assertions, one admin migration guard and one AdminPage accessibility/effect suggestion.
 Final targeted fix: authContext sign-out uses scope local only and cleanup signaling updated; DesktopAuth user-visible sign-in string repaired.
 Validation after final edits: root TypeScript, 3 desktop tests, root build; website TypeScript, 184 website tests, website build all passed. Rust tests remain environmentally blocked.
-No secrets or production infra changes occurred. Local merge remains uncommitted from earlier push? Clarify: final local edits remain uncommitted after round 6.
+No secrets or production infra changes occurred. At the end of round 6, the local merge and final edits were uncommitted and had not been pushed.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:c5bd7acdf915062dc5c70e2d5d4cd374926c6b1fb961fb6bbbed00a7bc346853 -->
+
+## PR #41 review repair - 2026-11-02
+
+- Restored corrected launch records, scoped the Wispr evidence and clarified historical handoff status.
+- Restricted desktop sign-in to the currently available Windows secure storage, serialized session cleanup with Supabase Web Locks, synchronized CSP with configured Supabase origin, and purged expired handoffs across users. Website CI now checks the handoff function.
+- Targeted desktop tests (5), handoff tests (14), renderer typecheck/build, default and alternate CSP builds, Deno checks and engineering pack validation passed. Linux desktop authentication still needs secure storage; remote CI for this patch and live provider integration remain unverified.
+- Skills: code-review loaded; repository-adjacent Supabase/security skills unavailable. Read-only subagents audited the supplied auth and documentation findings; the main agent integrated and validated changes.
+
+
+<!-- /coderabbit-ai-generated:v1 -->

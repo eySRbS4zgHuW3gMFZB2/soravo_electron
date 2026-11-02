@@ -785,7 +785,7 @@ Remaining: GitHub Actions database verification, CodeRabbit findings, owner boot
 
 
 <!-- /coderabbit-ai-generated:v1 -->
-## 2026-10-30 � P7-08 CodeRabbit test mock findings
+## 2026-10-30 - P7-08 CodeRabbit test mock findings
 
 - PR: 38
 - Branch: feature/P7-08-admin-dashboard-hardening
@@ -799,6 +799,16 @@ Remaining: GitHub Actions database verification, CodeRabbit findings, owner boot
 - Push status: pushed.
 - PR #38 remains open and unmerged; no deployment performed.
 
+## 2026-10-30 - Windows desktop development launch
+
+- App workspace: SORAVO (`<workspace>`)
+- Launch command: npm run tauri:dev with MSVC 2017 env; RUSTUP_TOOLCHAIN=1.90.0-x86_64-pc-windows-msvc
+- Vite dev server: http://localhost:5173
+- Rust build: successful after 5m15s; target\debug\soravo.exe launched
+- Authentication/entitlement/device-registration: not verified; pending manual owner login.
+- Target Supabase: Soravo_fresh (vfrhplskegqqdxbykyvx)
+- PR/log branch for this launch documentation: docs/desktop-dev-launch
+
 PR #41 integration update - 2026-11-01
 Integrated origin/main into the PR desktop-auth cleanup worktree via a local non-committed merge.
 Conflicts resolved: .github/workflows/database.yml, Soravo_Fresh_Engineering_Pack/18_PROGRESS_AND_HANDOFF.md, docs/engineering/STATE_AUDIT.md, progress.md.
@@ -807,10 +817,24 @@ Owner-recorded manual browser sign-in verification remains successful.
 Validation: root TypeScript/build passed; desktop tests 3/3; website TypeScript/build passed; website tests 184/184; GitHub Actions configuration and migration ordering reconciled locally.
 Rust: cargo check and cargo test were attempted with MSVC 1.90.0 and an isolated target directory; compilation/test remain environmentally blocked by mixed toolchain/dependency build issues. No Rust test pass is claimed.
 CodeRabbit review rounds 1-6 completed; remaining findings are documented as deferred, out of scope, cosmetic or platform-boundary items. No unresolved in-scope critical issue was identified after fixes.
-No commit, push, merge, deployment, DNS change or remote Supabase change was performed before this point.
+No commit, push, remote merge, deployment, DNS change or remote Supabase change was performed before this point.
 
 PR #41 CodeRabbit final follow-up - 2026-11-01
-Final round 6 run after fixes. Remaining findings: 6 minor/major/trivial items, including two DesktopAuth string encoding issues, two markdown history issues, two design-style findings, two Rust lib test assertions, one admin migration guard and one AdminPage accessibility/effect suggestion.
+Final round 6 run after fixes. Remaining findings: 10 minor/major/trivial items, including two DesktopAuth string encoding issues, two markdown history issues, two design-style findings, two Rust lib test assertions, one admin migration guard and one AdminPage accessibility/effect suggestion.
 Final targeted fix: authContext sign-out uses scope local only and cleanup signaling updated; DesktopAuth user-visible sign-in string repaired.
 Validation after final edits: root TypeScript, 3 desktop tests, root build; website TypeScript, 184 website tests, website build all passed. Rust tests remain environmentally blocked.
-No secrets or production infra changes occurred. Local merge remains uncommitted from earlier push? Clarify: final local edits remain uncommitted after round 6.
+No secrets or production infra changes occurred. At the end of round 6, the local merge and final edits were uncommitted and had not been pushed.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:e9ee7bd43319cd965ad930119a11de56cc70bf7b694b413290da5817315a62da -->
+
+## PR #41 review repair - 2026-11-02
+
+- Corrected the preserved launch and round-six records, Wispr provenance wording, desktop sign-out locking and error handling, configured Supabase CSP, and expired handoff cleanup. Website CI checks the handoff function.
+- Desktop sign-in is currently restricted to Windows secure storage; Linux remains an intended launch target and needs its own secure-storage implementation. Web Locks are required for safe desktop session coordination.
+- Targeted desktop tests (5), handoff tests (14), renderer typecheck/build, default and alternate CSP builds, Deno checks and engineering pack validation passed. Live provider integration and remote CI for this patch remain unverified. Exact validation inputs and commands are recorded in `workspace-context/validation-record.md` outside Git.
+- Loaded code-review; Supabase/security repository-adjacent skills were unavailable. Read-only subagents audited auth and documentation; the main agent integrated and validated the repair. No push or deployment.
+
+
+<!-- /coderabbit-ai-generated:v1 -->

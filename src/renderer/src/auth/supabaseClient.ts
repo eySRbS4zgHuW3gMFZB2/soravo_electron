@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config'
 import { desktopSecureStorage } from './storage'
+import { desktopSessionLock } from './sessionLock'
 
 // Pin Supabase JS's existing default key so sign-out fallback cleanup targets
 // the same record without changing where already-persisted sessions live.
@@ -13,6 +14,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     autoRefreshToken: true,
     detectSessionInUrl: false,
     storage: desktopSecureStorage,
+    lock: desktopSessionLock,
   },
 })
 

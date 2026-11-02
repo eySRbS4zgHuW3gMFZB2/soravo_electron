@@ -137,20 +137,20 @@ describe('desktop authentication handoff endpoint', () => {
       return { data: [{ token_hash: row.token_hash }], error: null, status: 200 }
     })
     let deleting = false
-    let deletingExpiredForUser = false
+    let deletingExpired = false
     const query = {
       delete: vi.fn(() => { deleting = true; return query }),
-      eq: vi.fn((column: string) => { if (deleting && column === 'user_id') deletingExpiredForUser = true; return query }),
+      eq: vi.fn(() => query),
       gt: vi.fn(() => query),
       insert: vi.fn((values: Record<string, unknown>) => ({ then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => insert(values).then(resolve, reject) })),
       is: vi.fn(() => query),
-      lte: vi.fn(() => query),
+      lte: vi.fn((column: string) => { if (deleting && column === 'expires_at') deletingExpired = true; return query }),
       limit: vi.fn(() => ({ then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => lookup().then(resolve, reject) })),
       select: vi.fn(() => query),
       then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => {
-        if (deletingExpiredForUser) {
+        if (deletingExpired) {
           deleting = false
-          deletingExpiredForUser = false
+          deletingExpired = false
           return cleanupExpired().then(resolve, reject)
         }
         if (deleting) {
@@ -208,6 +208,8 @@ describe('desktop authentication handoff endpoint', () => {
     expect(harness.row.code_hash).toMatch(/^[a-f0-9]{64}$/)
     expect(harness.row.token_hash).toBe('h'.repeat(64))
     expect(harness.cleanupExpired).toHaveBeenCalledTimes(1)
+    expect(harness.query.lte).toHaveBeenCalledWith('expires_at', expect.any(String))
+    expect(harness.query.eq).not.toHaveBeenCalled()
     expect(harness.adminClient.auth.admin.generateLink).toHaveBeenCalledWith({ type: 'magiclink', email: 'person@example.com' })
   })
 

@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { DESKTOP_SESSION_STORAGE_KEY, supabase } from './supabaseClient'
 import { createInitialSessionGuard } from './desktopAuthPrimitives'
 import { desktopSecureStorage } from './storage'
+import { desktopSessionLock } from './sessionLock'
 
 type User = { id: string; email?: string | null; email_confirmed_at?: string | null }
 type Session = { access_token: string; refresh_token?: string; user: User } | null
@@ -96,20 +97,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await desktopSecureStorage.removeItem(DESKTOP_SESSION_STORAGE_KEY)
     }
     try {
-      if (typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request) {
-        await navigator.locks.request(`lock:${DESKTOP_SESSION_STORAGE_KEY}`, { mode: 'exclusive' }, clearStoredSession)
-      } else {
-        await clearStoredSession()
-      }
+      await desktopSessionLock(`lock:${DESKTOP_SESSION_STORAGE_KEY}`, -1, clearStoredSession)
     } catch (caught) {
       storageError = caught
       setError('Could not clear the desktop session from secure storage.')
     }
 
-    setSession(null)
     if (signOutError && storageError) throw new AggregateError([signOutError, storageError], 'Sign out failed')
     if (signOutError) throw signOutError
     if (storageError) throw storageError
+    setSession(null)
   }, [])
 
   return (

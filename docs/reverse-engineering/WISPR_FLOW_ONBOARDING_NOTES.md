@@ -2,11 +2,11 @@
 
 ## Summary
 
-- Inspected installed Wispr Flow version `1.6.1337` from `C:\Users\kaya\AppData\Local\WisprFlow\app-1.6.1337`.
+- Inspected installed Wispr Flow version `1.6.1337` from `<installed Wispr Flow artifact>/app-1.6.1337`.
 - Framework: Electron (resources include `resources.pak`, Chromium support DLLs, `app.asar`, and preload/AX scripts).
 - Primary JavaScript bundle: `resources/app.asar`.
 - REA analysis ID: `ev_3367ac70bb6c029e4d610fde5cb97e22dfbfaccdb3c0bdd23a3c204dd2baccaf`.
-- ASAR integrity: one recorded mismatch for unpacked SQLite native binary (`node_sqlite3.node`), analyzed with `record-and-continue`.
+- Unpacked artifact integrity: one recorded mismatch for unpacked SQLite native binary (`node_sqlite3.node`), analyzed with `record-and-continue`.
 - Onboarding-related strings and flags exist in the bundle (`settings_testing_item_restart_onboarding`, `settings_testing_item_preserve_intents`, `personalization`, `plans`, `login`, `account`).
 
 ## Tooling
@@ -42,10 +42,10 @@ Unknowns:
 - Permission sequence and OS surfaces.
 - Tutorial implementation.
 
-## SORAVO design implications
+## SORAVO design implications for future desktop authentication
 
 - Reproduce the observed flow with SORAVO's own design language.
 - Preserve local-first behavior.
-- Keep Supabase Auth only for identity and entitlements.
-- Use secure OS storage later for sessions.
+- Use Supabase Auth for identity and entitlements, following the [web-desktop authentication contract](../../Soravo_Fresh_Engineering_Pack/29_WEB_DESKTOP_AUTH_CONTRACT.md).
+- For future desktop authentication, store sessions in secure OS storage as required by that contract.
 - Do not copy Wispr Flow assets or source.

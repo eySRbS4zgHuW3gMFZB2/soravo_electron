@@ -14,6 +14,7 @@ vi.mock('../src/renderer/src/auth/supabaseClient', () => ({
 }))
 
 import { AuthProvider, useAuth } from '../src/renderer/src/auth/authContext'
+import { desktopSessionLock } from '../src/renderer/src/auth/sessionLock'
 
 let renderer: ReactTestRenderer | undefined
 afterEach(() => {
@@ -22,25 +23,71 @@ afterEach(() => {
   vi.resetAllMocks()
 })
 
-it('removes the stored desktop session on sign-out', async () => {
-  const stored = new Map([[auth.storageKey, 'saved session']])
-  const secureStoreDelete = vi.fn(async (key: string) => { stored.delete(key) })
+function installLocks() {
+  let tail = Promise.resolve()
+  vi.stubGlobal('navigator', { locks: { request: (name: string, _options: unknown, callback: (lock: { name: string }) => Promise<unknown>) => {
+    const result = tail.then(() => callback({ name }))
+    tail = result.then(() => {}, () => {})
+    return result
+  } } })
+}
+
+async function mount(secureStoreDelete: (key: string) => Promise<void>) {
   vi.stubGlobal('window', { soravo: { secureStoreDelete } })
   auth.getSession.mockResolvedValue({ data: { session: { access_token: 'token', user: { id: 'user' } } } })
   auth.onAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } })
-  auth.signOut.mockResolvedValue({ error: null })
-  let current: ReturnType<typeof useAuth> | undefined
-  function Consumer() {
-    current = useAuth()
-    return null
-  }
-
+  let current: ReturnType<typeof useAuth>
+  function Consumer() { current = useAuth(); return null }
   await act(async () => { renderer = create(<AuthProvider><Consumer /></AuthProvider>) })
-  expect(current?.user?.id).toBe('user')
-  await act(async () => { await current!.signOut() })
+  return () => current!
+}
 
-  expect(auth.signOut).toHaveBeenCalledOnce()
+it('waits for an in-flight session operation before deleting the stored session', async () => {
+  installLocks()
+  const secureStoreDelete = vi.fn(async (_key: string) => {})
+  auth.signOut.mockResolvedValue({ error: null })
+  const current = await mount(secureStoreDelete)
+  let release!: () => void
+  const held = desktopSessionLock(`lock:${auth.storageKey}`, -1, () => new Promise<void>((resolve) => { release = resolve }))
+  await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+  let signingOut!: Promise<void>
+  await act(async () => { signingOut = current().signOut(); await Promise.resolve() })
+  expect(secureStoreDelete).not.toHaveBeenCalled()
+  await act(async () => { release(); await held; await signingOut })
   expect(secureStoreDelete).toHaveBeenCalledWith(auth.storageKey)
-  expect(stored.has(auth.storageKey)).toBe(false)
-  expect(current?.session).toBeNull()
+  expect(current().session).toBeNull()
+})
+
+it('propagates local sign-out errors without clearing the UI session', async () => {
+  installLocks()
+  const failure = new Error('sign-out failed')
+  auth.signOut.mockResolvedValue({ error: failure })
+  const current = await mount(vi.fn(async () => {}))
+  await act(async () => { await expect(current().signOut()).rejects.toBe(failure) })
+  expect(current().user?.id).toBe('user')
+})
+
+it('does not delete or clear the UI when cross-context locking is unavailable', async () => {
+  vi.stubGlobal('navigator', {})
+  const remove = vi.fn(async () => {})
+  auth.signOut.mockResolvedValue({ error: null })
+  const current = await mount(remove)
+  await act(async () => { await expect(current().signOut()).rejects.toThrow('Web Locks') })
+  expect(remove).not.toHaveBeenCalled()
+  expect(current().user?.id).toBe('user')
+})
+
+it('reports both failures and retains the session if cleanup also fails', async () => {
+  installLocks()
+  const signOutFailure = new Error('sign-out failed')
+  const storageFailure = new Error('storage failed')
+  auth.signOut.mockResolvedValue({ error: signOutFailure })
+  const current = await mount(vi.fn(async () => { throw storageFailure }))
+  await act(async () => {
+    try { await current().signOut(); throw new Error('expected failure') } catch (error) {
+      expect(error).toBeInstanceOf(AggregateError)
+      expect((error as AggregateError).errors).toEqual([signOutFailure, storageFailure])
+    }
+  })
+  expect(current().user?.id).toBe('user')
 })

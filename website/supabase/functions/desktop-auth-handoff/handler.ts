@@ -161,7 +161,6 @@ export function createDesktopAuthHandoffHandler(dependencies: HandlerDependencie
       const cleanupResult = await admin
         .from("desktop_auth_handoffs")
         .delete()
-        .eq("user_id", user.id)
         .lte("expires_at", dependencies.now().toISOString());
       if (cleanupResult.error) return json(500, { error: "Failed to prepare handoff" });
 
