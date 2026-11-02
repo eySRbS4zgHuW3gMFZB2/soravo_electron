@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS auth.users (
   email text,
   encrypted_password text,
   email_confirmed_at timestamptz,
+  banned_until timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   confirmation_token text,

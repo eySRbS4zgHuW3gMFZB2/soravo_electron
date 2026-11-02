@@ -6,7 +6,12 @@ site_url = "http://localhost:5174"
 additional_redirect_urls = [
   "http://localhost:5174/account",
   "http://localhost:5174/reset-password",
+  "http://localhost:5174/auth/desktop",
   "http://localhost:5174/auth/desktop-confirm",
+  "http://127.0.0.1:5174/account",
+  "http://127.0.0.1:5174/reset-password",
+  "http://127.0.0.1:5174/auth/desktop",
+  "http://127.0.0.1:5174/auth/desktop-confirm",
 ]
 
 [functions.desktop-auth-handoff]

@@ -6,9 +6,7 @@ import { consumeAuthReturnTo, readAuthReturnTo, useAuth, sanitizeReturnTo } from
 export function ResetPasswordPage() {
   const { updatePassword, session, loading: authLoading, passwordRecoveryUserId } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get("returnTo");
-  const safeReturnTo = sanitizeReturnTo(returnTo || readAuthReturnTo(), "/login");
+  const safeReturnTo = sanitizeReturnTo(readAuthReturnTo(), "/login");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);

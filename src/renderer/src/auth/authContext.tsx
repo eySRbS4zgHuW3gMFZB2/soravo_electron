@@ -83,22 +83,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     setError(null)
+    let signOutError: unknown = null
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        const { error: localSignOutError } = await supabase.auth.signOut({ scope: 'local' })
-        if (localSignOutError) throw localSignOutError
-      }
-    } finally {
-      try {
-        await desktopSecureStorage.removeItem(DESKTOP_SESSION_STORAGE_KEY)
-      } catch (storageError) {
-        setError('Could not clear the desktop session from secure storage.')
-        throw storageError
-      } finally {
-        setSession(null)
-      }
+      const { error } = await supabase.auth.signOut({ scope: 'local' })
+      if (error) signOutError = error
+    } catch (caught) {
+      signOutError = caught
     }
+
+    let storageError: unknown = null
+    const clearStoredSession = async () => {
+      await desktopSecureStorage.removeItem(DESKTOP_SESSION_STORAGE_KEY)
+    }
+    try {
+      if (typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request) {
+        await navigator.locks.request(`lock:${DESKTOP_SESSION_STORAGE_KEY}`, { mode: 'exclusive' }, clearStoredSession)
+      } else {
+        await clearStoredSession()
+      }
+    } catch (caught) {
+      storageError = caught
+      setError('Could not clear the desktop session from secure storage.')
+    }
+
+    setSession(null)
+    if (signOutError && storageError) throw new AggregateError([signOutError, storageError], 'Sign out failed')
+    if (signOutError) throw signOutError
+    if (storageError) throw storageError
   }, [])
 
   return (

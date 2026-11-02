@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use chrono::Datelike;
 use chrono::Timelike;
+use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Emitter, Manager, State};
@@ -225,10 +225,7 @@ fn hook_config_from_settings(settings: &SoravoSettings) -> hotkeys::HookConfig {
 
 // Database helpers
 fn open_db(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
-    let data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?;
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
     let db_path = data_dir.join("soravo.sqlite");
     let conn = rusqlite::Connection::open(&db_path).map_err(|e| e.to_string())?;
@@ -292,7 +289,6 @@ fn open_db(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
 
     Ok(conn)
 }
-
 
 /// A file the engine loads from beside the model.
 ///
@@ -385,7 +381,9 @@ fn catalog_model(id: &str) -> Option<&'static CatalogModel> {
 
 /// The default folder for the transcription models.
 fn default_models_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
-    app.path().app_data_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+    app.path()
+        .app_data_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
         .join("models")
 }
 
@@ -435,7 +433,8 @@ fn app_version(app: tauri::AppHandle) -> String {
 #[tauri::command]
 fn open_link(url: String) -> Result<(), String> {
     let allowed = url.starts_with("https://")
-        || (cfg!(debug_assertions) && (url.starts_with("http://127.0.0.1") || url.starts_with("http://localhost")));
+        || (cfg!(debug_assertions)
+            && (url.starts_with("http://127.0.0.1") || url.starts_with("http://localhost")));
     if !allowed {
         return Err(format!("Refusing to open {}: unsupported origin", url));
     }
@@ -451,11 +450,19 @@ fn open_link(url: String) -> Result<(), String> {
     }
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open").arg(&url).spawn().map(|_| ()).map_err(|e| e.to_string())
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| e.to_string())
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
-        std::process::Command::new("xdg-open").arg(&url).spawn().map(|_| ()).map_err(|e| e.to_string())
+        std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| e.to_string())
     }
 }
 
@@ -483,7 +490,11 @@ fn default_models_folder(app: tauri::AppHandle) -> String {
 /// `resource_dir()/crispasr/`. That location is checked first so the
 /// installed engine is always selected before any working-directory copy.
 fn find_crispasr_binary(roots: &[std::path::PathBuf]) -> Option<std::path::PathBuf> {
-    let name = if cfg!(target_os = "windows") { "crispasr.exe" } else { "crispasr" };
+    let name = if cfg!(target_os = "windows") {
+        "crispasr.exe"
+    } else {
+        "crispasr"
+    };
 
     // The Tauri resource_dir is the install-time location. Check it first so
     // the bundled engine wins over any development-tree copy.
@@ -514,7 +525,9 @@ fn find_crispasr_binary(roots: &[std::path::PathBuf]) -> Option<std::path::PathB
     // changes per release, so probe the immediate children.
     for root in roots {
         let extracted = root.join("third-party").join("crispasr").join("extracted");
-        let Ok(entries) = std::fs::read_dir(&extracted) else { continue };
+        let Ok(entries) = std::fs::read_dir(&extracted) else {
+            continue;
+        };
         for entry in entries.flatten() {
             let candidate = entry.path().join(name);
             if candidate.exists() {
@@ -566,17 +579,13 @@ async fn list_models(app: tauri::AppHandle) -> Result<Vec<ModelInfo>, String> {
 /// loads the weights and then fails on the missing file.
 #[tauri::command]
 async fn download_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
-    let model = catalog_model(&id)
-        .ok_or_else(|| format!("Unknown model: {}", id))?;
+    let model = catalog_model(&id).ok_or_else(|| format!("Unknown model: {}", id))?;
     let dir = models_dir(&app);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
     // The model first, then the files the engine loads from beside it.
-    let mut files: Vec<(String, &str, u64)> = vec![(
-        format!("ggml-{}.bin", model.id),
-        model.url,
-        model.size,
-    )];
+    let mut files: Vec<(String, &str, u64)> =
+        vec![(format!("ggml-{}.bin", model.id), model.url, model.size)];
     for companion in model.companions {
         files.push((companion.file.to_string(), companion.url, companion.size));
     }
@@ -592,7 +601,11 @@ async fn download_model(app: tauri::AppHandle, id: String) -> Result<(), String>
         fetch_file(&client, url, &dest, size, &app, &id).await?;
     }
 
-    app.emit("soravo:model-download-complete", serde_json::json!({ "id": id })).ok();
+    app.emit(
+        "soravo:model-download-complete",
+        serde_json::json!({ "id": id }),
+    )
+    .ok();
     Ok(())
 }
 
@@ -614,7 +627,10 @@ fn model_is_installed(dir: &std::path::Path, model: &CatalogModel) -> bool {
     if !file_is_whole(&weights, model.size) {
         return false;
     }
-    model.companions.iter().all(|c| file_is_whole(&dir.join(c.file), c.size))
+    model
+        .companions
+        .iter()
+        .all(|c| file_is_whole(&dir.join(c.file), c.size))
 }
 
 /// Fetch the files the engine loads from beside a model, if they are missing.
@@ -686,7 +702,9 @@ async fn fetch_file(
     let total = resp.content_length().unwrap_or(0);
 
     let part = dest.with_extension("part");
-    let mut file = tokio::fs::File::create(&part).await.map_err(|e| e.to_string())?;
+    let mut file = tokio::fs::File::create(&part)
+        .await
+        .map_err(|e| e.to_string())?;
     use tokio::io::AsyncWriteExt;
     let mut stream = resp.bytes_stream();
     use futures::StreamExt;
@@ -695,13 +713,21 @@ async fn fetch_file(
         let chunk = chunk.map_err(|e| e.to_string())?;
         file.write_all(&chunk).await.map_err(|e| e.to_string())?;
         received += chunk.len() as u64;
-        let pct = if total > 0 { (received as f64 / total as f64 * 100.0) as u32 } else { 0 };
-        app.emit("soravo:model-download-progress", serde_json::json!({
-            "id": id,
-            "received": received,
-            "total": total,
-            "percent": pct,
-        })).ok();
+        let pct = if total > 0 {
+            (received as f64 / total as f64 * 100.0) as u32
+        } else {
+            0
+        };
+        app.emit(
+            "soravo:model-download-progress",
+            serde_json::json!({
+                "id": id,
+                "received": received,
+                "total": total,
+                "percent": pct,
+            }),
+        )
+        .ok();
     }
     file.flush().await.map_err(|e| e.to_string())?;
 
@@ -763,8 +789,7 @@ fn companion_is_needed_elsewhere(
 
 #[tauri::command]
 async fn set_active_model(app: tauri::AppHandle, id: String) -> Result<(), String> {
-    let model = catalog_model(&id)
-        .ok_or_else(|| format!("Unknown model: {}", id))?;
+    let model = catalog_model(&id).ok_or_else(|| format!("Unknown model: {}", id))?;
     let dir = models_dir(&app);
     if !model_is_installed(&dir, model) {
         return Err(format!("Model not installed: {}", id));
@@ -781,23 +806,95 @@ fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
     let store = app.store("soravo-settings.json");
     if let Ok(s) = store {
         let mut settings = SoravoSettings::default();
-        if let Some(v) = s.get("hotkey") { if let Some(s) = v.as_str() { settings.hotkey = s.to_string(); } }
-        if let Some(v) = s.get("pasteHotkey") { if let Some(s) = v.as_str() { settings.paste_hotkey = s.to_string(); } }
-        if let Some(v) = s.get("copyHotkey") { if let Some(s) = v.as_str() { settings.copy_hotkey = s.to_string(); } }
-        if let Some(v) = s.get("holdToTalk") { if let Some(b) = v.as_bool() { settings.hold_to_talk = b; } }
-        if let Some(v) = s.get("model") { if let Some(s) = v.as_str() { settings.model = s.to_string(); } }
-        if let Some(v) = s.get("language") { if let Some(s) = v.as_str() { settings.language = s.to_string(); } }
-        if let Some(v) = s.get("microphoneId") { if let Some(s) = v.as_str() { settings.microphone_id = s.to_string(); } }
-        if let Some(v) = s.get("sounds") { if let Some(b) = v.as_bool() { settings.sounds = b; } }
-        if let Some(v) = s.get("smartCleanup") { if let Some(b) = v.as_bool() { settings.smart_cleanup = b; } }
-        if let Some(v) = s.get("addPunctuation") { if let Some(b) = v.as_bool() { settings.add_punctuation = b; } }
-        if let Some(v) = s.get("vocabulary") { if let Some(o) = v.as_object() { for (k, val) in o { if let Some(s) = val.as_str() { settings.vocabulary.insert(k.clone(), s.to_string()); } } } }
-        if let Some(v) = s.get("launchAtLogin") { if let Some(b) = v.as_bool() { settings.launch_at_login = b; } }
-        if let Some(v) = s.get("theme") { if let Some(s) = v.as_str() { settings.theme = s.to_string(); } }
-        if let Some(v) = s.get("retention") { if let Some(s) = v.as_str() { settings.retention = s.to_string(); } }
-        if let Some(v) = s.get("scratchpadHotkey") { if let Some(s) = v.as_str() { settings.scratchpad_hotkey = s.to_string(); } }
-        if let Some(v) = s.get("sidebarOpen") { if let Some(b) = v.as_bool() { settings.sidebar_open = b; } }
-        if let Some(v) = s.get("modelsDir") { if let Some(s) = v.as_str() { settings.models_dir = s.to_string(); } }
+        if let Some(v) = s.get("hotkey") {
+            if let Some(s) = v.as_str() {
+                settings.hotkey = s.to_string();
+            }
+        }
+        if let Some(v) = s.get("pasteHotkey") {
+            if let Some(s) = v.as_str() {
+                settings.paste_hotkey = s.to_string();
+            }
+        }
+        if let Some(v) = s.get("copyHotkey") {
+            if let Some(s) = v.as_str() {
+                settings.copy_hotkey = s.to_string();
+            }
+        }
+        if let Some(v) = s.get("holdToTalk") {
+            if let Some(b) = v.as_bool() {
+                settings.hold_to_talk = b;
+            }
+        }
+        if let Some(v) = s.get("model") {
+            if let Some(s) = v.as_str() {
+                settings.model = s.to_string();
+            }
+        }
+        if let Some(v) = s.get("language") {
+            if let Some(s) = v.as_str() {
+                settings.language = s.to_string();
+            }
+        }
+        if let Some(v) = s.get("microphoneId") {
+            if let Some(s) = v.as_str() {
+                settings.microphone_id = s.to_string();
+            }
+        }
+        if let Some(v) = s.get("sounds") {
+            if let Some(b) = v.as_bool() {
+                settings.sounds = b;
+            }
+        }
+        if let Some(v) = s.get("smartCleanup") {
+            if let Some(b) = v.as_bool() {
+                settings.smart_cleanup = b;
+            }
+        }
+        if let Some(v) = s.get("addPunctuation") {
+            if let Some(b) = v.as_bool() {
+                settings.add_punctuation = b;
+            }
+        }
+        if let Some(v) = s.get("vocabulary") {
+            if let Some(o) = v.as_object() {
+                for (k, val) in o {
+                    if let Some(s) = val.as_str() {
+                        settings.vocabulary.insert(k.clone(), s.to_string());
+                    }
+                }
+            }
+        }
+        if let Some(v) = s.get("launchAtLogin") {
+            if let Some(b) = v.as_bool() {
+                settings.launch_at_login = b;
+            }
+        }
+        if let Some(v) = s.get("theme") {
+            if let Some(s) = v.as_str() {
+                settings.theme = s.to_string();
+            }
+        }
+        if let Some(v) = s.get("retention") {
+            if let Some(s) = v.as_str() {
+                settings.retention = s.to_string();
+            }
+        }
+        if let Some(v) = s.get("scratchpadHotkey") {
+            if let Some(s) = v.as_str() {
+                settings.scratchpad_hotkey = s.to_string();
+            }
+        }
+        if let Some(v) = s.get("sidebarOpen") {
+            if let Some(b) = v.as_bool() {
+                settings.sidebar_open = b;
+            }
+        }
+        if let Some(v) = s.get("modelsDir") {
+            if let Some(s) = v.as_str() {
+                settings.models_dir = s.to_string();
+            }
+        }
         settings
     } else {
         SoravoSettings::default()
@@ -806,7 +903,9 @@ fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
 
 fn save_settings(app: &tauri::AppHandle, settings: &SoravoSettings) -> Result<(), String> {
     use tauri_plugin_store::StoreExt;
-    let store = app.store("soravo-settings.json").map_err(|e| e.to_string())?;
+    let store = app
+        .store("soravo-settings.json")
+        .map_err(|e| e.to_string())?;
     store.set("hotkey", serde_json::json!(settings.hotkey));
     store.set("pasteHotkey", serde_json::json!(settings.paste_hotkey));
     store.set("copyHotkey", serde_json::json!(settings.copy_hotkey));
@@ -816,12 +915,18 @@ fn save_settings(app: &tauri::AppHandle, settings: &SoravoSettings) -> Result<()
     store.set("microphoneId", serde_json::json!(settings.microphone_id));
     store.set("sounds", serde_json::json!(settings.sounds));
     store.set("smartCleanup", serde_json::json!(settings.smart_cleanup));
-    store.set("addPunctuation", serde_json::json!(settings.add_punctuation));
+    store.set(
+        "addPunctuation",
+        serde_json::json!(settings.add_punctuation),
+    );
     store.set("vocabulary", serde_json::json!(settings.vocabulary));
     store.set("launchAtLogin", serde_json::json!(settings.launch_at_login));
     store.set("theme", serde_json::json!(settings.theme));
     store.set("retention", serde_json::json!(settings.retention));
-    store.set("scratchpadHotkey", serde_json::json!(settings.scratchpad_hotkey));
+    store.set(
+        "scratchpadHotkey",
+        serde_json::json!(settings.scratchpad_hotkey),
+    );
     store.set("sidebarOpen", serde_json::json!(settings.sidebar_open));
     store.set("modelsDir", serde_json::json!(settings.models_dir));
     store.save().map_err(|e| e.to_string())?;
@@ -870,7 +975,12 @@ fn cleanup_text(text: &str, add_punctuation: bool) -> (String, i64) {
     }
 
     // Add period if missing
-    if add_punctuation && !result.is_empty() && !result.ends_with('.') && !result.ends_with('!') && !result.ends_with('?') {
+    if add_punctuation
+        && !result.is_empty()
+        && !result.ends_with('.')
+        && !result.ends_with('!')
+        && !result.ends_with('?')
+    {
         result.push('.');
     }
 
@@ -896,7 +1006,10 @@ fn capitalize_and_punctuate(text: &str) -> String {
     result
 }
 
-fn apply_vocabulary(text: &str, vocab: &std::collections::HashMap<String, String>) -> (String, i64) {
+fn apply_vocabulary(
+    text: &str,
+    vocab: &std::collections::HashMap<String, String>,
+) -> (String, i64) {
     if vocab.is_empty() {
         return (text.to_string(), 0);
     }
@@ -904,7 +1017,12 @@ fn apply_vocabulary(text: &str, vocab: &std::collections::HashMap<String, String
     // alphabetically for a stable order. A HashMap would iterate in an
     // arbitrary order, which made overlapping entries non-deterministic.
     let mut keys: Vec<&String> = vocab.keys().collect();
-    keys.sort_by(|a, b| b.chars().count().cmp(&a.chars().count()).then_with(|| a.cmp(b)));
+    keys.sort_by(|a, b| {
+        b.chars()
+            .count()
+            .cmp(&a.chars().count())
+            .then_with(|| a.cmp(b))
+    });
 
     // One combined alternation so each position in the text matches at most
     // one entry, and a replacement can never be rewritten by a later pass.
@@ -1035,7 +1153,11 @@ fn transcribe_wav(
     let current_dir = std::env::current_dir().unwrap_or_default();
     let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
 
-    let roots = [current_dir.clone(), project_root.clone(), resource_dir.to_path_buf()];
+    let roots = [
+        current_dir.clone(),
+        project_root.clone(),
+        resource_dir.to_path_buf(),
+    ];
 
     let whisper_path = find_crispasr_binary(&roots).ok_or_else(|| {
         "CrispASR engine is missing from this installation. Reinstall Soravo or contact support.".to_string()
@@ -1098,7 +1220,11 @@ fn transcribe_wav(
 /// tokenizer.bin next to the model is missing" is a thing the user can fix.
 fn engine_error(stderr: &[u8], model: &str) -> String {
     let text = String::from_utf8_lossy(stderr);
-    let lines: Vec<&str> = text.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+    let lines: Vec<&str> = text
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect();
 
     // A file the engine could not open is the common case: name it.
     for line in &lines {
@@ -1128,7 +1254,9 @@ fn engine_error(stderr: &[u8], model: &str) -> String {
 fn inject_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
     use tauri_plugin_clipboard_manager::ClipboardExt;
     let previous = app.clipboard().read_text().unwrap_or_default();
-    app.clipboard().write_text(text.to_string()).map_err(|e| e.to_string())?;
+    app.clipboard()
+        .write_text(text.to_string())
+        .map_err(|e| e.to_string())?;
 
     // Give the focused window a moment to see the new clipboard content, then
     // synthesize Ctrl+V into whatever window currently has focus.
@@ -1160,20 +1288,25 @@ fn inject_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
 #[cfg(target_os = "windows")]
 fn copy_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
     use tauri_plugin_clipboard_manager::ClipboardExt;
-    app.clipboard().write_text(text.to_string()).map_err(|e| e.to_string())
+    app.clipboard()
+        .write_text(text.to_string())
+        .map_err(|e| e.to_string())
 }
 
 /// Copy text to the clipboard without injecting it (Linux stub).
 #[cfg(target_os = "linux")]
 fn copy_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
     use tauri_plugin_clipboard_manager::ClipboardExt;
-    app.clipboard().write_text(text.to_string()).map_err(|e| e.to_string())
+    app.clipboard()
+        .write_text(text.to_string())
+        .map_err(|e| e.to_string())
 }
 
 /// Inject text into the focused window (Linux stub — not implemented).
 #[cfg(target_os = "linux")]
 fn inject_text(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
-    app.emit("soravo:error", "Text injection is not available on Linux").ok();
+    app.emit("soravo:error", "Text injection is not available on Linux")
+        .ok();
     Err("Text injection is not available on Linux".to_string())
 }
 
@@ -1222,10 +1355,7 @@ async fn get_state(state: State<'_, AppState>) -> Result<RecState, String> {
 }
 
 #[tauri::command]
-async fn toggle(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+async fn toggle(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     toggle_recording(&app, &state)
 }
 
@@ -1236,19 +1366,13 @@ async fn toggle(
 /// Both paths call the same function, and it is a no-op unless the recorder is
 /// idle, so a key press that both paths see does not start twice.
 #[tauri::command]
-async fn start_record(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+async fn start_record(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     start_recording(&app, &state)
 }
 
 /// End a dictation and transcribe it. A no-op unless a recording is running.
 #[tauri::command]
-async fn stop_record(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+async fn stop_record(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     stop_recording(&app, &state)
 }
 
@@ -1306,9 +1430,15 @@ fn stop_recording(app: &tauri::AppHandle, state: &AppState) -> Result<(), String
             app.emit("soravo:state", RecState::Transcribing).ok();
             app.emit("soravo:record-command", "stop").ok();
             // Bail out if the recorder never hands us any audio.
-            spawn_timer(app, &state.audio_gen, std::time::Duration::from_secs(15), |app| {
-                app.emit("soravo:error", "No audio arrived from the recorder").ok();
-            });
+            spawn_timer(
+                app,
+                &state.audio_gen,
+                std::time::Duration::from_secs(15),
+                |app| {
+                    app.emit("soravo:error", "No audio arrived from the recorder")
+                        .ok();
+                },
+            );
             Ok(())
         }
         _ => Ok(()),
@@ -1316,10 +1446,7 @@ fn stop_recording(app: &tauri::AppHandle, state: &AppState) -> Result<(), String
 }
 
 #[tauri::command]
-async fn cancel(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+async fn cancel(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     // Cancel the pending audio timeout.
     state.audio_gen.fetch_add(1, Ordering::SeqCst);
     app.emit("soravo:record-command", "cancel").ok();
@@ -1370,7 +1497,10 @@ async fn submit_audio(
     // the transcription fails on a file the user never asked for.
     if let Some(model) = catalog_model(&model) {
         if let Err(err) = ensure_companions(&app, model, &models_dir).await {
-            log::error!("[soravo] could not fetch the files {} needs: {err}", model.id);
+            log::error!(
+                "[soravo] could not fetch the files {} needs: {err}",
+                model.id
+            );
         }
     }
 
@@ -1388,7 +1518,8 @@ async fn submit_audio(
         Ok(raw) => {
             let raw = raw.trim().to_string();
             if raw.is_empty() {
-                app.emit("soravo:error", "Transcription came back empty").ok();
+                app.emit("soravo:error", "Transcription came back empty")
+                    .ok();
                 *state.state.lock().unwrap() = RecState::Error;
                 app.emit("soravo:state", RecState::Error).ok();
                 return Ok(());
@@ -1410,7 +1541,8 @@ async fn submit_audio(
 
             let text = text.trim().to_string();
             if text.is_empty() {
-                app.emit("soravo:error", "Transcription came back empty").ok();
+                app.emit("soravo:error", "Transcription came back empty")
+                    .ok();
                 *state.state.lock().unwrap() = RecState::Error;
                 app.emit("soravo:state", RecState::Error).ok();
                 return Ok(());
@@ -1431,7 +1563,8 @@ async fn submit_audio(
             #[cfg(target_os = "windows")]
             {
                 if let Err(err) = inject_text(&app, &text) {
-                    app.emit("soravo:error", format!("Paste failed: {err}")).ok();
+                    app.emit("soravo:error", format!("Paste failed: {err}"))
+                        .ok();
                 }
             }
 
@@ -1472,25 +1605,26 @@ async fn set_height(app: tauri::AppHandle, px: i32) -> Result<(), String> {
         let monitor = win.current_monitor().map_err(|e| e.to_string())?;
         if let Some(m) = monitor {
             let work_area = m.work_area();
-            win
-                .set_size(tauri::Size::Physical(tauri::PhysicalSize {
-                    width: size.width,
-                    height: height as u32,
-                }))
-                .ok();
-            win
-                .set_position(tauri::Position::Physical(tauri::PhysicalPosition {
-                    x: work_area.position.x + (work_area.size.width as i32 - size.width as i32) / 2,
-                    y: work_area.position.y + work_area.size.height as i32 - height - 28,
-                }))
-                .ok();
+            win.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+                width: size.width,
+                height: height as u32,
+            }))
+            .ok();
+            win.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+                x: work_area.position.x + (work_area.size.width as i32 - size.width as i32) / 2,
+                y: work_area.position.y + work_area.size.height as i32 - height - 28,
+            }))
+            .ok();
         }
     }
     Ok(())
 }
 
 #[tauri::command]
-async fn get_history(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<TranscriptEntry>, String> {
+async fn get_history(
+    app: tauri::AppHandle,
+    limit: Option<i64>,
+) -> Result<Vec<TranscriptEntry>, String> {
     let limit = limit.unwrap_or(50).clamp(1, 200);
     let conn = open_db(&app)?;
     let mut stmt = conn
@@ -1514,7 +1648,8 @@ async fn get_history(app: tauri::AppHandle, limit: Option<i64>) -> Result<Vec<Tr
 #[tauri::command]
 async fn clear_history(app: tauri::AppHandle) -> Result<(), String> {
     let conn = open_db(&app)?;
-    conn.execute("DELETE FROM transcriptions", []).map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM transcriptions", [])
+        .map_err(|e| e.to_string())?;
     app.emit("soravo:data-changed", ()).ok();
     Ok(())
 }
@@ -1555,7 +1690,8 @@ async fn get_insights(app: tauri::AppHandle) -> Result<InsightsData, String> {
     let mut per_month = vec![0i64; 12];
     let mut per_year: std::collections::HashMap<i32, i64> = std::collections::HashMap::new();
     let mut word_counts: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
-    let mut phrase_counts: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+    let mut phrase_counts: std::collections::HashMap<String, i64> =
+        std::collections::HashMap::new();
     let mut words: i64 = 0;
     let mut rate_words: i64 = 0;
     let mut rate_ms: i64 = 0;
@@ -1592,7 +1728,7 @@ async fn get_insights(app: tauri::AppHandle) -> Result<InsightsData, String> {
             per_hour[local.hour() as usize] += count;
             per_weekday[(local.weekday().num_days_from_monday()) as usize] += count;
             per_month[(local.month() as usize) - 1] += count;
-    *per_year.entry(local.year()).or_insert(0) += count;
+            *per_year.entry(local.year()).or_insert(0) += count;
         }
 
         // Tokenize
@@ -1716,11 +1852,18 @@ async fn get_insights(app: tauri::AppHandle) -> Result<InsightsData, String> {
 }
 
 #[tauri::command]
-async fn get_runtime_status(app: tauri::AppHandle, model: String) -> Result<serde_json::Value, String> {
+async fn get_runtime_status(
+    app: tauri::AppHandle,
+    model: String,
+) -> Result<serde_json::Value, String> {
     let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
     let current_dir = std::env::current_dir().unwrap_or_default();
     let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
-    let roots = [current_dir.clone(), project_root.clone(), resource_dir.to_path_buf()];
+    let roots = [
+        current_dir.clone(),
+        project_root.clone(),
+        resource_dir.to_path_buf(),
+    ];
     // Same resolution as transcribe_wav, so the UI cannot report the engine
     // missing while dictation would in fact work.
     let binary_exists = find_crispasr_binary(&roots).is_some();
@@ -1932,7 +2075,10 @@ async fn get_scratchpad_notes(app: tauri::AppHandle) -> Result<Vec<ScratchpadNot
 }
 
 #[tauri::command]
-async fn add_scratchpad_note(app: tauri::AppHandle, text: String) -> Result<ScratchpadNote, String> {
+async fn add_scratchpad_note(
+    app: tauri::AppHandle,
+    text: String,
+) -> Result<ScratchpadNote, String> {
     let conn = open_db(&app)?;
     conn.execute("INSERT INTO scratchpad_notes (text) VALUES (?1)", [&text])
         .map_err(|e| e.to_string())?;
@@ -2038,7 +2184,11 @@ async fn get_snippets(app: tauri::AppHandle) -> Result<Vec<Snippet>, String> {
 }
 
 #[tauri::command]
-async fn add_snippet(app: tauri::AppHandle, phrase: String, expansion: String) -> Result<Snippet, String> {
+async fn add_snippet(
+    app: tauri::AppHandle,
+    phrase: String,
+    expansion: String,
+) -> Result<Snippet, String> {
     let conn = open_db(&app)?;
     conn.execute(
         "INSERT INTO snippets (phrase, expansion) VALUES (?1, ?2)",
@@ -2192,9 +2342,14 @@ pub fn run() {
                 },
             };
 
-            if let Err(err) = hotkeys::spawn_hook(state.hook_config.clone(), handles, state.textarea_focused.clone()) {
+            if let Err(err) = hotkeys::spawn_hook(
+                state.hook_config.clone(),
+                handles,
+                state.textarea_focused.clone(),
+            ) {
                 log::error!("[soravo] {err}");
-                app.emit("soravo:error", format!("Global hotkeys unavailable: {err}")).ok();
+                app.emit("soravo:error", format!("Global hotkeys unavailable: {err}"))
+                    .ok();
             }
 
             // Pill stays hidden on startup - only shows during dictation
@@ -2307,14 +2462,31 @@ mod tests {
                 updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
                 is_auto_learned BOOLEAN NOT NULL DEFAULT 0
             );",
-        ).unwrap();
-        conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('hello', 'HELLO WORLD')", []).unwrap();
-        conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('stephen', 'Stephen Dedalus')", []).unwrap();
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO snippets (phrase, expansion) VALUES ('hello', 'HELLO WORLD')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO snippets (phrase, expansion) VALUES ('stephen', 'Stephen Dedalus')",
+            [],
+        )
+        .unwrap();
 
         let text = "hello there stephen";
         let result = apply_snippets_to_conn(&text, &conn).unwrap();
-        assert!(result.contains("HELLO WORLD"), "Expected expansion, got: {}", result);
-        assert!(result.contains("Stephen Dedalus"), "Expected name expansion, got: {}", result);
+        assert!(
+            result.contains("HELLO WORLD"),
+            "Expected expansion, got: {}",
+            result
+        );
+        assert!(
+            result.contains("Stephen Dedalus"),
+            "Expected name expansion, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -2329,8 +2501,13 @@ mod tests {
                 updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
                 is_auto_learned BOOLEAN NOT NULL DEFAULT 0
             );",
-        ).unwrap();
-        conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('xyz', 'ABC')", []).unwrap();
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO snippets (phrase, expansion) VALUES ('xyz', 'ABC')",
+            [],
+        )
+        .unwrap();
 
         let text = "hello there stephen";
         let result = apply_snippets_to_conn(&text, &conn).unwrap();
@@ -2350,19 +2527,40 @@ mod tests {
                 updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
                 is_auto_learned BOOLEAN NOT NULL DEFAULT 0
             );",
-        ).unwrap();
+        )
+        .unwrap();
         // Add snippets based on LibriSpeech transcript
-        conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('rector', 'The Rector (Mr. Hart')", []).unwrap();
+        conn.execute(
+            "INSERT INTO snippets (phrase, expansion) VALUES ('rector', 'The Rector (Mr. Hart')",
+            [],
+        )
+        .unwrap();
         conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('catechism', 'the Catechism of the Church')", []).unwrap();
         conn.execute("INSERT INTO snippets (phrase, expansion) VALUES ('stephen', 'Stephen Dedalus (protagonist)')", []).unwrap();
 
         // Test text similar to LibriSpeech transcript line 0026
         let text = "THE RECTOR DID NOT ASK FOR A CATECHISM TO HEAR THE LESSON FROM";
         let result = apply_snippets_to_conn(&text, &conn).unwrap();
-        assert!(result.contains("The Rector"), "Expected rector expansion, got: {}", result);
-        assert!(result.contains("Catechism"), "Expected catechism expansion, got: {}", result);
-        assert!(!result.contains("THE RECTOR"), "Should have been replaced, got: {}", result);
-        assert!(!result.contains("CATECHISM"), "Should have been replaced, got: {}", result);
+        assert!(
+            result.contains("The Rector"),
+            "Expected rector expansion, got: {}",
+            result
+        );
+        assert!(
+            result.contains("Catechism"),
+            "Expected catechism expansion, got: {}",
+            result
+        );
+        assert!(
+            !result.contains("THE RECTOR"),
+            "Should have been replaced, got: {}",
+            result
+        );
+        assert!(
+            !result.contains("CATECHISM"),
+            "Should have been replaced, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -2408,7 +2606,10 @@ mod tests {
     #[test]
     fn punctuation_helper_matches_cleanup_behaviour() {
         assert_eq!(capitalize_and_punctuate("oh"), "Oh.");
-        assert_eq!(capitalize_and_punctuate("oh"), capitalize_and_punctuate("oh"));
+        assert_eq!(
+            capitalize_and_punctuate("oh"),
+            capitalize_and_punctuate("oh")
+        );
         assert_eq!(capitalize_and_punctuate(""), "");
     }
 
@@ -2418,11 +2619,17 @@ mod tests {
         v.insert("sore avo".to_string(), "Soravo".to_string());
         v.insert("kubernetes".to_string(), "Kubernetes".to_string());
         // Multi-word entries match literally.
-        assert_eq!(apply_vocabulary("built with sore avo", &v), ("built with Soravo".into(), 1));
+        assert_eq!(
+            apply_vocabulary("built with sore avo", &v),
+            ("built with Soravo".into(), 1)
+        );
         // Matching is case-insensitive.
         assert_eq!(apply_vocabulary("deployed to KUBERNETES", &v).1, 1);
         // Substrings of a longer word are not touched.
-        assert_eq!(apply_vocabulary("the kubernetes operator", &v).0, "the Kubernetes operator");
+        assert_eq!(
+            apply_vocabulary("the kubernetes operator", &v).0,
+            "the Kubernetes operator"
+        );
         // Nothing to do when the phrase is absent.
         assert_eq!(apply_vocabulary("plain text", &v).1, 0);
     }
@@ -2461,7 +2668,10 @@ mod tests {
     fn vocabulary_handles_keys_with_symbols() {
         let mut vocab = std::collections::HashMap::new();
         vocab.insert("c++".to_string(), "CSharpPlusPlus".to_string());
-        assert_eq!(apply_vocabulary("i love c++", &vocab).0, "i love CSharpPlusPlus");
+        assert_eq!(
+            apply_vocabulary("i love c++", &vocab).0,
+            "i love CSharpPlusPlus"
+        );
     }
 
     #[test]
@@ -2474,11 +2684,8 @@ mod tests {
     /// `"bin"` is what `npm run fetch:asr` produces, `"extracted"` is what a
     /// fresh clone gets from the committed archive.
     fn fixture(layout: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "soravo-asr-test-{}-{}",
-            layout,
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("soravo-asr-test-{}-{}", layout, std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let exe_dir = if layout == "bin" {
             dir.join("third-party").join("bin")
@@ -2489,7 +2696,11 @@ mod tests {
                 .join("crispasr-windows-x86_64-cpu")
         };
         std::fs::create_dir_all(&exe_dir).unwrap();
-        let name = if cfg!(target_os = "windows") { "crispasr.exe" } else { "crispasr" };
+        let name = if cfg!(target_os = "windows") {
+            "crispasr.exe"
+        } else {
+            "crispasr"
+        };
         std::fs::write(exe_dir.join(name), b"stub").unwrap();
         dir
     }
@@ -2509,7 +2720,10 @@ mod tests {
         // missing even though the binary was present in the repo.
         let dir = fixture("extracted");
         let found = find_crispasr_binary(&[dir.clone()]);
-        assert!(found.is_some(), "should find third-party/crispasr/extracted/<build>/<exe>");
+        assert!(
+            found.is_some(),
+            "should find third-party/crispasr/extracted/<build>/<exe>"
+        );
         assert!(found.unwrap().to_string_lossy().contains("extracted"));
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -2529,7 +2743,11 @@ mod tests {
         // layout and the one a bundle ships.
         let root = std::env::temp_dir().join(format!("soravo-asr-both-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
-        let name = if cfg!(target_os = "windows") { "crispasr.exe" } else { "crispasr" };
+        let name = if cfg!(target_os = "windows") {
+            "crispasr.exe"
+        } else {
+            "crispasr"
+        };
         let bin = root.join("third-party").join("bin");
         let extracted = root
             .join("third-party")
@@ -2660,7 +2878,8 @@ mod tests {
             "moonshine-tiny",
         );
         assert_eq!(
-            err, "CrispASR failed: failed to initialise backend 'moonshine'"
+            err,
+            "CrispASR failed: failed to initialise backend 'moonshine'"
         );
     }
 
@@ -2735,97 +2954,93 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
-    /// The dictionary, end to end, on real speech.
-    ///
-    /// The sample is the first line of the LibriSpeech test-clean set
-    /// (1089-134686-0001): the recording says "stuff it into you" and the
-    /// engine hears "stuffed into you" - which is exactly what a dictionary
-    /// entry is for. The test runs the path the app runs: the engine, then
-    /// the vocabulary.
-    ///
-    /// The audio is not in the repository, so the test is skipped unless the
-    /// WAV is pointed at:
-    ///
-    ///   SORAVO_TEST_WAV=.../1089-134686-0001.wav cargo test dictionary_rewrites
-    ///
-    /// The WAV is the LibriSpeech FLAC converted to 16 kHz mono PCM:
-    ///
-    ///   ffmpeg -i 1089-134686-0001.flac -ar 16000 -ac 1 -c:a pcm_s16le out.wav
-    #[test]
-    fn dictionary_rewrites_a_misheard_word() {
-        let Ok(wav) = std::env::var("SORAVO_TEST_WAV") else {
-            eprintln!("skipping: SORAVO_TEST_WAV is not set");
-            return;
-        };
-        if !std::path::Path::new(&wav).exists() {
-            eprintln!("skipping: {} does not exist", wav);
-            return;
-        }
-
-        // The engine and the model have to be installed for this to mean
-        // anything; without them there is nothing to test.
-        let current_dir = std::env::current_dir().unwrap_or_default();
-        let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
-        let roots = [current_dir.clone(), project_root.clone()];
-        let Some(whisper) = find_crispasr_binary(&roots) else {
-            eprintln!("skipping: CrispASR is not installed");
-            return;
-        };
-        let _ = &whisper;
-        let model_dir = dirs::data_dir()
-            .unwrap_or_default()
-            .join("com.soravo.app")
-            .join("models");
-        let Some(model) = ["base.en", "small.en", "tiny.en"]
-            .iter()
-            .map(|m| model_dir.join(format!("ggml-{}.bin", m)))
-            .find(|p| p.exists())
-        else {
-            eprintln!("skipping: no model is installed");
-            return;
-        };
-        let model_id = model
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("")
-            .trim_start_matches("ggml-")
-            .trim_end_matches(".bin")
-            .to_string();
-
-        // The engine, exactly as the app runs it.
-        let raw = transcribe_wav(
-            &wav,
-            &model_id,
-            "en",
-            &project_root,
-            &model_dir,
-        )
-        .expect("the engine should transcribe the sample");
-        let raw = raw.trim().to_string();
-
-        // The engine mishears the phrase; that is the point of the sample.
-        assert!(
-            raw.to_lowercase().contains("stuffered into you"),
-            "expected the engine to mishear the phrase, got: {}",
-            raw
-        );
-
-        // The dictionary entry the user would add for it.
-        let mut vocabulary = std::collections::HashMap::new();
-        vocabulary.insert("stuffered into you".to_string(), "Stuff it into you".to_string());
-
-        let (text, applied) = apply_vocabulary(&raw, &vocabulary);
-        assert_eq!(applied, 1, "the entry should have matched once");
-        assert!(
-            text.contains("Stuff it into you"),
-            "the dictionary should have rewritten the phrase, got: {}",
-            text
-        );
-        // The rest of the line is untouched.
-        assert!(
-            text.contains("his belly counseled him"),
-            "the rest of the transcript should be untouched, got: {}",
-            text
-        );
+/// The dictionary, end to end, on real speech.
+///
+/// The sample is the first line of the LibriSpeech test-clean set
+/// (1089-134686-0001): the recording says "stuff it into you" and the
+/// engine hears "stuffed into you" - which is exactly what a dictionary
+/// entry is for. The test runs the path the app runs: the engine, then
+/// the vocabulary.
+///
+/// The audio is not in the repository, so the test is skipped unless the
+/// WAV is pointed at:
+///
+///   SORAVO_TEST_WAV=.../1089-134686-0001.wav cargo test dictionary_rewrites
+///
+/// The WAV is the LibriSpeech FLAC converted to 16 kHz mono PCM:
+///
+///   ffmpeg -i 1089-134686-0001.flac -ar 16000 -ac 1 -c:a pcm_s16le out.wav
+#[test]
+fn dictionary_rewrites_a_misheard_word() {
+    let Ok(wav) = std::env::var("SORAVO_TEST_WAV") else {
+        eprintln!("skipping: SORAVO_TEST_WAV is not set");
+        return;
+    };
+    if !std::path::Path::new(&wav).exists() {
+        eprintln!("skipping: {} does not exist", wav);
+        return;
     }
 
+    // The engine and the model have to be installed for this to mean
+    // anything; without them there is nothing to test.
+    let current_dir = std::env::current_dir().unwrap_or_default();
+    let project_root = current_dir.parent().unwrap_or(&current_dir).to_path_buf();
+    let roots = [current_dir.clone(), project_root.clone()];
+    let Some(whisper) = find_crispasr_binary(&roots) else {
+        eprintln!("skipping: CrispASR is not installed");
+        return;
+    };
+    let _ = &whisper;
+    let model_dir = dirs::data_dir()
+        .unwrap_or_default()
+        .join("com.soravo.app")
+        .join("models");
+    let Some(model) = ["base.en", "small.en", "tiny.en"]
+        .iter()
+        .map(|m| model_dir.join(format!("ggml-{}.bin", m)))
+        .find(|p| p.exists())
+    else {
+        eprintln!("skipping: no model is installed");
+        return;
+    };
+    let model_id = model
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .trim_start_matches("ggml-")
+        .trim_end_matches(".bin")
+        .to_string();
+
+    // The engine, exactly as the app runs it.
+    let raw = transcribe_wav(&wav, &model_id, "en", &project_root, &model_dir)
+        .expect("the engine should transcribe the sample");
+    let raw = raw.trim().to_string();
+
+    // The engine mishears the phrase; that is the point of the sample.
+    assert!(
+        raw.to_lowercase().contains("stuffered into you"),
+        "expected the engine to mishear the phrase, got: {}",
+        raw
+    );
+
+    // The dictionary entry the user would add for it.
+    let mut vocabulary = std::collections::HashMap::new();
+    vocabulary.insert(
+        "stuffered into you".to_string(),
+        "Stuff it into you".to_string(),
+    );
+
+    let (text, applied) = apply_vocabulary(&raw, &vocabulary);
+    assert_eq!(applied, 1, "the entry should have matched once");
+    assert!(
+        text.contains("Stuff it into you"),
+        "the dictionary should have rewritten the phrase, got: {}",
+        text
+    );
+    // The rest of the line is untouched.
+    assert!(
+        text.contains("his belly counseled him"),
+        "the rest of the transcript should be untouched, got: {}",
+        text
+    );
+}

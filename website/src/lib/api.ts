@@ -136,6 +136,9 @@ export async function createOrder(planCode: PlanCode): Promise<CreateOrderResult
 /**
  * Read the signed-in user's entitlements through RLS.
  */
+
+const SUPABASE_FUNCTIONS = `${SUPABASE_URL}/functions/v1`;
+
 export async function listEntitlements(): Promise<
   { plan_code: string; status: string; lifetime: boolean; subscription_period_end: string | null }[]
 > {
@@ -149,4 +152,70 @@ export async function listEntitlements(): Promise<
 
   if (error) throw error;
   return data ?? [];
+}
+
+async function adminRequest<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+  const response = await fetch(`${SUPABASE_FUNCTIONS}/admin-dashboard`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ action, ...payload }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error ?? "Admin access denied");
+  return data as T;
+};
+
+export interface AdminOverview {
+  totalUsers: number;
+  newUsers30d: number;
+  activeUsers: number;
+  activeDevices: number;
+  totalDevices: number;
+  lifetimeEntitlements: number;
+  monthlyEntitlements: number;
+  paymentTotalMinor: number;
+  capturedPayments: number;
+  failedPayments: number;
+  refundedPayments: number;
+  totalPayments: number;
+  lifetimePaymentCount: number;
+  recurringPaymentCount: number;
+  lifetimePaymentTotalMinor: number;
+  recurringPaymentTotalMinor: number;
+  subscriptionBreakdown: Record<string, number>;
+  webhookBreakdown: Record<string, number>;
+  newUsersByDay: { date: string; count: number }[];
+}
+
+export async function fetchAdminOverview(): Promise<AdminOverview> {
+  return adminRequest<AdminOverview>("overview");
+}
+
+export interface AdminUsersResponse {
+  users: unknown[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export async function fetchAdminUsers(page = 1, pageSize = 25, q = ""): Promise<AdminUsersResponse> {
+  return adminRequest<AdminUsersResponse>("users", { page, pageSize, q });
+}
+
+export async function fetchAdminPayments(page = 1, pageSize = 25): Promise<any> {
+  return adminRequest<any>("payments", { page, pageSize });
+}
+
+export async function fetchAdminSubscriptions(page = 1, pageSize = 25): Promise<any> {
+  return adminRequest<any>("subscriptions", { page, pageSize });
+}
+
+export async function fetchAdminDevices(page = 1, pageSize = 25): Promise<any> {
+  return adminRequest<any>("devices", { page, pageSize });
+}
+
+export async function fetchAdminAudit(page = 1, pageSize = 25): Promise<any> {
+  return adminRequest<any>("audit", { page, pageSize });
 }

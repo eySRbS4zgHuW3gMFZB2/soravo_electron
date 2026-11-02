@@ -141,7 +141,15 @@ export function createDesktopAuthHandoffHandler(dependencies: HandlerDependencie
 
       const browser = dependencies.createClient(supabaseUrl, anonKey);
       const { data: { user }, error: authError } = await browser.auth.getUser(accessToken);
-      if (authError || !user?.email) return json(401, { error: "Invalid session" });
+      if (authError) {
+        const status = (authError as { status?: unknown } | null)?.status;
+        if (typeof status !== "number" || status === 0 || status >= 500) {
+          console.error("desktop-auth-handoff: auth.getUser failed", authError);
+          return json(503, { error: "Authentication service unavailable" });
+        }
+        return json(401, { error: "Invalid session" });
+      }
+      if (!user?.email) return json(401, { error: "Invalid session" });
 
       const state = body.state;
       const challenge = body.code_challenge;

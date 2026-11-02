@@ -10,7 +10,9 @@ fn secret_filename(key: &str) -> Result<String, String> {
     if key.is_empty()
         || key.len() > 251
         || reserved
-        || !key.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-' || c == b'_')
+        || !key
+            .bytes()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-' || c == b'_')
     {
         return Err("invalid secure store key".into());
     }
@@ -44,7 +46,9 @@ mod inner {
     impl Drop for DpapiOutput {
         fn drop(&mut self) {
             if !self.0.pbData.is_null() {
-                unsafe { LocalFree(self.0.pbData as _); }
+                unsafe {
+                    LocalFree(self.0.pbData as _);
+                }
             }
         }
     }
@@ -62,18 +66,39 @@ mod inner {
         bytes.iter().map(|b| format!("{:02x}", b)).collect()
     }
     fn from_hex(s: &str) -> Result<Vec<u8>, String> {
-        if s.len() % 2 != 0 { return Err("invalid hex".into()); }
-        (0..s.len()).step_by(2).map(|i| u8::from_str_radix(&s[i..i+2], 16).map_err(|e| e.to_string())).collect()
+        if s.len() % 2 != 0 {
+            return Err("invalid hex".into());
+        }
+        (0..s.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&s[i..i + 2], 16).map_err(|e| e.to_string()))
+            .collect()
     }
 
     pub fn secure_store_set(app: AppHandle, key: String, value: String) -> Result<(), String> {
         let input = value.as_bytes();
-        let mut in_blob = CRYPT_INTEGER_BLOB { cbData: input.len() as u32, pbData: input.as_ptr() as *mut u8 };
-        let mut out_blob = CRYPT_INTEGER_BLOB { cbData: 0, pbData: std::ptr::null_mut() };
-        let ok = unsafe {
-            CryptProtectData(&mut in_blob, std::ptr::null(), std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), CRYPTPROTECT_UI_FORBIDDEN, &mut out_blob)
+        let mut in_blob = CRYPT_INTEGER_BLOB {
+            cbData: input.len() as u32,
+            pbData: input.as_ptr() as *mut u8,
         };
-        if ok == 0 { return Err("CryptProtectData failed".into()); }
+        let mut out_blob = CRYPT_INTEGER_BLOB {
+            cbData: 0,
+            pbData: std::ptr::null_mut(),
+        };
+        let ok = unsafe {
+            CryptProtectData(
+                &mut in_blob,
+                std::ptr::null(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                CRYPTPROTECT_UI_FORBIDDEN,
+                &mut out_blob,
+            )
+        };
+        if ok == 0 {
+            return Err("CryptProtectData failed".into());
+        }
         let output = DpapiOutput(out_blob);
         let encoded = to_hex(output.bytes()?);
         let p = secret_path(&app, &key)?;
@@ -83,15 +108,33 @@ mod inner {
 
     pub fn secure_store_get(app: AppHandle, key: String) -> Result<Option<String>, String> {
         let p = secret_path(&app, &key)?;
-        if !p.exists() { return Ok(None); }
+        if !p.exists() {
+            return Ok(None);
+        }
         let encoded = fs::read_to_string(p).map_err(|e| e.to_string())?;
         let bytes = from_hex(encoded.trim())?;
-        let mut in_blob = CRYPT_INTEGER_BLOB { cbData: bytes.len() as u32, pbData: bytes.as_ptr() as *mut u8 };
-        let mut out_blob = CRYPT_INTEGER_BLOB { cbData: 0, pbData: std::ptr::null_mut() };
-        let ok = unsafe {
-            CryptUnprotectData(&mut in_blob, std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), CRYPTPROTECT_UI_FORBIDDEN, &mut out_blob)
+        let mut in_blob = CRYPT_INTEGER_BLOB {
+            cbData: bytes.len() as u32,
+            pbData: bytes.as_ptr() as *mut u8,
         };
-        if ok == 0 { return Err("CryptUnprotectData failed".into()); }
+        let mut out_blob = CRYPT_INTEGER_BLOB {
+            cbData: 0,
+            pbData: std::ptr::null_mut(),
+        };
+        let ok = unsafe {
+            CryptUnprotectData(
+                &mut in_blob,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                CRYPTPROTECT_UI_FORBIDDEN,
+                &mut out_blob,
+            )
+        };
+        if ok == 0 {
+            return Err("CryptUnprotectData failed".into());
+        }
         let output = DpapiOutput(out_blob);
         let text = String::from_utf8(output.bytes()?.to_vec()).map_err(|e| e.to_string())?;
         Ok(Some(text))
@@ -99,7 +142,9 @@ mod inner {
 
     pub fn secure_store_delete(app: AppHandle, key: String) -> Result<(), String> {
         let p = secret_path(&app, &key)?;
-        if p.exists() { fs::remove_file(p).map_err(|e| e.to_string())?; }
+        if p.exists() {
+            fs::remove_file(p).map_err(|e| e.to_string())?;
+        }
         Ok(())
     }
 }
@@ -124,7 +169,11 @@ pub fn secure_store_delete(app: tauri::AppHandle, key: String) -> Result<(), Str
 
 #[cfg(not(target_os = "windows"))]
 #[tauri::command]
-pub fn secure_store_set(_app: tauri::AppHandle, _key: String, _value: String) -> Result<(), String> {
+pub fn secure_store_set(
+    _app: tauri::AppHandle,
+    _key: String,
+    _value: String,
+) -> Result<(), String> {
     Err("unsupported".into())
 }
 
@@ -146,9 +195,18 @@ mod tests {
 
     #[test]
     fn filenames_preserve_valid_keys_and_reject_ambiguous_or_unsafe_ones() {
-        assert_eq!(secret_filename("desktop-session").unwrap(), "desktop-session.bin");
-        assert_eq!(secret_filename("desktop-auth-pending").unwrap(), "desktop-auth-pending.bin");
-        assert_ne!(secret_filename("a-b").unwrap(), secret_filename("a_b").unwrap());
+        assert_eq!(
+            secret_filename("desktop-session").unwrap(),
+            "desktop-session.bin"
+        );
+        assert_eq!(
+            secret_filename("desktop-auth-pending").unwrap(),
+            "desktop-auth-pending.bin"
+        );
+        assert_ne!(
+            secret_filename("a-b").unwrap(),
+            secret_filename("a_b").unwrap()
+        );
         for key in ["", "A", "a/b", "a.b", "..", "é", "con", "lpt1", "com9"] {
             assert!(secret_filename(key).is_err(), "accepted {key:?}");
         }

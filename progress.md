@@ -1018,72 +1018,85 @@ Merged remote `b645e82` with local `d8d7ec4`, retaining both handoff/audit recor
 - Verification: website typecheck passed; npm test passed (121 tests); Playwright routing tests passed (36); simulated deployment rebuild contained configured Supabase values and no placeholder values.
 - CodeRabbit: fixed deployment-artifact finding via post-test rebuild; previous minor progress heading spacing finding addressed.
 
-## P7-08 auth realism verification (2026-10-30)
+## P7-08 owner-only admin dashboard
+P7-08 branch feature/P7-08-admin-dashboard-owner-only created from origin/main 329316e. Adds migration 006 admin_users with service-only access; protects profile updates; Edge Function admin-dashboard (server-side admin role check + audited reads); /admin React page with overview, users, payments, subscriptions, devices, audit tabs; tests and docs. Preview URL to be provided by deployment; no production changes.
+
+## P7-08 admin dashboard follow-up (2026-10-30)
+Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening.
+Start SHA: 0ab690e10ace99fe5c2378ced2a16ef5f65a966f.
+End SHA: d828e4bef136693d8f665f8402183f06b4da4b0f.
+PR: https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron/pull/38.
+Changes: fixed duplicate devices declaration in the admin Edge Function; enforced fail-closed audit logging; debounced admin user search; refactored admin API helpers to a shared typed requester; corrected pgTAP bigint assertion; documented approved owner self-grant bootstrap; added an Edge Function Deno check job to Website CI.
+Verified commands: targeted Vitest AdminPage/api tests, complete npm test (130 passed), npm run typecheck, npm run build, npx deno check website/supabase/functions/admin-dashboard/index.ts, npx playwright test e2e/admin.spec.ts --project=chromium (3 passed).
+Unresolved: GitHub Actions database run, CodeRabbit review final result, owner-selected admin bootstrap, preview deployment verification.
+
+## P7-08 re-orientation / CI-ready state (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+Final SHA: 8cb006d1b8d91bef6013e0ad583d9e6eec10f9d9
+PR #38 state: OPEN, mergeable=true, mergeStateStatus=UNSTABLE, not merged.
+CI at final SHA: all GitHub Actions checks completed SUCCESS except CodeRabbit review in_progress (non-blocking gate still pending). Website tests/local: npm run typecheck, npm test (149 passed), npm run build, Playwright admin (3 passed), and Deno check passed.
+Security: read-only inspection only; no merge, deployment, bootstrap, or access grants performed.
+Next safe action: owner approval to integrate PR #38, followed by the controlled non-production admin bootstrap and preview verification.
+
+## P7-08 code review follow-up (2026-10-30)
+End SHA: cad68cf3c774c9f871833ed045b1c1f483ac87cb.
+Changes: repaired payments/audit pagination, profile trigger assertions, Edge Function query errors/allowlists/email resolution, sub/device pagination, secret-safe error handling.
+Validation: complete website vitest 130 passed; typecheck/build passed; Playwright 3 passed; Deno check passed; DB pgTAP passed; GitHub checks all completed successfully except CodeRabbit AI review (auto status may be pending).
+Remaining: CodeRabbit AI review completion, owner bootstrap, preview verification.
+
+## P7-08 admin dashboard hardening (2026-10-30)
+Worktree .worktrees/P7-08-admin-hardening, branch feature/P7-08-admin-dashboard-hardening, based on feature/P7-08-admin-dashboard-owner-only (8ee01ad). Reused existing admin implementation; hardened admin overview metrics (registered/active users, registered/active devices, lifetime vs recurring payment counters); fixed user search pagination to avoid partial-record leakage; corrected admin role self-grant constraint for approved owner bootstrap; added Vitest component/API tests and Playwright read-only navigation; added migration 006 to DB workflow and pinned ubuntu-24.04. Verification: 130 Vitest tests passed; Playwright admin 3 passed; website typecheck and production build passed. Outstanding owner actions: approve exact admin account, perform controlled SQL bootstrap, verify preview deployment.
+
+## P7-08 final security corrections (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+SHA: a767cbfba8276fe176d740ebd2f8421660046c4b
+Changes: Edge Function authorization now requires role='owner'; emailsFor errors are propagated.
+Validation: Vitest 158 passed, Playwright 3 passed, typecheck/build passed, Deno check passed.
+Tests added: anonymous, admin-role, revoked-owner, owner-access, email-lookup-failure.
+No merge, deployment, bootstrap, or privilege grants performed.
+## P7-08 auth pagination verification (2026-10-30)
 Branch: feature/P7-08-admin-dashboard-hardening
 SHA: ed68eb85da0f37b81009e7c510af82bfabc60e83
-Changes: mocked Supabase auth pagination headers and added auth total/page assertions.
-Validation: npm test 162 passed; typecheck and build passed; Deno check passed; Playwright 3 passed.
-GitHub: push successful; core CI known green from prior matching commit, CodeRabbit run in progress.
+Changes: Mocked realistic Supabase auth pagination headers and added auth total/page assertions.
+Validation: Vitest 162 passed; typecheck/build passed; Deno check passed; Playwright 3 passed.
 No merge, deployment, bootstrap, or privileges changed.
-## Windows desktop development launch � 2026-10-30
-- Host OS: Windows 11 (x86_64)
-- App workspace: C:/Users/kaya/Desktop/Hydra/soravo
-- Development command: 
-pm run tauri:dev via cmd /c C:\Users\kaya\AppData\Local\Temp\opencode\launch.bat
-- Launch script environment: Visual Studio 2017 BuildTools vcvars64.bat; PATH includes C:\Users\kaya\.cargo\bin; RUSTUP_TOOLCHAIN=1.90.0-x86_64-pc-windows-msvc
-- rustc: 1.90.1 (rustup MSVC)
-- cargo: active via rustup 1.90.0 MSVC target
-- Vite dev server: http://localhost:5173 (started)
-- Rust build result: succeeded after 5m15s (	arget\debug\soravo.exe launched)
-- Application window/toolchain evidence: log reports VITE ready and Running target\debug\soravo.exe; Tauri process is running.
-- Authentication/entitlement/device-registration verification: not yet performed (manual owner test pending).
-- Supabase target for app: Soravo_fresh (vfrhplskegqqdxbykyvx), existing owner account to be signed in manually; no secrets printed.
-- Stop instruction: close the Soravo app window or terminate the background Tauri dev process (npm/cargo) in the terminal; stop the Vite child process if needed. Do not close this terminal while testing.
-- No production deployment, release, account creation, entitlement modification, or privilege grant performed.
 
-## Desktop auth onboarding research � 2026-10-30 (TASK DESKTOP-AUTH-ONBOARDING-01)
-- Branch: feature/desktop-auth-onboarding (PR 41)
-- REA evidence ID: ev_3367ac70bb6c029e4d610fde5cb97e22dfbfaccdb3c0bdd23a3c204dd2baccaf
-- Wispr version inspected: 1.6.1337 (Electron, ASAR)
-- Implementation status: PARTIAL (research only)
-- Files: docs/reverse-engineering/WISPR_FLOW_ONBOARDING_NOTES.md
+## P7-08 CodeRabbit follow-up fixes (2026-10-30)
+Branch: feature/P7-08-admin-dashboard-hardening
+Changes: disabled users pagination while loading; preserved zero/unavailable auth totals with exact-count fallback; neutral heading for non-authorization dashboard failures.
+Validation: website Vitest 162 passed; TypeScript passed.
+No merge, deployment, bootstrap, or privileges changed.
 
-## Windows desktop authentication repair — 2026-10-31 (SORAVO-DESKTOP-AUTH-REPAIR-30)
 
-- Worktree: `.worktrees/SORAVO-DESKTOP-AUTH-REPAIR-30-desktop-auth`; branch: `fix/SORAVO-DESKTOP-AUTH-REPAIR-30-desktop-auth`; base: `a86ed22acbaeb3f52920164760fc111ff68546ba`; planning commit: `ded4df5f8b9d72e3293825f37956c6009f5aa375`.
-- Skills loaded from the requested Hydra skills directory: `tauri-v2`, `rust-best-practices`, `supabase`, `supabase-postgres-best-practices`, `security-review`, `playwright-best-practices`, `playwright-cli`, `code-review`, `vercel-react-best-practices`. The Tauri advanced-runtime and Playwright referenced support files are absent. CodeRabbit CLI 0.9.0 is installed/authenticated; integrated-diff review started and pending. Supabase plugin was not used because remote project access is unnecessary and remote writes are out of scope. Cloudflare and plugin-management skills were considered but not loaded because no Cloudflare work is included.
-- CONFIRMED from source: warm deep-link listener registration was late and startup/warm callbacks were not deduplicated or serialized; initial `getSession()` could overwrite later auth events; secure-store read failures were hidden as a missing session. Existing handoff SHA-256 code hash and conditional delete were retained; true Postgres concurrent behavior was not exercised locally.
-- Implemented: early startup callback broker with queue/deduplication; strict callback and pending transaction parsing; RFC compliant rejection-sampled PKCE; ordered session restore; safe errors and secure-storage error propagation; terminal-only pending cleanup; matching `magiclink` verifyOtp contract; browser session refresh before handoff issue and one refresh retry; retained explicit “Open Soravo” browser click. Extracted Edge handler and added injectable contract tests. No schema migration or hosted Supabase/Cloudflare/GitHub mutation.
-- Validation: desktop `npm run typecheck` PASS; desktop `npm run build` PASS (existing >500 kB chunk warning); website `npm run typecheck` PASS; website `npm run build` PASS; focused `npm test -- desktopAuthContracts` PASS (13/13); full website `npm test` PASS (130 tests before handler extraction, focused 13/13 after); `git diff --check` PASS. Playwright targeted run: three desktop route checks PASS, real-auth skipped because credentials were removed, four existing auth-form tests fail because base `auth.spec.ts` mocks `http://localhost:5173` while configured Vite/Playwright uses 5174. Confirmed this mismatch and tests exist at base. Rust test attempts did not produce a result: default 1.98 Windows GNU failed linker (`export ordinal too large`); MSVC 1.90 attempts were affected by shared target/compiler artifacts and dependency `embed-resource` rustc_private errors. Do not report Rust tests passing.
-- Runtime acceptance PARTIAL/BLOCKED: no local Deno/Supabase/Postgres runtime. Full handoff requires a hosted handoff-table write, prohibited by this task's no-remote-mutation boundary. Windows cold/warm callback, DPAPI session persistence/restart, authenticated handoff, and actual Postgres concurrency remain unverified. Next action: authorize an isolated disposable Supabase project/local stack, run end-to-end and concurrent exchange acceptance, run Rust on configured MSVC 1.90.1, launch Soravo and verify cold and warm callbacks. Do not deploy without separate approval.
-- Contract mismatch for owner decision: `29_WEB_DESKTOP_AUTH_CONTRACT.md` says one-minute expiry while existing function uses two minutes; preserved the existing two-minute behavior pending a separate compatibility decision.
-- Rollback: revert this task source diff before deployment; no schema rollback needed. Keep worktree until integrated, then inspect ignored artifacts per policy.
+## P7-08 CodeRabbit test mock findings (2026-10-30)
+PR: 38
+Branch: feature/P7-08-admin-dashboard-hardening
+Findings addressed:
+- A: /auth/v1/user mock now validates the Authorization header and returns 401 for missing/malformed/incorrect bearer tokens.
+- B: default Supabase Auth mock page size changed from 25 to 50; pagination remains explicitly per_page-driven.
+- C: mock Link headers now include rel=\"last\" on final/single/empty result sets and rel=\"next\" when another page exists.
+Changes: website/supabase/tests/admin_dashboard.test.ts
+Validation:
+- npm test -> 12 files, 167 tests passed, exit 0
+- npm run typecheck -> exit 0
+- npm run build -> exit 0
+- npx deno check supabase/functions/admin-dashboard/index.ts -> exit 0
+- coderabbit review --uncommitted --agent -> 0 findings
+Code commit: 3bd46bc5f27663fccf8e67f1647c2c20c408b7ba
+Push status: pushed to origin/feature/P7-08-admin-dashboard-hardening
+PR #38 remains open and unmerged; no deployment performed.
 
-### Validation addendum — 2026-10-31 (supersedes earlier status above)
-- PASS: Rust `cargo test --lib` on MSVC 1.90: 38/38; desktop typecheck/build PASS; website typecheck/build PASS; full website unit suite 136/136; focused desktop handoff/contract tests 15/15; Playwright Chromium auth suites 13 passed / 1 skipped (real credential flow skipped). The Playwright rerun includes the fixed 5174 origin and password-recovery `returnTo` check. `git diff --check` PASS.
-- PASS: `npm run tauri:dev` finished compiling and launched `src-tauri/target/debug/soravo.exe`; the native window rendered signed-out actions. The existing stored pending transaction rendered an expired-request status. UI automation could not capture the window after initial accessibility state due Windows.Graphics.Capture failure; no native sign-in click or live callback is claimed.
-- Implemented then removed after security review: code-less background polling was vulnerable to an attacker-chosen PKCE verifier on a crafted auth URL. Final flow requires the authenticated browser user to select “Continue to Soravo”, then “Open Soravo”. Browser session refresh/retry and signup/login recovery/reset return routing remain in place. The Edge handler supports issue and exchange only.
-- REVIEW: The previous CodeRabbit review identified the code-less polling risk; the final security addendum records its removal. Current integrated-diff review is pending.
-- NOT ACCEPTED as full live handoff: the supplied test account completed browser login and reached desktop-auth confirmation, but no handoff was issued and the security-fixed function/config are not deployed. Hosted handler runtime, database single-use concurrency, and native deep-link completion remain unverified.
+## PR #41 controlled cleanup integration (PR41-CONTROLLED-CLEANUP-01)
+Integration: cleanup worktree merged with origin/main in a local non-committed merge. Four conflicts (database workflow, handoff doc, state audit, progress) resolved by combining compatible history.
+Manual owner verification of desktop browser sign-in is already recorded and remains valid; authentication architecture was preserved.
+CodeRabbit round 1 completed 14 findings; valid follow-up fixes remain in progress for UTF-8/mojibake, admin spec mocking, admin bootstrap wording, HubApp copy, DesktopAuth sign-out messaging, SQL trigger guard GUC, and YAML Deno job.
 
-### Final security and validation addendum — 2026-10-31 (supersedes prior polling status)
-- SECURITY: CodeRabbit identified an account-takeover path in code-less state polling: a crafted desktop-auth URL could bind a victim's browser session to an attacker-chosen PKCE verifier. Removed polling completely from the renderer and Edge handler. Browser handoff issuance now occurs only after the authenticated user clicks “Continue to Soravo”; the one-time code is then exchanged only through the app's stored state/verifier and explicit Soravo protocol callback.
-- DECISION: clickless desktop completion after website login was removed because it made a transferable victim token retrievable by a caller who chose the challenge. The user must confirm the desktop handoff in the authenticated browser and then accept the browser's Open Soravo prompt. This is an intentional security requirement.
-- PASS: Rust `cargo test --lib` 38/38; desktop and website typecheck/build; website unit suite 135/135; focused contracts 14/14; Playwright Chromium auth suites 14/14 with supplied test credentials, including live login, desktop return, and no handoff before user confirmation.
-- PASS: Rust `cargo test --lib` 38/38 earlier in this task; `git diff --check` pass. Tauri dev runtime built and launched earlier; initial accessibility tree rendered. Native screenshot/input automation failed on Windows.Graphics.Capture, so no desktop click/deep-link acceptance is claimed.
-- NOT ACCEPTED as live full handoff: latest Edge handler/config are not deployed, and no hosted handoff was issued. The real credential run deliberately stopped before “Continue to Soravo” to avoid exercising a stale deployed function. No actual app deep-link callback against the hosted backend or DB concurrency test was performed.
-- REVIEW: a final CodeRabbit review of the security-fixed diff is running; triage its completed findings before integration.
-
-### Fixed-redirect handoff addendum — 2026-10-31
-- Supabase email confirmation and recovery now use static exact callback paths (`/auth/desktop-confirm`, `/reset-password`); sanitized `returnTo` stays in same-origin local storage and is consumed after confirmation/reset. Local `supabase/config.toml` lists exact localhost URLs only. Hosted Auth URL configuration still needs the corresponding exact production paths; no wildcard redirect was added.
-- Final credential-backed Playwright pass: 16/16. Website typecheck/build and 135 Vitest cases pass; focused handler/contract tests 14/14. Real password login against the supplied test project returns to desktop confirmation and does not issue a handoff until user confirmation.
-- Remaining production acceptance: deploy the security-fixed Edge Function/config and add the exact hosted Auth redirect URLs, then run issue/exchange with the test account and exercise the Soravo OS callback. No hosted change or handoff was made.
-
-### Deployed handoff compatibility fix — 2026-10-31
-- Found the live `desktop-auth-handoff` Edge Function is version 1 and its successful exchange response contains `token_hash` and `state` but omits `otp_type`. The desktop client required that field, so it discarded a valid callback after consuming the code. The deployed function issues only `magiclink` tokens.
-- Updated the desktop response parser to infer `magiclink` only when `otp_type` is omitted; any explicit unexpected type still fails validation. Added coverage for legacy omission, explicit type, and malformed payloads.
-- PASS: desktop typecheck/build; website typecheck/build; website unit suite 138/138; diff check. Native callback retry not completed because Windows Graphics Capture/input failed on the app window; user can retry sign-in with the rebuilt hot-reloaded app.
-- Windows/browser protocol prompts are controlled by the registered handler and browser consent state; the callback reached Soravo in the reported attempt, so the missing prompt was not the cause of the failed desktop session.
-- Code review follow-up: moved `pg_cron` scheduling out of migration replay into `website/supabase/operations/cleanup_expired_desktop_auth_handoffs.sql`, which is run once in hosted Supabase; migrations 009/010 are now replayed by database CI without requiring `pg_cron` in the plain PostgreSQL service. Database migrations could not be exercised locally (no psql/Docker); CI will verify replay.
-- PR #41 review follow-up: explicitly pin Supabase's current default session-storage key and use that same key for fallback cleanup, preserving existing stored sessions; fixed the Windows-safe root test glob and documented the separate Deno check for the Edge Function.
-- PASS after that follow-up: root sign-out regression test 1/1, desktop typecheck/build, website typecheck/build, website Vitest 138/138, and diff check.
+PR #41 integration update - 2026-11-01
+Integrated origin/main into the PR desktop-auth cleanup worktree via a local non-committed merge.
+Conflicts resolved: .github/workflows/database.yml, Soravo_Fresh_Engineering_Pack/18_PROGRESS_AND_HANDOFF.md, docs/engineering/STATE_AUDIT.md, progress.md.
+Valid cleanup fixes preserved: auth sign-out/storage coordination, Signup/ResetPassword return handling, handoff error classification and replay tests, local redirect origins, docs privacy/typos.
+Owner-recorded manual browser sign-in verification remains successful.
+Validation: root TypeScript/build passed; desktop tests 3/3; website TypeScript/build passed; website tests 184/184; GitHub Actions configuration and migration ordering reconciled locally.
+Rust: cargo check and cargo test were attempted with MSVC 1.90.0 and an isolated target directory; compilation/test remain environmentally blocked by mixed toolchain/dependency build issues. No Rust test pass is claimed.
+CodeRabbit review rounds 1-6 completed; remaining findings are documented as deferred, out of scope, cosmetic or platform-boundary items. No unresolved in-scope critical issue was identified after fixes.
+No commit, push, merge, deployment, DNS change or remote Supabase change was performed before this point.

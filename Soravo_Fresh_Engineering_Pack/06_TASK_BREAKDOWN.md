@@ -88,6 +88,7 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - P7-05: Link Cloudflare Web Analytics; clearly label metrics and time ranges.
 - P7-06: Add audit log for admin changes.
 - P7-07: Test direct API calls as ordinary user.
+- P7-08: Owner-only admin dashboard: secure admin role table, server-side admin Edge Function, read-only overview/users/payments/subscriptions/devices/audit metrics.
 
 ## P8 — Release
 - P8-00: **ADR-0005 accepted.** Remaining publication gates: clean-machine verification, the Linux release gate when publishing Linux artifacts, and owner approval of each release.

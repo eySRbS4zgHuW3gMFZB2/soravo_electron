@@ -103,7 +103,7 @@ async function processCallback(callback: DesktopAuthCallback, setInfo: (s: strin
   }
 
   if (callback.state !== pending.state) {
-    setInfo('This response does not match Soravo’s sign-in request. Start sign-in again.')
+    setInfo('This response does not match SoravoÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s sign-in request. Start sign-in again.')
     return
   }
 
@@ -174,7 +174,7 @@ export function DesktopAuth() {
       await window.soravo.secureStoreSet(PENDING_KEY, JSON.stringify({ state, verifier, createdAt: Date.now() }))
       const url = `${HOSTED_AUTH_BASE}?intent=${intent}&state=${encodeURIComponent(state)}&code_challenge=${challenge}&code_challenge_method=S256&redirect=${encodeURIComponent('soravo://auth/callback')}`
       await window.soravo.openLink(url)
-      setInfo('Continue in your browser. After you sign in, choose “Continue to Soravo” and confirm the browser prompt to finish signing in.')
+      setInfo('Continue in your browser. After you sign in, choose Continue to Soravo and confirm the browser prompt to finish signing in.')
     } catch {
       setInfo('Soravo could not save or open the sign-in request. Check Windows secure storage and try again.')
     } finally {
@@ -184,8 +184,8 @@ export function DesktopAuth() {
 
   useEffect(() => subscribeToDesktopAuthCallbacks(handleCallback), [handleCallback])
 
-  if (loading) return <div className="auth-loading">Loading Soravo…</div>
-  if (session) return <HubApp onSignOut={signOut} />
+  if (loading) return <div className="auth-loading">Loading SoravoÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</div>
+  if (session) return <HubApp onSignOut={() => { void signOut().catch(() => setInfo('Signed out, but Soravo could not remove the saved session from Windows secure storage. Restart Soravo and sign out again.')) }} />
 
   return (
     <div className="auth-shell">
@@ -193,7 +193,7 @@ export function DesktopAuth() {
         <h1>Soravo</h1>
         <p className="auth-sub">Local-first dictation with secure browser sign-in.</p>
         <p className="auth-copy">Credentials are entered in the system browser, not in the desktop app.</p>
-        {authError && <div className="auth-error" role="alert">The saved desktop session could not be read securely. Restart Soravo or try signing in again.</div>}
+        {authError && <div className="auth-error" role="alert">{authError}</div>}
         <div className="auth-actions">
           <button className="auth-primary" disabled={pending} onClick={() => void startAuth('signin')}>Sign in</button>
           <button className="auth-secondary" disabled={pending} onClick={() => void startAuth('signup')}>Create account</button>

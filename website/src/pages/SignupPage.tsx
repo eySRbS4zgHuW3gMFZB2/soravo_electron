@@ -37,7 +37,7 @@ export function SignupPage() {
           <p className="text-muted">You are already signed in.</p>
           <button
             type="button"
-            onClick={() => navigate("/account", { replace: true })}
+            onClick={() => navigate(safeReturnTo, { replace: true })}
             className="mt-4 rounded-full bg-ink px-6 py-3 font-semibold text-lime"
           >
             Go to account

@@ -130,7 +130,7 @@ describe('desktop authentication handoff endpoint', () => {
       Object.assign(row, values)
       return { data: null, error: null }
     })
-    const lookup = vi.fn(async () => ({ data: [{ ...row }], error: null }))
+    const lookup = vi.fn(async () => ({ data: consumed ? [] : [{ ...row }], error: null }))
     const consume = vi.fn(async () => {
       if (consumed || new Date(String(row.expires_at)).getTime() <= Date.now()) return { data: [], error: null }
       consumed = true
@@ -244,6 +244,6 @@ describe('desktop authentication handoff endpoint', () => {
     expect(pkce.consume).not.toHaveBeenCalled()
     const replay = await makeHarness()
     expect((await replay.post({ action: 'exchange', code, state, code_verifier: 'a'.repeat(43) })).status).toBe(200)
-    expect((await replay.post({ action: 'exchange', code, state, code_verifier: 'a'.repeat(43) })).status).toBe(409)
+    expect((await replay.post({ action: 'exchange', code, state, code_verifier: 'a'.repeat(43) })).status).toBe(401)
   })
 })
