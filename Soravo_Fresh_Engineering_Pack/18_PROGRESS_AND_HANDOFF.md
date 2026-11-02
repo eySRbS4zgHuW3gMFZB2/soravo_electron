@@ -889,3 +889,10 @@ No secrets or production infra changes occurred. At the end of round 6, the loca
 
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+PR #41 Windows release auth repair - 2026-11-02
+Starting PR HEAD: 4eecb0b5e4c26415de5f4ebe785d9b319279426d; resulting local commit will be pushed to feature/desktop-auth-onboarding.
+Targeted repair: .github/workflows/release.yml now validates and passes VITE_DESKTOP_AUTH_ORIGIN from the GitHub release environment before npm run tauri:build; validation is limited to the approved https://soravo.xyz origin.
+Validation performed: root TypeScript and build passed; root tests 3 passed; website TypeScript/build passed; website tests 184 passed.
+Blocked/not verified: Rust tests remain blocked by mixed toolchain/dependency environment; no release build was executed; the release environment variable itself must be configured by the owner if absent.
+No production site, DNS, Supabase, Cloudflare deployment, PR merge, auto-merge or push to main was performed by this task before the intended authorized push.
