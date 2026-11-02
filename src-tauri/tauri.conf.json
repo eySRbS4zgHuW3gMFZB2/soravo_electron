@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.soravo.app",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "node scripts/tauri-dev.mjs",
     "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
