@@ -2608,7 +2608,7 @@ mod tests {
         assert_eq!(capitalize_and_punctuate("oh"), "Oh.");
         assert_eq!(
             capitalize_and_punctuate("oh"),
-            capitalize_and_punctuate("oh")
+            cleanup_text("oh", true).0
         );
         assert_eq!(capitalize_and_punctuate(""), "");
     }
