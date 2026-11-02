@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../lib/auth";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { consumeAuthReturnTo, readAuthReturnTo, useAuth, sanitizeReturnTo } from "../lib/auth";
 
 /** Update the recovery password with clear loading/success/error states. */
 export function ResetPasswordPage() {
   const { updatePassword, session, loading: authLoading, passwordRecoveryUserId } = useAuth();
   const navigate = useNavigate();
+  const safeReturnTo = sanitizeReturnTo(readAuthReturnTo(), "/login");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,8 +46,9 @@ export function ResetPasswordPage() {
         } catch {
           // Ignore storage failures.
         }
+        consumeAuthReturnTo();
         setSuccess(true);
-        setTimeout(() => navigate("/login"), 1500);
+        setTimeout(() => navigate(safeReturnTo), 1500);
       }
     } catch {
       setError("Unable to update the password. Please try again.");
@@ -65,7 +67,7 @@ export function ResetPasswordPage() {
 
         {success ? (
           <div role="status" className="mt-8 rounded-lg bg-green-50 p-4 text-sm text-green-700">
-            Password updated. Redirecting to login...
+            Password updated. Redirecting...
           </div>
         ) : authLoading ? (
           <div role="status" className="mt-8 text-sm text-muted">

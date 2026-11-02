@@ -113,3 +113,7 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 - CodeRabbit review where useful and within free quota;
 - no unresolved critical/high findings;
 - worktree removal and build-output cleanup after integration.
+
+## Task-specific work items
+
+- SORAVO-DESKTOP-AUTH-REPAIR-30: Repair and accept the Windows desktop browser-auth flow, including deep-link lifecycle, PKCE handoff/OTP contract, secure session persistence, restart behavior, and documented evidence. Worktree: `.worktrees/SORAVO-DESKTOP-AUTH-REPAIR-30-desktop-auth`; branch: `fix/SORAVO-DESKTOP-AUTH-REPAIR-30-desktop-auth`.

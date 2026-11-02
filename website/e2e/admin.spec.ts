@@ -16,12 +16,12 @@ test("admin deep link is served by SPA fallback", async ({ page, request }) => {
 });
 
 test("admin read-only navigation works with a mocked backend", async ({ page }) => {
-  const SUPABASE = "https://placeholder.supabase.co";
-  const ORIGIN = "http://localhost:5173";
+  const SUPABASE = process.env.VITE_SUPABASE_URL || "https://placeholder.supabase.co";
+  const ORIGIN = "http://localhost:5174";
   const CORS_HEADERS = {
     "access-control-allow-origin": ORIGIN,
     "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, x-admin-token",
+    "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, x-supabase-api-version, x-admin-token",
   };
   function fulfillJson(route: any, status: number, body: unknown) {
     if (route.request().method() === "OPTIONS") {

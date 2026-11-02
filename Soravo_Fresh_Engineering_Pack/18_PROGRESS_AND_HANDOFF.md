@@ -785,7 +785,7 @@ Remaining: GitHub Actions database verification, CodeRabbit findings, owner boot
 
 
 <!-- /coderabbit-ai-generated:v1 -->
-## 2026-10-30 — P7-08 CodeRabbit test mock findings
+## 2026-10-30 - P7-08 CodeRabbit test mock findings
 
 - PR: 38
 - Branch: feature/P7-08-admin-dashboard-hardening
@@ -798,3 +798,104 @@ Remaining: GitHub Actions database verification, CodeRabbit findings, owner boot
 - Code commit: 3bd46bc5f27663fccf8e67f1647c2c20c408b7ba
 - Push status: pushed.
 - PR #38 remains open and unmerged; no deployment performed.
+
+## 2026-10-30 - Windows desktop development launch
+
+- App workspace: SORAVO (`<workspace>`)
+- Launch command: npm run tauri:dev with MSVC 2017 env; RUSTUP_TOOLCHAIN=1.90.0-x86_64-pc-windows-msvc
+- Vite dev server: http://localhost:5173
+- Rust build: successful after 5m15s; target\debug\soravo.exe launched
+- Authentication/entitlement/device-registration: not verified; pending manual owner login.
+- Target Supabase: Soravo_fresh (vfrhplskegqqdxbykyvx)
+- PR/log branch for this launch documentation: docs/desktop-dev-launch
+
+PR #41 integration update - 2026-11-01
+Integrated origin/main into the PR desktop-auth cleanup worktree via a local non-committed merge.
+Conflicts resolved: .github/workflows/database.yml, Soravo_Fresh_Engineering_Pack/18_PROGRESS_AND_HANDOFF.md, docs/engineering/STATE_AUDIT.md, progress.md.
+Valid cleanup fixes preserved: auth sign-out/storage coordination, Signup/ResetPassword return handling, handoff error classification and replay tests, local redirect origins, docs privacy/typos.
+Owner-recorded manual browser sign-in verification remains successful.
+Validation: root TypeScript/build passed; desktop tests 3/3; website TypeScript/build passed; website tests 184/184; GitHub Actions configuration and migration ordering reconciled locally.
+Rust: cargo check and cargo test were attempted with MSVC 1.90.0 and an isolated target directory; compilation/test remain environmentally blocked by mixed toolchain/dependency build issues. No Rust test pass is claimed.
+CodeRabbit review rounds 1-6 completed; remaining findings are documented as deferred, out of scope, cosmetic or platform-boundary items. No unresolved in-scope critical issue was identified after fixes.
+No commit, push, remote merge, deployment, DNS change or remote Supabase change was performed before this point.
+
+PR #41 CodeRabbit final follow-up - 2026-11-01
+Final round 6 run after fixes. Remaining findings: 10 minor/major/trivial items, including two DesktopAuth string encoding issues, two markdown history issues, two design-style findings, two Rust lib test assertions, one admin migration guard and one AdminPage accessibility/effect suggestion.
+Final targeted fix: authContext sign-out uses scope local only and cleanup signaling updated; DesktopAuth user-visible sign-in string repaired.
+Validation after final edits: root TypeScript, 3 desktop tests, root build; website TypeScript, 184 website tests, website build all passed. Rust tests remain environmentally blocked.
+No secrets or production infra changes occurred. At the end of round 6, the local merge and final edits were uncommitted and had not been pushed.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:e9ee7bd43319cd965ad930119a11de56cc70bf7b694b413290da5817315a62da -->
+
+## PR #41 review repair - 2026-11-02
+
+- Corrected the preserved launch and round-six records, Wispr provenance wording, desktop sign-out locking and error handling, configured Supabase CSP, and expired handoff cleanup. Website CI checks the handoff function.
+- Desktop sign-in is currently restricted to Windows secure storage; Linux remains an intended launch target and needs its own secure-storage implementation. Web Locks are required for safe desktop session coordination.
+- Targeted desktop tests (5), handoff tests (14), renderer typecheck/build, default and alternate CSP builds, Deno checks and engineering pack validation passed. Live provider integration and remote CI for this patch remain unverified. Exact validation inputs and commands are recorded in `workspace-context/validation-record.md` outside Git.
+- Loaded code-review; Supabase/security repository-adjacent skills were unavailable. Read-only subagents audited auth and documentation; the main agent integrated and validated the repair. No push or deployment.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:3dcc213d6f81c86d29e42900e0df2cd28f72137aca85a34a7abbbd3d07c92a65 -->
+
+## PR #41 review follow-up - 2026-11-02
+
+- The requested sign-out behavior changes the previous UI guarantee: after secure storage deletion succeeds, clear the session even if Supabase sign-out fails, and report the remote error. When both sign-out and storage deletion fail, both errors are reported. Non-loopback Supabase HTTP URLs are rejected and the CSP and renderer share the validated URL.
+- Targeted desktop tests (18), renderer typecheck, HTTPS/loopback builds and public-HTTP rejection passed. Reused the unchanged 14-test handoff result. Exact inputs and checks are in `workspace-context/validation-record.md` outside Git. Linux secure storage, live provider integration and current-patch remote CI remain unverified.
+- The owner screenshot reference was unavailable. Code-review skill loaded; repository-adjacent Supabase/security skills unavailable. A read-only subagent checked earlier launch, platform and handoff repairs. No push or deployment.
+
+<!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:0d4db9824d2409c4b9454284f3ab9333116e304520705acf8ecaab6d99e3b215 -->
+
+## PR #41 URL and session-key follow-up - 2026-11-02
+
+- Supabase URL validation rejects query strings and fragments, and normalizes empty delimiters. IPv6 loopback now uses a secure-store-compatible key distinct from the legacy namespace; other host keys are unchanged for existing sessions.
+- Targeted desktop tests (27), renderer typecheck, IPv6 build/CSP/key checks, and query/fragment build rejection passed. Reused the earlier handoff and platform results. Exact inputs are in `workspace-context/validation-record.md` outside Git.
+- Linux secure storage is unavailable and non-loopback IPv6 keys remain incompatible with the native store. Live providers and remote CI for this patch were not checked. The owner screenshot identifier remains unavailable. No push or deployment.
+
+<!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:7daa2707ffa2aab9575ac469c0c1602dc489664345565f8a8a9f1f8b85cc1f4d -->
+
+## PR #41 callback and schema follow-up - 2026-11-02
+
+- Block unsupported IPv6 Supabase hosts, serialize callback outcomes with retry-safe fingerprint retention and a fail-closed 1024-entry cap, and load the website's public Supabase configuration as desktop fallback.
+- Apply migration 011 to previously deployed schemas. It changes the original grantor foreign key from blocking deletion to clearing attribution, and replaces the profile guard with the existing JWT-claims-based safeguards. Other foreign keys can still block deletion.
+- Targeted desktop tests (39), website handoff tests (14), both typechecks, scoped Vite builds, configuration checks, and PostgreSQL 16 replay with 142 pgTAP assertions passed. Detailed inputs and commands are in `workspace-context/validation-record.md` outside Git. Live provider integration and current-patch remote CI remain unverified.
+- Read-only subagents audited auth, environment and migration contracts; CodeRabbit review skill was loaded previously and repository-adjacent Supabase/security skills were unavailable. Owner screenshot reference remains unavailable. No push or deployment.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:a681117581ad43f438a52666749107d0b938ed6d83ed3e602484cb4d601a38c9 -->
+
+## PR #41 Supabase pair and session isolation - 2026-11-02
+
+- Process, desktop and website settings are selected as complete URL/key pairs in that order, with defaults when no complete pair exists. The validated URL drives both the CSP and the session key.
+- Root HTTPS Supabase project-ref keys remain unchanged. Other URLs use a full-URL SHA-256 key. Existing custom-URL sessions require sign-in again; ambiguous old encrypted records are left in place.
+- Focused desktop tests (32), renderer typecheck and synthetic environment builds passed. Reused unchanged handoff/platform results. Detailed evidence is in `workspace-context/validation-record.md` outside Git. Live services, real Windows secure storage and current-patch remote CI remain unverified; the owner screenshot reference is unavailable. No push or deployment.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+
+PR #41 Windows release auth repair - 2026-11-02
+Starting PR HEAD: 4eecb0b5e4c26415de5f4ebe785d9b319279426d; resulting local commit will be pushed to feature/desktop-auth-onboarding.
+Targeted repair: .github/workflows/release.yml now validates and passes VITE_DESKTOP_AUTH_ORIGIN from the GitHub release environment before npm run tauri:build; validation is limited to the approved https://soravo.xyz origin.
+Validation performed: root TypeScript and build passed; root tests 3 passed; website TypeScript/build passed; website tests 184 passed.
+Blocked/not verified: Rust tests remain blocked by mixed toolchain/dependency environment; no release build was executed; the release environment variable itself must be configured by the owner if absent.
+No production site, DNS, Supabase, Cloudflare deployment, PR merge, auto-merge or push to main was performed by this task before the intended authorized push.
+PR #41 Windows release auth-origin validation repair - 2026-11-02
+Changed .github/workflows/release.yml only: validation now uses case-sensitive PowerShell comparisons and rejects noncanonical origins before npm run tauri:build.
+Validation: focused origin cases passed; typecheck/build passed; Rust tests remain environmentally blocked. No push occurred yet.

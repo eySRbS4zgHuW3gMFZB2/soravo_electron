@@ -4,10 +4,12 @@ Local development notes.
 
 ## Environment files
 
-- `website/.env` is for Vite client variables only:
+- `website/.env.local` is the recommended local Vite config file (Vite also loads `website/.env`):
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_ANON_KEY`
   - These are public/publishable values. Security depends on RLS, not secrecy.
+  - The desktop development app opens the local website at `http://127.0.0.1:5174`; start it with `npm run dev` from `website/` so Vite loads this file.
+  - Playwright reads these same values so its local server and request interceptors target the same Supabase project.
 - `website/supabase/.env.local` is for local Supabase Edge Function development only.
   - It is ignored by git.
   - From the `website/` directory, start Edge Functions with the CLI's supported env file option:
@@ -20,6 +22,19 @@ Local development notes.
     - `RAZORPAY_KEY_SECRET` (server-only, test mode only)
     - `RAZORPAY_WEBHOOK_SECRET` (server-only)
 - `website/supabase/.env.local.example` contains placeholders only and is safe to commit.
+
+The website TypeScript check covers browser sources in `website/src`. The
+desktop-auth Edge Function under `website/supabase/functions/` uses Deno and is
+outside that Vite TypeScript project; run
+`deno check supabase/functions/desktop-auth-handoff/index.ts` from `website/`
+when validating Edge Function changes.
+
+## Desktop auth handoff cleanup
+
+Migrations 009 and 010 create the one-time desktop handoff table and remove
+already-expired rows during replay. After applying them to a hosted Supabase
+project, run `supabase/operations/cleanup_expired_desktop_auth_handoffs.sql`
+once in that project's SQL editor to enable the `pg_cron` cleanup job.
 
 ## Deployed Edge Function secrets
 
@@ -61,3 +76,16 @@ Monthly checkout reserves the user in the database before contacting Razorpay. A
 A provider timeout, ambiguous server error, or failure to save a successful provider response keeps the reservation in `monthly_checkout_reservations`. It deliberately has no automatic expiry. Before releasing a stuck reservation, an operator must reconcile Razorpay subscriptions using the `user_id` and `checkout_request_id` notes: persist any created subscription locally and confirm that no request remains in flight. Release only the matching `user_id`/`request_id` reservation after the outcome is known. Do not retry creation by deleting an unresolved reservation.
 
 Both lifecycle events and payment-triggered active updates use the provider webhook's `created_at` through one conditional database upsert. Older events cannot overwrite newer state; terminal statuses win equal-time ties. The subscription entity's creation time is not a transition timestamp. Undated events cannot replace dated state; an undated terminal event may close an undated checkout and requires provider reconciliation before reactivation. A stale verified capture can extend the recorded paid period without changing subscription status or its event timestamp. Captured-payment provisioning remains authoritative for paid entitlement periods.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:3456fc57b829fc0774d779a58a01b4d068e64c75186f442f15c86646c6f905ce -->
+
+## Desktop Supabase configuration
+
+The desktop Vite build selects the first complete public Supabase URL and anon/publishable key pair from the process environment, renderer environment files, then `website/.env.local` or `website/.env`. Incomplete pairs are skipped; when none is complete, the existing default pair is used. Configure both values for the same project. Desktop-only settings such as `VITE_DESKTOP_AUTH_ORIGIN` remain in the renderer environment.
+
+Root HTTPS project URLs at `<project-ref>.supabase.co` retain their existing session keys. Other URLs now use a key derived from the full URL, so existing custom-project sessions require sign-in again. Old encrypted records are not migrated or deleted because prior keys may be shared by multiple URLs.
+
+
+<!-- /coderabbit-ai-generated:v1 -->

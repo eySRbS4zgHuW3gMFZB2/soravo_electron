@@ -138,6 +138,12 @@ export interface SoravoAPI {
   openFolder(path: string): Promise<void>
   /** Open an https link in the operating system's browser. */
   openLink(url: string): Promise<void>
+  /** Store a value in OS-protected storage. */
+  secureStoreSet(key: string, value: string): Promise<void>
+  /** Retrieve a value from OS-protected storage. */
+  secureStoreGet(key: string): Promise<string | null>
+  /** Remove a value from OS-protected storage. */
+  secureStoreDelete(key: string): Promise<void>
   /** The running app's version. */
   appVersion(): Promise<string>
   validateBinding(accel: string): Promise<boolean>
@@ -316,6 +322,9 @@ export const soravo: SoravoAPI = {
   defaultModelsFolder: () => invoke<string>('default_models_folder'),
   openFolder: (path) => invoke<void>('open_folder', { path }),
   openLink: (url) => invoke<void>('open_link', { url }),
+  secureStoreSet: (key, value) => invoke<void>('secure_store_set', { key, value }),
+  secureStoreGet: (key) => invoke<string | null>('secure_store_get', { key }),
+  secureStoreDelete: (key) => invoke<void>('secure_store_delete', { key }),
   appVersion: () => invoke<string>('app_version'),
 }
 

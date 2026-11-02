@@ -15,9 +15,9 @@ interface AuthContextValue {
   loading: boolean;
   passwordRecoveryUserId: string | null;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, displayName?: string, returnTo?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
-  requestPasswordReset: (email: string) => Promise<{ error: string | null }>;
+  requestPasswordReset: (email: string, returnTo?: string) => Promise<{ error: string | null }>;
   updatePassword: (password: string) => Promise<{ error: string | null }>;
 }
 
@@ -25,11 +25,67 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const CONFIG_ERROR =
   "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.";
+const AUTH_RETURN_TO_KEY = "soravo:pending-auth-return-to";
+const AUTH_RETURN_TO_TTL_MS = 24 * 60 * 60 * 1000;
 
-/** Read URL parameters from the browser location without SSR assumptions. */
+export function storeAuthReturnTo(returnTo?: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (!returnTo) {
+      window.localStorage.removeItem(AUTH_RETURN_TO_KEY);
+      return;
+    }
+    window.localStorage.setItem(AUTH_RETURN_TO_KEY, JSON.stringify({
+      returnTo: sanitizeReturnTo(returnTo),
+      createdAt: Date.now(),
+    }));
+  } catch {
+    // Auth can continue without a post-confirmation return destination.
+  }
+}
+
+export function readAuthReturnTo(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(AUTH_RETURN_TO_KEY);
+    if (!raw) return null;
+    const value: unknown = JSON.parse(raw);
+    if (!value || typeof value !== "object") return null;
+    const record = value as Record<string, unknown>;
+    if (
+      typeof record.returnTo !== "string" ||
+      typeof record.createdAt !== "number" ||
+      Date.now() - record.createdAt < 0 ||
+      Date.now() - record.createdAt > AUTH_RETURN_TO_TTL_MS
+    ) {
+      window.localStorage.removeItem(AUTH_RETURN_TO_KEY);
+      return null;
+    }
+    return sanitizeReturnTo(record.returnTo);
+  } catch {
+    return null;
+  }
+}
+
+export function consumeAuthReturnTo(): string | null {
+  const returnTo = readAuthReturnTo();
+  try {
+    if (typeof window !== "undefined") window.localStorage.removeItem(AUTH_RETURN_TO_KEY);
+  } catch {
+    // The route has already been validated and can still be used this time.
+  }
+  return returnTo;
+}
+
+function isDesktopAuthReturnTo(returnTo: string | null): boolean {
+  if (!returnTo) return false;
+  return new URL(returnTo, "https://soravo.invalid").pathname === "/auth/desktop";
+}
+
+/** Use a fixed allowlisted URL; the post-auth destination stays in local storage. */
 function recoveryRedirectUrl(): string {
   if (typeof window === "undefined") return "";
-  return `${window.location.origin}/reset-password`;
+  return new URL("/reset-password", window.location.origin).toString();
 }
 
 /**
@@ -124,19 +180,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   /** Create an account with optional display name metadata and return any error. */
-  const signUp = async (email: string, password: string, displayName?: string) => {
+  const signUp = async (email: string, password: string, displayName?: string, returnTo?: string) => {
     if (!isConfigured) {
       return { error: CONFIG_ERROR };
     }
+    const safeReturnTo = returnTo ? sanitizeReturnTo(returnTo) : null;
+    storeAuthReturnTo(safeReturnTo);
+    const redirectTo = new URL(
+      isDesktopAuthReturnTo(safeReturnTo) ? "/auth/desktop-confirm" : "/account",
+      window.location.origin,
+    ).toString();
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { display_name: displayName },
-        emailRedirectTo:
-          typeof window === "undefined" ? undefined : `${window.location.origin}/account`,
+        emailRedirectTo: redirectTo,
       },
     });
+    if (error) storeAuthReturnTo(null);
     return { error: error?.message ?? null };
   };
 
@@ -148,13 +210,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   /** Request a password reset email using Supabase's supported email flow. */
-  const requestPasswordReset = async (email: string) => {
+  const requestPasswordReset = async (email: string, returnTo?: string) => {
     if (!isConfigured) {
       return { error: CONFIG_ERROR };
     }
+    storeAuthReturnTo(returnTo);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: recoveryRedirectUrl(),
     });
+    if (error) storeAuthReturnTo(null);
     return { error: error?.message ?? null };
   };
 

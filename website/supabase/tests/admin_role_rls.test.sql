@@ -11,7 +11,7 @@ INSERT INTO auth.users (id, email) VALUES ('44444444-0000-4000-8000-000000000000
 SET LOCAL ROLE authenticated;
 SELECT throws_ok($$INSERT INTO public.admin_users (user_id, role) VALUES ('44444444-0000-4000-8000-000000000000','admin')$$, '42501', NULL, 'ordinary user cannot self-assign admin role');
 RESET ROLE;
-SET LOCAL request.jwt.claim.role = 'authenticated';
+SET LOCAL request.jwt.claims = '{"role":"authenticated"}';
 SELECT throws_ok($$UPDATE public.profiles
   SET user_id = '55555555-0000-4000-8000-000000000000'
   WHERE user_id = '44444444-0000-4000-8000-000000000000'$$,

@@ -26,6 +26,7 @@ tauri-plugin-shell = "2"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-global-shortcut = "2"
+tauri-plugin-deep-link = "2"
 tauri-plugin-autostart = "2"
 rusqlite = { version = "0.32", features = ["bundled"] }
 tokio = { version = "1", features = ["full"] }
@@ -42,4 +43,6 @@ futures = "0.3"
 # already in the tree through rdev, so this adds no new download.
 [target.'cfg(target_os = "windows")'.dependencies.winapi]
 version = "0.3"
-features = ["winuser", "minwindef", "libloaderapi", "errhandlingapi", "processthreadsapi"]
+features = ["winuser", "minwindef", "libloaderapi", "errhandlingapi", "processthreadsapi", "dpapi", "winbase"]
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-single-instance = { version = "2.0.0", features = ["deep-link"] }

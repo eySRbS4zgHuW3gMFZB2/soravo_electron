@@ -77,5 +77,5 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Typecheck admin dashboard Edge Function
-        run: deno check website/supabase/functions/admin-dashboard/index.ts
+      - name: Typecheck Supabase Edge Functions
+        run: deno check website/supabase/functions/admin-dashboard/index.ts website/supabase/functions/desktop-auth-handoff/index.ts

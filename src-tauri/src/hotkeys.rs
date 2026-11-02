@@ -62,28 +62,76 @@ impl Binding {
 
 /// Letters, in the order rdev declares them.
 const LETTERS: [Key; 26] = [
-    Key::KeyA, Key::KeyB, Key::KeyC, Key::KeyD, Key::KeyE, Key::KeyF, Key::KeyG, Key::KeyH,
-    Key::KeyI, Key::KeyJ, Key::KeyK, Key::KeyL, Key::KeyM, Key::KeyN, Key::KeyO, Key::KeyP,
-    Key::KeyQ, Key::KeyR, Key::KeyS, Key::KeyT, Key::KeyU, Key::KeyV, Key::KeyW, Key::KeyX,
-    Key::KeyY, Key::KeyZ,
+    Key::KeyA,
+    Key::KeyB,
+    Key::KeyC,
+    Key::KeyD,
+    Key::KeyE,
+    Key::KeyF,
+    Key::KeyG,
+    Key::KeyH,
+    Key::KeyI,
+    Key::KeyJ,
+    Key::KeyK,
+    Key::KeyL,
+    Key::KeyM,
+    Key::KeyN,
+    Key::KeyO,
+    Key::KeyP,
+    Key::KeyQ,
+    Key::KeyR,
+    Key::KeyS,
+    Key::KeyT,
+    Key::KeyU,
+    Key::KeyV,
+    Key::KeyW,
+    Key::KeyX,
+    Key::KeyY,
+    Key::KeyZ,
 ];
 
 /// Number row, in order.
 const DIGITS: [Key; 10] = [
-    Key::Num0, Key::Num1, Key::Num2, Key::Num3, Key::Num4,
-    Key::Num5, Key::Num6, Key::Num7, Key::Num8, Key::Num9,
+    Key::Num0,
+    Key::Num1,
+    Key::Num2,
+    Key::Num3,
+    Key::Num4,
+    Key::Num5,
+    Key::Num6,
+    Key::Num7,
+    Key::Num8,
+    Key::Num9,
 ];
 
 /// Numpad digits, in order.
 const KP_DIGITS: [Key; 10] = [
-    Key::Kp0, Key::Kp1, Key::Kp2, Key::Kp3, Key::Kp4,
-    Key::Kp5, Key::Kp6, Key::Kp7, Key::Kp8, Key::Kp9,
+    Key::Kp0,
+    Key::Kp1,
+    Key::Kp2,
+    Key::Kp3,
+    Key::Kp4,
+    Key::Kp5,
+    Key::Kp6,
+    Key::Kp7,
+    Key::Kp8,
+    Key::Kp9,
 ];
 
 /// Function keys, F1..F12 in order (rdev models no higher F-keys).
 const FUNCTION_KEYS: [Key; 12] = [
-    Key::F1, Key::F2, Key::F3, Key::F4, Key::F5, Key::F6,
-    Key::F7, Key::F8, Key::F9, Key::F10, Key::F11, Key::F12,
+    Key::F1,
+    Key::F2,
+    Key::F3,
+    Key::F4,
+    Key::F5,
+    Key::F6,
+    Key::F7,
+    Key::F8,
+    Key::F9,
+    Key::F10,
+    Key::F11,
+    Key::F12,
 ];
 
 fn parse_key(name: &str) -> Option<Key> {
@@ -148,7 +196,10 @@ fn parse_key(name: &str) -> Option<Key> {
                 }
             }
             // Function keys F1..F12.
-            if let Some(n) = other.strip_prefix('F').and_then(|n| n.parse::<usize>().ok()) {
+            if let Some(n) = other
+                .strip_prefix('F')
+                .and_then(|n| n.parse::<usize>().ok())
+            {
                 if (1..=12).contains(&n) {
                     return Some(FUNCTION_KEYS[n - 1]);
                 }
@@ -167,7 +218,9 @@ fn parse_button(name: &str) -> Option<Button> {
     match name {
         "Mouse1" | "MouseLeft" | "LeftMouseButton" | "MouseLeftButton" => Some(Button::Left),
         "Mouse2" | "MouseRight" | "RightMouseButton" | "MouseRightButton" => Some(Button::Right),
-        "Mouse3" | "MouseMiddle" | "MiddleMouseButton" | "MouseMiddleButton" => Some(Button::Middle),
+        "Mouse3" | "MouseMiddle" | "MiddleMouseButton" | "MouseMiddleButton" => {
+            Some(Button::Middle)
+        }
         "Mouse4" | "MouseBack" | "XButton1" => Some(Button::Unknown(1)),
         "Mouse5" | "MouseForward" | "XButton2" => Some(Button::Unknown(2)),
         _ => None,
@@ -308,7 +361,11 @@ fn is_modifier(key: Key) -> bool {
 /// clicking keep working in every other application.
 ///
 /// The listener blocks, so it has to be on its own thread.
-pub fn spawn_hook(config: Arc<RwLock<HookConfig>>, handles: HookHandles, textarea_focused: Arc<AtomicBool>) -> Result<(), String> {
+pub fn spawn_hook(
+    config: Arc<RwLock<HookConfig>>,
+    handles: HookHandles,
+    textarea_focused: Arc<AtomicBool>,
+) -> Result<(), String> {
     // Modifier state has to persist across events: by the time the
     // trigger key or mouse button arrives, the modifier press was a
     // separate, earlier event. The listener takes an FnMut closure,
@@ -329,91 +386,91 @@ pub fn spawn_hook(config: Arc<RwLock<HookConfig>>, handles: HookHandles, textare
                     }
                 }
                 EventType::KeyRelease(key) => {
-                        if is_modifier(key) {
-                            set_modifier(&mut mods, key, false);
-                        }
+                    if is_modifier(key) {
+                        set_modifier(&mut mods, key, false);
                     }
-                    _ => {}
                 }
+                _ => {}
+            }
+            return;
+        }
+        // Cheap and rare: snapshot the bindings for this event.
+        let cfg = match config.read() {
+            Ok(cfg) => cfg.clone(),
+            Err(_) => return,
+        };
+
+        // (trigger, is_press)
+        let mut hit: Option<(Trigger, bool)> = None;
+
+        match event.event_type {
+            EventType::KeyPress(key) => {
+                if is_modifier(key) {
+                    set_modifier(&mut mods, key, true);
+                } else {
+                    hit = Some((Trigger::Key(normalize(key)), true));
+                }
+            }
+            EventType::KeyRelease(key) => {
+                if is_modifier(key) {
+                    set_modifier(&mut mods, key, false);
+                } else {
+                    hit = Some((Trigger::Key(normalize(key)), false));
+                }
+            }
+            // Both edges matter: push-to-talk needs the release to end
+            // the recording, and the release edge is what stops it.
+            EventType::ButtonPress(button) => hit = Some((Trigger::Mouse(button), true)),
+            EventType::ButtonRelease(button) => hit = Some((Trigger::Mouse(button), false)),
+            EventType::MouseMove { .. } | EventType::Wheel { .. } => return,
+        }
+
+        let Some((trigger, pressed)) = hit else {
+            return;
+        };
+
+        let matched = |binding: &Option<Binding>| -> bool {
+            binding
+                .as_ref()
+                .is_some_and(|b| b.matches(trigger, mods.ctrl, mods.alt, mods.shift, mods.meta))
+        };
+
+        // Dictation trigger.
+        //
+        // In push-to-talk we remember which trigger started the
+        // recording and stop on that trigger's release, ignoring the
+        // modifier state by then. Otherwise letting go of Ctrl before
+        // the trigger key would leave the recording running forever.
+        if cfg.hold_to_talk {
+            if pressed {
+                if matched(&cfg.dictation) {
+                    held = Some(trigger);
+                    (handles.dictate_start)();
+                    return;
+                }
+            } else if held == Some(trigger) {
+                held = None;
+                (handles.dictate_stop)();
                 return;
             }
-            // Cheap and rare: snapshot the bindings for this event.
-            let cfg = match config.read() {
-                Ok(cfg) => cfg.clone(),
-                Err(_) => return,
-                };
+        } else if pressed && matched(&cfg.dictation) {
+            // Toggle mode: every press flips the recorder, so tapping a
+            // second time stops it. Release is irrelevant here.
+            (handles.dictate_toggle)();
+            return;
+        }
 
-                // (trigger, is_press)
-                let mut hit: Option<(Trigger, bool)> = None;
+        if !pressed {
+            return;
+        }
 
-                match event.event_type {
-                    EventType::KeyPress(key) => {
-                        if is_modifier(key) {
-                            set_modifier(&mut mods, key, true);
-                        } else {
-                            hit = Some((Trigger::Key(normalize(key)), true));
-                        }
-                    }
-                    EventType::KeyRelease(key) => {
-                        if is_modifier(key) {
-                            set_modifier(&mut mods, key, false);
-                        } else {
-                            hit = Some((Trigger::Key(normalize(key)), false));
-                        }
-                    }
-                    // Both edges matter: push-to-talk needs the release to end
-                    // the recording, and the release edge is what stops it.
-                    EventType::ButtonPress(button) => hit = Some((Trigger::Mouse(button), true)),
-                    EventType::ButtonRelease(button) => {
-                        hit = Some((Trigger::Mouse(button), false))
-                    }
-                    EventType::MouseMove { .. } | EventType::Wheel { .. } => return,
-                }
-
-                let Some((trigger, pressed)) = hit else { return };
-
-                let matched = |binding: &Option<Binding>| -> bool {
-                    binding.as_ref().is_some_and(|b| {
-                        b.matches(trigger, mods.ctrl, mods.alt, mods.shift, mods.meta)
-                    })
-                };
-
-                // Dictation trigger.
-                //
-                // In push-to-talk we remember which trigger started the
-                // recording and stop on that trigger's release, ignoring the
-                // modifier state by then. Otherwise letting go of Ctrl before
-                // the trigger key would leave the recording running forever.
-                if cfg.hold_to_talk {
-                    if pressed {
-                        if matched(&cfg.dictation) {
-                            held = Some(trigger);
-                            (handles.dictate_start)();
-                            return;
-                        }
-                    } else if held == Some(trigger) {
-                        held = None;
-                        (handles.dictate_stop)();
-                        return;
-                    }
-                } else if pressed && matched(&cfg.dictation) {
-                    // Toggle mode: every press flips the recorder, so tapping a
-                    // second time stops it. Release is irrelevant here.
-                    (handles.dictate_toggle)();
-                    return;
-                }
-
-                if !pressed {
-                    return;
-                }
-
-                if matched(&cfg.paste_last) {
-                    (handles.paste_last)();
-                    return;
-                }
-                if matched(&cfg.copy_last) {
-                    (handles.copy_last)();
-                }
+        if matched(&cfg.paste_last) {
+            (handles.paste_last)();
+            return;
+        }
+        if matched(&cfg.copy_last) {
+            (handles.copy_last)();
+        }
     };
 
     // The listener blocks forever, so it runs on its own thread.
@@ -554,7 +611,10 @@ mod tests {
         assert_eq!(parse_binding("K").unwrap().trigger, Trigger::Key(Key::KeyK));
         assert_eq!(parse_binding("k").unwrap().trigger, Trigger::Key(Key::KeyK));
         assert_eq!(parse_binding("7").unwrap().trigger, Trigger::Key(Key::Num7));
-        assert_eq!(parse_binding("F11").unwrap().trigger, Trigger::Key(Key::F11));
+        assert_eq!(
+            parse_binding("F11").unwrap().trigger,
+            Trigger::Key(Key::F11)
+        );
     }
 
     #[test]

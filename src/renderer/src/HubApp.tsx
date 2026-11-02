@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from './auth/authContext'
 import type { InsightsData, RecState, SoravoSettings, Theme, TranscriptEntry } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
 import ShortcutRow from './components/pages/ShortcutRow'
@@ -54,7 +55,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Info as InfoIcon } from 'lucide-react'
+import { Info as InfoIcon, LogOut as LogOutIcon } from 'lucide-react'
 import { RefreshIcon } from '@/components/pages/icons'
 
 type Page = 'dictation' | 'history' | 'insights' | 'dictionary' | 'snippets' | 'style' | 'models' | 'scratchpad'
@@ -134,13 +135,15 @@ function Sidebar({
   go,
   open,
   onOpenSettings,
-  onOpenHelp
+  onOpenHelp,
+  onSignOut
 }: {
   page: Page
   go: (p: Page) => void
   open: boolean
   onOpenSettings: () => void
   onOpenHelp: () => void
+  onSignOut: () => void
 }) {
   // Nav items are full-bleed rows, so they must not inherit the button's
   // default centring or inset padding. Each one carries a floating label that
@@ -202,10 +205,11 @@ function Sidebar({
       <div className="hub-sidebar-foot">
         <div className="hub-local-card">
           <p className="hub-local-title">Local &amp; private</p>
-          <p className="hub-local-text">No account. No cloud. Audio never leaves this PC.</p>
+          <p className="hub-local-text">Audio never leaves this PC.</p>
         </div>
         {footItem('Settings', <SettingsIcon />, onOpenSettings)}
         {footItem('Help', <HelpIcon />, onOpenHelp, 'hub-nav-external')}
+        {footItem('Sign out', <LogOutIcon />, onSignOut)}
       </div>
     </aside>
   )
@@ -288,6 +292,7 @@ function SettingsModal({
   onQuit: () => void
   onClose: () => void
 }) {
+  const { user } = useAuth()
   const [tab, setTab] = useState<SettingsTab>('general')
   const [hotkey, setHotkey] = useState(settings.hotkey)
   const [pasteHotkey, setPasteHotkey] = useState(settings.pasteHotkey)
@@ -323,7 +328,7 @@ function SettingsModal({
       .catch(() => setVersion(''))
   }, [settings.modelsDir])
 
-  const updateLabel = checkingUpdate ? 'Checking for updates…' : version ? `Soravo ${version}` : 'Check for updates'
+  const updateLabel = checkingUpdate ? 'Checking for updates...' : version ? `Soravo ${version}` : 'Check for updates'
 
   /** Look for a newer build. Soravo has no auto-updater, so this opens the
       project's releases page, where the newest build is published. */
@@ -937,10 +942,10 @@ function SettingsModal({
                   S
                 </span>
                 <div className="account-profile-text">
-                  <p className="account-profile-name">Local profile</p>
+                  <p className="account-profile-name">Signed-in account</p>
                   <p className="account-profile-sub">
-                    This device is the whole account. Nothing is signed in and nothing is sent
-                    anywhere.
+                    This account is used for identity and entitlements. Audio
+                    and transcripts stay on this device.
                   </p>
                 </div>
               </div>
@@ -948,7 +953,7 @@ function SettingsModal({
                 <div className="settings-row">
                   <div className="settings-row-text">
                     <span className="settings-row-label">Signed in as</span>
-                    <span className="settings-row-desc">Nobody - Soravo has no accounts.</span>
+                    <span className="settings-row-desc">{user?.email ?? 'Email unavailable'}</span>
                   </div>
                 </div>
                 <div className="settings-row">
@@ -1012,7 +1017,7 @@ function SettingsModal({
               <div className="hub-local-card" style={{ marginBottom: 20 }}>
                 <p className="hub-local-title">Everything stays on this PC</p>
                 <p className="hub-local-text">
-                  No account, no cloud, no telemetry. Audio is transcribed locally and only the
+                  Identity and entitlements only. Audio and transcripts stay on this device. Audio is transcribed locally and only the
                   resulting text is kept in a SQLite database on this machine.
                 </p>
               </div>
@@ -1116,7 +1121,8 @@ function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   )
 }
 
-export default function HubApp() {
+export default function HubApp({ onSignOut }: { onSignOut: () => void }) {
+  const { user } = useAuth()
   const [page, setPage] = useState<Page>('dictation')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -1336,6 +1342,7 @@ export default function HubApp() {
             open={sidebarOpen}
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenHelp={() => setHelpOpen(true)}
+            onSignOut={onSignOut}
           />
           <main className="hub-content">
             {page === 'dictation' && (

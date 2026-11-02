@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
 /** Request a Supabase password-reset email with clear loading and result states. */
 export function ForgotPasswordPage() {
   const { requestPasswordReset } = useAuth();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +18,7 @@ export function ForgotPasswordPage() {
     setError(null);
     setSuccess(false);
     try {
-      const { error } = await requestPasswordReset(email);
+      const { error } = await requestPasswordReset(email, returnTo ?? undefined);
       if (error) {
         setError(error);
       } else {

@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://placeholder.supabase.co";
+
 const { mockAuth, mockFrom } = vi.hoisted(() => ({
   mockAuth: {
     getSession: vi.fn(),
@@ -55,7 +57,7 @@ describe("Device Registration API", () => {
     expect(result.success).toBe(true);
     expect(result.device_id).toBe("test-device-123");
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://placeholder.supabase.co/functions/v1/register-device",
+      `${SUPABASE_URL}/functions/v1/register-device`,
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({

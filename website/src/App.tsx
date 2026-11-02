@@ -16,6 +16,8 @@ import { TermsPage } from "./pages/TermsPage";
 import { RefundsPage } from "./pages/RefundsPage";
 import { SupportPage } from "./pages/SupportPage";
 import { LicensePage } from "./pages/LicensePage";
+import { DesktopAuthPage } from "./pages/DesktopAuthPage";
+import { AuthConfirmationPage } from "./pages/AuthConfirmationPage";
 
 /** Render the website routes within the shared authentication provider. */
 export default function App() {
@@ -46,6 +48,8 @@ export default function App() {
           <Route path="/refunds" element={<RefundsPage />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/license" element={<LicensePage />} />
+          <Route path="/auth/desktop" element={<DesktopAuthPage />} />
+          <Route path="/auth/desktop-confirm" element={<AuthConfirmationPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

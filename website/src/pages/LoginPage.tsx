@@ -7,6 +7,10 @@ export function LoginPage() {
   const { signIn, loading: authLoading, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const hasExplicitReturn = Boolean(
+    searchParams.get("returnTo") || searchParams.get("next") ||
+      searchParams.get("redirect") || searchParams.get("redirectTo")
+  );
   const returnTo = sanitizeReturnTo(
     searchParams.get("returnTo") || searchParams.get("next") ||
       searchParams.get("redirect") || searchParams.get("redirectTo")
@@ -96,7 +100,12 @@ export function LoginPage() {
         </form>
 
         <p className="mt-4 text-center text-sm text-muted">
-          <Link to="/forgot-password" className="underline">Forgot password?</Link>
+          <Link
+            to={hasExplicitReturn ? `/forgot-password?returnTo=${encodeURIComponent(returnTo)}` : "/forgot-password"}
+            className="underline"
+          >
+            Forgot password?
+          </Link>
         </p>
       </div>
     </div>

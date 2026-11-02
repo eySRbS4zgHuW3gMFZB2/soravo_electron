@@ -7,7 +7,7 @@
 CREATE TABLE IF NOT EXISTS public.admin_users (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   role TEXT NOT NULL CHECK (role IN ('owner', 'admin')),
-  granted_by UUID REFERENCES auth.users(id),
+  granted_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   revoked_at TIMESTAMPTZ,
   CHECK (granted_by IS NULL OR granted_by <> user_id OR (granted_by = user_id AND role = 'owner'))
@@ -30,7 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_admin_users_active
 CREATE OR REPLACE FUNCTION public.protect_profile_sensitive_fields()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF current_setting('request.jwt.claim.role', true) = 'authenticated'
+  IF (NULLIF(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role') = 'authenticated'
      AND (NEW IS DISTINCT FROM OLD) THEN
     -- Only display_name and updated_at are user-editable.
     IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
