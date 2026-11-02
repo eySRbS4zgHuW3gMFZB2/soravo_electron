@@ -2278,7 +2278,13 @@ pub fn run() {
             #[cfg(any(target_os = "linux", all(debug_assertions, target_os = "windows")))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                let _ = app.deep_link().register_all();
+                app.deep_link().register_all().map_err(|error| {
+                    log::error!(
+                        "[auth] failed to register the development deep-link handler: {error}"
+                    );
+                    error
+                })?;
+                log::info!("[auth] registered the development deep-link handler");
             }
             // Open database
             let state = app.state::<AppState>();
