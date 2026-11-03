@@ -27,3 +27,7 @@ verify_jwt = false
 [functions.process-email-outbox]
 # The handler authenticates requests with its internal worker secret.
 verify_jwt = false
+
+[functions.razorpay-webhook]
+# The handler authenticates Razorpay requests with a webhook signature.
+verify_jwt = false

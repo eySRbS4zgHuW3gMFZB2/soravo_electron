@@ -1232,3 +1232,9 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 ## P2-EMAIL-01 review repair — 2026-11-03
 
 - Repaired outbox claiming, lease fencing, sender idempotency, webhook error handling, payment finalization, and user erasure. Migration 013 and focused database tests are included in CI. Verification and remaining deployment steps are recorded in the handoff.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+## P2-EMAIL-01 retry follow-up — 2026-11-03
+
+- Resend concurrent idempotency conflicts now retry within the attempt limit; the scheduler credential guidance and Razorpay gateway configuration were corrected.

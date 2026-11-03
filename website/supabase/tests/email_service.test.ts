@@ -56,6 +56,17 @@ describe("email service", () => {
     expect(result).toMatchObject({ ok: false, retryable: true, statusCode: 429, errorCode: "rate_limit" });
   });
 
+  it.each([
+    ["concurrent_idempotent_requests", true],
+    ["invalid_idempotent_request", false],
+    ["other_conflict", false],
+  ])("classifies provider conflict %s", async (name, retryable) => {
+    vi.stubGlobal("Deno", { env: { get: () => "rk_test" } });
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ name }), { status: 409 }));
+    const result = await emailModule.sendEmail({ to: "a@example.com", subject: "s", html: "x", text: "x" });
+    expect(result).toMatchObject({ ok: false, retryable, statusCode: 409, errorCode: name });
+  });
+
   it("sends the idempotency key as an HTTP header, not an email header", async () => {
     vi.stubGlobal("Deno", { env: { get: () => "rk_test" } });
     vi.mocked(fetch).mockResolvedValue(new Response('{"id":"msg_1"}', { status: 200 }));

@@ -101,6 +101,15 @@ describe("process-email-outbox", () => {
     expect((await handler(request())).status).toBe(401);
   });
 
+  it("rejects a mismatched bearer even when the worker-secret header matches", async () => {
+    env.EMAIL_WORKER_SECRET = "synthetic-worker-secret";
+    const res = await handler(new Request("https://worker.invalid", { method: "POST", headers: {
+      Authorization: "Bearer wrong-secret", "x-email-worker-secret": "synthetic-worker-secret",
+    } }));
+    expect(res.status).toBe(401);
+    expect(mocked.createClient).not.toHaveBeenCalled();
+  });
+
   it("accepts CRON_SECRET as a bearer when the worker secret is unset", async () => {
     env.CRON_SECRET = "synthetic-cron-secret";
     const res = await handler(new Request("https://worker.invalid", { method: "POST", headers: { Authorization: "Bearer synthetic-cron-secret" } }));
@@ -159,6 +168,18 @@ describe("process-email-outbox", () => {
     expect(await res.json()).toMatchObject({ sent: 0, failed: 1 });
     expect(updates[1].payload).toMatchObject({ status: "failed_retryable", last_error_code: "rate_limit" });
     expect(updates[1].filters).toContainEqual(["eq", "status", "processing"]);
+  });
+
+  it.each([
+    ["retryable conflict", true, 1, "failed_retryable"],
+    ["permanent conflict", false, 1, "failed_permanent"],
+    ["attempt cap", true, 8, "failed_permanent"],
+  ])("honors provider retryability and the attempt limit for %s", async (_label, retryable, attempts, status) => {
+    rows = [row({ attempt_count: attempts })];
+    mocked.send.mockResolvedValue({ ok: false, retryable, statusCode: 409, errorCode: "provider_conflict" });
+    await handler(request());
+    expect(updates[1].payload).toMatchObject({ status, last_error_code: "provider_conflict" });
+    expect(updates[1].payload.next_attempt_at).toEqual(status === "failed_retryable" ? expect.any(String) : null);
   });
 
   it.each([

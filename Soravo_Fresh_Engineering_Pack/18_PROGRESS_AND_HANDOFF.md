@@ -932,3 +932,9 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - Checkout: runtime-isolated `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `feature/transactional-email-resend-monitoring`, reviewed base `e54afe127ef48ab8294edff4a06543ef2853e783`. Remote history was rewritten; prior head preserved locally.
 - Repaired email idempotency and retry handling, claim fencing and recovery, webhook delivery updates, payment notification handling, renewal dates, and user redaction. Configure worker secrets, deploy functions and migrations, and install the retention schedule through the owner process. No hosted state was changed.
 - Scoped Vitest, Deno, and PostgreSQL checks passed; exact commands and inputs are in `workspace-context/validation-record.md`. Supabase and security-review skill files were unavailable; checks used repository tests and a manual security review.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+### P2-EMAIL-01 retry follow-up — 2026-11-03
+
+- Reviewed PR head `153fe54b4d73d7d64d92b7cf97e8e5d4a349bf69` on the runtime task branch. Resend concurrent-key conflicts retry within the existing attempt cap; invalid-key conflicts stay permanent. Documented worker credential precedence and configured Razorpay signature-authenticated webhook access. No hosted settings changed. Scoped verification is in `workspace-context/validation-record.md`.

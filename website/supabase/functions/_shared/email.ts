@@ -164,7 +164,7 @@ export async function sendResendEmail(message: EmailMessage): Promise<ProviderSe
           ? String((parsed as Record<string, unknown>).error)
           : `http_${res.status}`;
 
-    return { ok: false, retryable: res.status === 429 || res.status >= 500, statusCode: res.status, errorCode, errorMessage: res.statusText || errorCode };
+    return { ok: false, retryable: res.status === 429 || res.status >= 500 || errorCode === "concurrent_idempotent_requests", statusCode: res.status, errorCode, errorMessage: res.statusText || errorCode };
   } catch (error) {
     const aborted = error instanceof Error && error.name === "AbortError";
     return { ok: false, retryable: true, statusCode: 0, errorCode: aborted ? "timeout" : "network_error", errorMessage: aborted ? "Provider request timed out" : "Provider network error" };

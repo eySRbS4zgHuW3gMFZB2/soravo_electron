@@ -157,9 +157,7 @@ Deno.serve(async (req: Request) => {
     } else {
       failed += 1;
       const permanent =
-        !result.retryable ||
-        (result.statusCode >= 400 && result.statusCode < 500 && result.statusCode !== 429) ||
-        row.attempt_count >= MAX_EMAIL_ATTEMPTS;
+        !result.retryable || row.attempt_count >= MAX_EMAIL_ATTEMPTS;
       const nextAttempt = permanent
         ? null
         : new Date(Date.now() + emailBackoffMs(row.attempt_count)).toISOString();
