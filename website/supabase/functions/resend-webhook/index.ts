@@ -54,7 +54,7 @@ async function verifySvixSignature(rawBody: string, headers: Headers, secret: st
   if (Math.abs(nowSeconds - tsSeconds) > REPLAY_TOLERANCE_SECONDS) return false;
 
   const secretBytes = getSecretBytes(secret);
-  const key = await crypto.subtle.importKey("raw", secretBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey("raw", Uint8Array.from(secretBytes), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const signedContent = `${id}.${timestamp}.${rawBody}`;
   const expectedDigest = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signedContent)));
   const expectedBase64 = toBase64(expectedDigest);
@@ -241,25 +241,16 @@ Deno.serve(async (req: Request) => {
     // Update any email outbox rows matching the provider message id, using
     // out-of-order-safe rank comparisons.
     if (emailId) {
-      const { data: rows, error: rowsError } = await admin
+      const eligible = Object.entries(DELIVERY_RANK)
+        .filter(([, rank]) => rank <= deliveryRank)
+        .map(([status]) => status);
+      const now = new Date().toISOString();
+      const { error: updateError } = await admin
         .from("email_outbox")
-        .select("id, delivery_status")
-        .eq("provider_message_id", emailId);
-      if (!rowsError && Array.isArray(rows)) {
-        for (const row of rows as Array<{ id: string; delivery_status: string | null }>) {
-          const currentRank = row.delivery_status ? (DELIVERY_RANK[row.delivery_status] ?? 0) : 0;
-          if (deliveryRank >= currentRank) {
-            await admin
-              .from("email_outbox")
-              .update({
-                delivery_status: newStatus,
-                delivery_updated_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", row.id);
-          }
-        }
-      }
+        .update({ delivery_status: newStatus, delivery_updated_at: now, updated_at: now })
+        .eq("provider_message_id", emailId)
+        .or(`delivery_status.is.null,delivery_status.in.(${eligible.join(",")})`);
+      if (updateError) throw updateError;
     }
 
     const { data: finalizedRows, error: finalizeError } = await admin

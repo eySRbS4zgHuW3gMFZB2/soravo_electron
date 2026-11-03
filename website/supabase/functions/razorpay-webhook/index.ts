@@ -355,7 +355,7 @@ Deno.serve(async (req: Request) => {
               const { data: failedUser } = await admin.auth.admin.getUserById(failedUserId);
               const recipient = failedUser?.user?.email;
               if (recipient) {
-                await admin.from("email_outbox").insert({
+                const { error: emailInsertError } = await admin.from("email_outbox").insert({
                   user_id: failedUserId,
                   recipient_email: recipient,
                   template_key: "subscription_payment_failed",
@@ -363,6 +363,9 @@ Deno.serve(async (req: Request) => {
                   status: "pending",
                   metadata: { plan: plan ?? "subscription" },
                 } as Record<string, unknown>);
+                if (emailInsertError && emailInsertError.code !== "23505") {
+                  console.error("razorpay-webhook: failed-payment email enqueue failed", emailInsertError.code);
+                }
               }
             } catch (emailError) {
               console.error("razorpay-webhook: failed-payment email enqueue failed", (emailError as { code?: string })?.code);
@@ -378,7 +381,7 @@ Deno.serve(async (req: Request) => {
           const { data: refundUser } = await admin.auth.admin.getUserById(userId);
           const recipient = refundUser?.user?.email;
           if (recipient) {
-            await admin.from("email_outbox").insert({
+            const { error: emailInsertError } = await admin.from("email_outbox").insert({
               user_id: userId,
               recipient_email: recipient,
               template_key: "refund",
@@ -390,6 +393,9 @@ Deno.serve(async (req: Request) => {
                 currency: currency || "USD",
               },
             } as Record<string, unknown>);
+            if (emailInsertError && emailInsertError.code !== "23505") {
+              console.error("razorpay-webhook: refund email enqueue failed", emailInsertError.code);
+            }
           }
         } catch (emailError) {
           console.error("razorpay-webhook: refund email enqueue failed", (emailError as { code?: string })?.code);

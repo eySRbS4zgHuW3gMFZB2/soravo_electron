@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import {
   renderTemplate,
+  RESEND_TIMEOUT_MS,
   sendResendEmail,
 } from "../_shared/email.ts";
 import { emailBackoffMs, MAX_EMAIL_ATTEMPTS } from "../_shared/email-outbox.ts";
@@ -53,7 +54,8 @@ Deno.serve(async (req: Request) => {
   const { data: claimedRows, error: claimError } = await admin.rpc("claim_email_outbox_batch", {
     p_batch_size: batchSize,
     p_claim_token: claimToken,
-    p_lease_seconds: 60,
+    // Give a full sequential batch time for each bounded provider request.
+    p_lease_seconds: Math.ceil(batchSize * RESEND_TIMEOUT_MS / 1000) + 60,
   });
 
   if (claimError) {
@@ -81,7 +83,7 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", row.id)
         .eq("claim_token", claimToken)
-        .eq("processing_status", "processing");
+        .eq("status", "processing");
       continue;
     }
 
@@ -100,7 +102,27 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", row.id)
         .eq("claim_token", claimToken)
-        .eq("processing_status", "processing");
+        .eq("status", "processing");
+      continue;
+    }
+
+    // A row may have expired or been reclaimed while earlier rows were sent.
+    // Renew only an unexpired claim we still own before making an external call.
+    const leaseNow = new Date();
+    const { data: renewedRows, error: renewalError } = await admin
+      .from("email_outbox")
+      .update({ lease_expires_at: new Date(leaseNow.getTime() + 60_000).toISOString() })
+      .eq("id", row.id)
+      .eq("claim_token", claimToken)
+      .eq("status", "processing")
+      .gt("lease_expires_at", leaseNow.toISOString())
+      .select("id");
+    if (renewalError) {
+      failed += 1;
+      continue;
+    }
+    if (!renewedRows?.length) {
+      skipped += 1;
       continue;
     }
 
@@ -109,7 +131,7 @@ Deno.serve(async (req: Request) => {
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
-      headers: { "Idempotency-Key": row.idempotency_key },
+      idempotencyKey: row.idempotency_key,
     });
 
     if (result.ok) {
@@ -126,7 +148,7 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", row.id)
         .eq("claim_token", claimToken)
-        .eq("processing_status", "processing");
+        .eq("status", "processing");
       if (updateError) {
         failed += 1;
       } else {
@@ -151,7 +173,7 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", row.id)
         .eq("claim_token", claimToken)
-        .eq("processing_status", "processing");
+        .eq("status", "processing");
     }
   }
 

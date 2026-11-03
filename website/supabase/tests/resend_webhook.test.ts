@@ -1,6 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("https://esm.sh/@supabase/supabase-js@2.49.0", async () => import("@supabase/supabase-js"));
+const mock = vi.hoisted(() => ({ createClient: vi.fn() }));
+vi.mock("https://esm.sh/@supabase/supabase-js@2.49.0", () => ({ createClient: mock.createClient }));
 
 const secretRaw = "mysecret";
 const secretEnv = `whsec_${btoa(secretRaw)}`;
@@ -70,5 +71,120 @@ describe("resend webhook signature", () => {
       headers: { "svix-id": id, "svix-timestamp": String(now), "svix-signature": signature },
     }));
     expect(res.status).toBe(200);
+  });
+});
+
+
+describe("resend webhook database processing", () => {
+  let calls: Array<{ table: string; action: string; payload?: any; filters: Array<[string, unknown]> }>;
+  let eventStatus: string | null;
+  let outboxStatus: string | null;
+  let claimLost: boolean;
+  let outboxError: boolean;
+  let outboxExists: boolean;
+
+  beforeEach(() => {
+    calls = [];
+    eventStatus = null;
+    outboxStatus = null;
+    claimLost = false;
+    outboxError = false;
+    outboxExists = true;
+    mock.createClient.mockImplementation(() => ({
+      from(table: string) {
+        let action = "select";
+        let payload: any;
+        const filters: Array<[string, unknown]> = [];
+        const execute = () => {
+          calls.push({ table, action, payload, filters: [...filters] });
+          if (table === "email_outbox") {
+            if (outboxError) return { data: null, error: new Error("update failed") };
+            const filter = filters.find(([name]) => name === "or")?.[1] as string;
+            const eligible = filter.match(/in\.\(([^)]*)\)/)?.[1].split(",") ?? [];
+            if (outboxExists && (!outboxStatus || eligible.includes(outboxStatus))) outboxStatus = payload.delivery_status;
+            return { data: null, error: null };
+          }
+          if (action === "select") return { data: eventStatus ? { id: "event", processing_status: eventStatus } : null, error: null };
+          if (action === "insert") { eventStatus = "received"; return { data: null, error: null }; }
+          if (payload.processing_status === "processing") {
+            if (claimLost) return { data: [], error: null };
+            eventStatus = "processing";
+            return { data: [{ id: "event" }], error: null };
+          }
+          eventStatus = payload.processing_status;
+          return { data: [{ id: "event" }], error: null };
+        };
+        const query: any = {
+          select: () => query,
+          insert: (value: any) => { action = "insert"; payload = value; return query; },
+          update: (value: any) => { action = "update"; payload = value; return query; },
+          eq: (name: string, value: unknown) => { filters.push([name, value]); return query; },
+          in: (name: string, value: unknown) => { filters.push([name, value]); return query; },
+          lt: (name: string, value: unknown) => { filters.push([name, value]); return query; },
+          or: (value: string) => { filters.push(["or", value]); return query; },
+          maybeSingle: async () => execute(),
+          then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => Promise.resolve(execute()).then(resolve, reject),
+        };
+        return query;
+      },
+    }));
+  });
+
+  async function dispatch(type = "email.delivered", id = "evt_1") {
+    const body = JSON.stringify({ type, data: { email_id: "msg_1" } });
+    const now = Math.floor(Date.now() / 1000);
+    return handler(new Request("https://webhook.invalid", { method: "POST", body, headers: {
+      "svix-id": id, "svix-timestamp": String(now), "svix-signature": await sign(body, id, now),
+    } }));
+  }
+
+  it("updates the matching outbox row and finalizes a signed event", async () => {
+    const res = await dispatch();
+    expect(res.status).toBe(200);
+    expect(outboxStatus).toBe("delivered");
+    expect(calls).toEqual(expect.arrayContaining([
+      expect.objectContaining({ table: "email_outbox", action: "update", payload: expect.objectContaining({ delivery_status: "delivered" }), filters: expect.arrayContaining([["provider_message_id", "msg_1"]]) }),
+      expect.objectContaining({ table: "webhook_events", action: "update", payload: expect.objectContaining({ processing_status: "processed" }) }),
+    ]));
+  });
+
+  it("acknowledges a duplicate svix id without updating the outbox", async () => {
+    eventStatus = "processed";
+    const res = await dispatch();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "duplicate" });
+    expect(calls.some((call) => call.table === "email_outbox")).toBe(false);
+  });
+
+  it("returns 503 when another worker holds the claim", async () => {
+    eventStatus = "processing";
+    claimLost = true;
+    const res = await dispatch();
+    expect(res.status).toBe(503);
+    expect(calls.filter((call) => call.payload?.processing_status === "processing")).toHaveLength(2);
+    expect(calls.some((call) => call.table === "email_outbox")).toBe(false);
+  });
+
+  it("returns 500 and marks the event failed when the outbox update fails", async () => {
+    outboxError = true;
+    const res = await dispatch();
+    expect(res.status).toBe(500);
+    expect(eventStatus).toBe("failed");
+    expect(calls).toEqual(expect.arrayContaining([expect.objectContaining({ table: "webhook_events", payload: expect.objectContaining({ processing_status: "failed" }) })]));
+  });
+
+  it("does not let a lower-ranked event overwrite a higher status", async () => {
+    outboxStatus = "bounced";
+    const res = await dispatch("email.sent");
+    expect(res.status).toBe(200);
+    expect(outboxStatus).toBe("bounced");
+    expect(calls.find((call) => call.table === "email_outbox")?.filters).toContainEqual(["or", "delivery_status.is.null,delivery_status.in.(sent)"]);
+  });
+
+  it("acknowledges an event with no matching outbox row", async () => {
+    outboxExists = false;
+    const res = await dispatch();
+    expect(res.status).toBe(200);
+    expect(eventStatus).toBe("processed");
   });
 });

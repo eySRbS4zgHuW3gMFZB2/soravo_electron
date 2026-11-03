@@ -17,6 +17,8 @@ let grantCalls: number;
 let subscriptionCalls: Record<string, unknown>[];
 let subscriptionWrites: Record<string, unknown>[];
 let statusWrites: { token: string | null; count: number }[];
+let emailInsertError: string | null;
+let emailInserts: Record<string, unknown>[];
 const priorToken = "11111111-1111-4111-8111-111111111111";
 const nextToken = "22222222-2222-4222-8222-222222222222";
 const secret = "synthetic-webhook-secret";
@@ -46,6 +48,15 @@ async function postgrest(input: string | URL | Request, init?: RequestInit): Pro
   const table = url.pathname.split("/").at(-1) ?? "";
   const body = init?.body ? JSON.parse(String(init.body)) : null;
   let rows: unknown[] = [];
+
+  if (url.pathname.startsWith("/auth/v1/admin/users/")) {
+    return Response.json({ id: "test-user", email: "recipient@example.test" });
+  }
+  if (table === "email_outbox" && init?.method === "POST") {
+    emailInserts.push(body);
+    if (emailInsertError) return Response.json({ code: emailInsertError, message: "Synthetic outbox error" }, { status: 409 });
+    return Response.json([]);
+  }
 
   // Synthetic response for the atomic ordering boundary. The SQL implementation
   // and overlapping transactions are tested independently against PostgreSQL.
@@ -148,6 +159,7 @@ async function postgrest(input: string | URL | Request, init?: RequestInit): Pro
 
 async function deliver(eventType = "payment.captured", validPayload = true, options: {
   eventId?: string;
+  userId?: string;
   omitSubscriptionEntity?: boolean;
   createdAt?: number | null;
   currentEnd?: number | null;
@@ -159,7 +171,7 @@ async function deliver(eventType = "payment.captured", validPayload = true, opti
     created_at: options.createdAt,
     payload: { payment: { entity: {
       id: "pay_test", order_id: "order_test", subscription_id: "sub_test", status: "captured", currency: "USD",
-      amount: validPayload ? 1200 : 1, notes: { user_id: "test-user" },
+      amount: validPayload ? 1200 : 1, notes: { user_id: options.userId ?? "test-user" },
     } }, subscription: options.omitSubscriptionEntity ? undefined : { entity: {
       id: "sub_test", current_end: options.currentEnd === undefined ? 2000000000 : options.currentEnd,
       status: options.subscriptionStatus, created_at: 1800000000,
@@ -197,6 +209,8 @@ beforeEach(() => {
   paymentError = false;
   dbError = false;
   statusWrites = [];
+  emailInsertError = null;
+  emailInserts = [];
   subscription = null;
   subscriptionReadError = false;
   concurrentSubscription = null;
@@ -423,5 +437,41 @@ describe("subscription transition RPC boundary", () => {
   it.each(["payment.captured", "subscription.cancelled"])("does not mistake entity creation time for event time for %s", async (type) => {
     expect((await deliver(type, true, { createdAt: null })).status).toBe(200);
     expect(subscriptionCalls[0].p_event_created_at).toBeNull();
+  });
+});
+
+
+describe("email enqueue errors", () => {
+  it.each([
+    ["payment.failed", "subscription_payment_failed", "razorpay-webhook: failed-payment email enqueue failed"],
+    ["payment.refunded", "refund", "razorpay-webhook: refund email enqueue failed"],
+  ])("logs returned outbox errors for %s and preserves webhook completion", async (eventType, template, logMessage) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      emailInsertError = "42501";
+      const response = await deliver(eventType, true, { userId: "11111111-1111-4111-8111-111111111111" });
+      expect(response.status).toBe(200);
+      expect(emailInserts).toEqual([expect.objectContaining({ template_key: template })]);
+      expect(log).toHaveBeenCalledWith(logMessage, "42501");
+      expect(ledger.processing_status).toBe("processed");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it.each([
+    ["payment.failed", "subscription_payment_failed"],
+    ["payment.refunded", "refund"],
+  ])("suppresses duplicate outbox errors for %s", async (eventType, template) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      emailInsertError = "23505";
+      const response = await deliver(eventType, true, { userId: "11111111-1111-4111-8111-111111111111" });
+      expect(response.status).toBe(200);
+      expect(emailInserts).toEqual([expect.objectContaining({ template_key: template })]);
+      expect(log).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
   });
 });

@@ -182,6 +182,8 @@ Outbox:
 Worker function: `process-email-outbox`.
 Recommended invocation is authenticated internal HTTP POST with bounded batch size. Supabase scheduling/triggering can invoke it, but this task does not perform deployment or create schedules.
 
+Provision `EMAIL_WORKER_SECRET` as an Edge Function secret (or use `CRON_SECRET` if `EMAIL_WORKER_SECRET` is unset). Configure the scheduler to send the same secret in `Authorization: Bearer <secret>` or `x-email-worker-secret: <secret>`. The service-role key is accepted only as a fallback when neither worker secret is configured; keep it server-side and prefer a dedicated worker secret. Deploy with `website/supabase/config.toml` so the gateway forwards these requests to the handler for secret verification.
+
 Worker requirements:
 - Reject unauthorized requests.
 - Process bounded batches.

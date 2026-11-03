@@ -19,3 +19,11 @@ additional_redirect_urls = [
 # one-time code, state, and PKCE verifier. Issue requests authenticate the
 # browser access token with getUser().
 verify_jwt = false
+
+[functions.resend-webhook]
+# The handler authenticates Resend requests with Svix signatures.
+verify_jwt = false
+
+[functions.process-email-outbox]
+# The handler authenticates requests with its internal worker secret.
+verify_jwt = false

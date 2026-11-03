@@ -47,7 +47,8 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF OLD.email_confirmed_at IS NULL AND NEW.email_confirmed_at IS NOT NULL THEN
+  IF OLD.email_confirmed_at IS NULL AND NEW.email_confirmed_at IS NOT NULL
+     AND NEW.email IS NOT NULL AND NEW.email <> '' THEN
     INSERT INTO public.email_outbox (
       user_id,
       recipient_email,
@@ -91,13 +92,31 @@ AS $$
 DECLARE
   v_size integer := LEAST(GREATEST(COALESCE(p_batch_size, 25), 1), 100);
 BEGIN
+  -- A crashed worker may have consumed its final attempt without finalizing.
+  -- Keep this limit in sync with MAX_EMAIL_ATTEMPTS in _shared/email-outbox.ts.
+  UPDATE public.email_outbox
+  SET status = 'failed_permanent',
+      claim_token = NULL,
+      claimed_at = NULL,
+      lease_expires_at = NULL,
+      next_attempt_at = NULL,
+      last_error_code = 'attempts_exhausted',
+      updated_at = now()
+  WHERE status = 'processing'
+    AND lease_expires_at < now()
+    AND attempt_count >= 8;
+
   RETURN QUERY
   WITH next_rows AS (
     SELECT id
     FROM public.email_outbox
-    WHERE status IN ('pending', 'failed_retryable')
-      AND (next_attempt_at IS NULL OR next_attempt_at <= now())
-      AND (lease_expires_at IS NULL OR lease_expires_at < now())
+    WHERE attempt_count < 8
+      AND (
+        (status IN ('pending', 'failed_retryable')
+          AND (next_attempt_at IS NULL OR next_attempt_at <= now())
+          AND (lease_expires_at IS NULL OR lease_expires_at < now()))
+        OR (status = 'processing' AND lease_expires_at < now())
+      )
     ORDER BY created_at ASC
     LIMIT v_size
     FOR UPDATE SKIP LOCKED
@@ -117,6 +136,10 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.claim_email_outbox_batch(integer, uuid, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_email_outbox_batch(integer, uuid, integer) TO service_role;
+
+-- The defaults on the new signature preserve existing 11-argument calls.
+-- Remove the old overload to avoid ambiguous PostgreSQL and PostgREST calls.
+DROP FUNCTION IF EXISTS public.finalize_webhook_payment_atomic(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN);
 
 -- Replace finalize so verified captured payments enqueue downstream notifications in the same transaction.
 CREATE OR REPLACE FUNCTION public.finalize_webhook_payment_atomic(
@@ -148,6 +171,7 @@ DECLARE
   v_existing_status TEXT;
   v_payment_already_captured BOOLEAN := FALSE;
   v_recipient_email TEXT;
+  v_stored_period_end TIMESTAMPTZ;
 BEGIN
   IF p_provider IS NULL OR p_provider = '' THEN
     RAISE EXCEPTION 'invalid provider';
@@ -298,7 +322,8 @@ BEGIN
           THEN entitlements.subscription_period_end + INTERVAL '30 days'
         ELSE EXCLUDED.subscription_period_end
       END,
-      lifetime = EXCLUDED.lifetime;
+      lifetime = EXCLUDED.lifetime
+    RETURNING subscription_period_end INTO v_stored_period_end;
 
     SELECT email INTO v_recipient_email
     FROM auth.users
@@ -349,7 +374,7 @@ BEGIN
           'subscription_renewed',
           'subscription_renewed:razorpay:' || p_provider_payment_id,
           'pending',
-          jsonb_build_object('plan', p_plan, 'periodEnd', p_period_end::text)
+          jsonb_build_object('plan', p_plan, 'periodEnd', v_stored_period_end::text)
         )
         ON CONFLICT (idempotency_key) DO NOTHING;
       END IF;
@@ -373,8 +398,8 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.finalize_webhook_payment_atomic(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN, BOOLEAN, BOOLEAN) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.finalize_webhook_payment_atomic(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN, BOOLEAN, BOOLEAN) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.finalize_webhook_payment_atomic(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.finalize_webhook_payment_atomic(TEXT, TEXT, UUID, UUID, TEXT, TEXT, TEXT, INTEGER, TEXT, TIMESTAMPTZ, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN) TO service_role;
 
 -- Retention cleanup: redact recipient and PII after the configured period.
 CREATE OR REPLACE FUNCTION public.cleanup_email_outboxRetention(
@@ -463,6 +488,6 @@ $$;
 
 DROP TRIGGER IF EXISTS email_outbox_redact_on_user_delete ON auth.users;
 CREATE TRIGGER email_outbox_redact_on_user_delete
-AFTER DELETE ON auth.users
+BEFORE DELETE ON auth.users
 FOR EACH ROW
 EXECUTE FUNCTION public.redact_email_outbox_on_user_delete();

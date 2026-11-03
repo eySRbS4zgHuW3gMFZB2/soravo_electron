@@ -49,6 +49,33 @@ describe("email service", () => {
     expect(result.errorCode).toBe("validation_error");
   });
 
+  it("marks rate limits retryable", async () => {
+    vi.stubGlobal("Deno", { env: { get: () => "rk_test" } });
+    vi.mocked(fetch).mockResolvedValue(new Response('{"name":"rate_limit"}', { status: 429 }));
+    const result = await emailModule.sendEmail({ to: "a@example.com", subject: "s", html: "x", text: "x" });
+    expect(result).toMatchObject({ ok: false, retryable: true, statusCode: 429, errorCode: "rate_limit" });
+  });
+
+  it("sends the idempotency key as an HTTP header, not an email header", async () => {
+    vi.stubGlobal("Deno", { env: { get: () => "rk_test" } });
+    vi.mocked(fetch).mockResolvedValue(new Response('{"id":"msg_1"}', { status: 200 }));
+    await emailModule.sendEmail({ to: "a@example.com", subject: "s", html: "x", text: "x", idempotencyKey: "outbox-key", headers: { "X-Custom": "value" } });
+    const request = vi.mocked(fetch).mock.calls[0][1]!;
+    const headers = new Headers(request.headers);
+    expect(headers.get("Idempotency-Key")).toBe("outbox-key");
+    expect(headers.get("Authorization")).toBe("Bearer rk_test");
+    expect(headers.get("Content-Type")).toBe("application/json");
+    expect(JSON.parse(request.body as string).headers).toEqual({ "X-Custom": "value" });
+    expect(request.body).not.toContain("outbox-key");
+  });
+
+  it("omits the idempotency header when no key is supplied", async () => {
+    vi.stubGlobal("Deno", { env: { get: () => "rk_test" } });
+    vi.mocked(fetch).mockResolvedValue(new Response('{"id":"msg_1"}', { status: 200 }));
+    await emailModule.sendEmail({ to: "a@example.com", subject: "s", html: "x", text: "x" });
+    expect(new Headers(vi.mocked(fetch).mock.calls[0][1]?.headers).has("Idempotency-Key")).toBe(false);
+  });
+
   it("handles provider 5xx error", async () => {
     vi.stubGlobal("Deno", { env: { get: (key: string) => (key === "RESEND_API_KEY" ? "rk_test" : undefined) }, serve: () => {} });
     (globalThis.fetch as any).mockResolvedValue(new Response("server error", { status: 500 }));
