@@ -953,3 +953,10 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - Fix: final DB authorization SELECT immediately before Resend call matching row ID, claim token, status processing, valid lease; renders from fresh recipient/metadata. Failed final check is skipped without external send.
 - Limitation documented: read/request are not atomic; account deletion after final check and before provider acceptance remains narrow race; no broad locking redesign introduced.
 - Validation: website Vitest 6 files/138 tests passed; root typecheck passed.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+### P2-EMAIL-01 webhook retry follow-up — 2026-11-03
+
+- Reviewed PR head `1b1936e32e23277b2999ec257bb98fe46c653aed`. Unmatched Resend events now retry for five minutes from their stored receipt time rather than being acknowledged immediately; a subsequent delivery after that window is acknowledged. Auth SMTP events without an outbox row follow the same rule. Matching higher-ranked statuses remain unchanged.
+- Updated worker claim/lease test fixtures and checked the affected webhook and worker tests. Exact validation is in `workspace-context/validation-record.md`. No hosted state was changed.

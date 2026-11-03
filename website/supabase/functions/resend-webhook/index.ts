@@ -11,6 +11,9 @@ const APPROVED_RESEND_EVENTS = new Set([
 ]);
 
 const REPLAY_TOLERANCE_SECONDS = 300;
+// Allow time for the sending worker to save the provider message ID. Auth SMTP
+// and other unrelated messages can have no outbox row and are acknowledged later.
+const OUTBOX_MATCH_RETRY_WINDOW_MS = 5 * 60_000;
 
 function toBase64(bytes: ArrayBuffer | Uint8Array): string {
   const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -198,7 +201,7 @@ Deno.serve(async (req: Request) => {
     .eq("provider", "resend")
     .eq("provider_event_id", providerEventId)
     .in("processing_status", ["received", "failed"])
-    .select("id");
+    .select("id, received_at");
 
   if (claimError) {
     return new Response(JSON.stringify({ error: "Persistence failed" }), { status: 500, headers: { "Content-Type": "application/json" } });
@@ -216,7 +219,7 @@ Deno.serve(async (req: Request) => {
       .eq("provider_event_id", providerEventId)
       .eq("processing_status", "processing")
       .lt("lease_expires_at", claimNow)
-      .select("id"));
+      .select("id, received_at"));
     if (claimError) {
       return new Response(JSON.stringify({ error: "Persistence failed" }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
@@ -245,12 +248,37 @@ Deno.serve(async (req: Request) => {
         .filter(([, rank]) => rank <= deliveryRank)
         .map(([status]) => status);
       const now = new Date().toISOString();
-      const { error: updateError } = await admin
+      const { data: updatedRows, error: updateError } = await admin
         .from("email_outbox")
         .update({ delivery_status: newStatus, delivery_updated_at: now, updated_at: now })
         .eq("provider_message_id", emailId)
-        .or(`delivery_status.is.null,delivery_status.in.(${eligible.join(",")})`);
+        .or(`delivery_status.is.null,delivery_status.in.(${eligible.join(",")})`)
+        .select("id");
       if (updateError) throw updateError;
+      if (!updatedRows?.length) {
+        // A higher-ranked status also yields zero updates; it is already handled.
+        const { data: matchingRows, error: lookupError } = await admin
+          .from("email_outbox")
+          .select("id, delivery_status")
+          .eq("provider_message_id", emailId);
+        if (lookupError) throw lookupError;
+        if (!matchingRows?.length) {
+          const receivedAt = Date.parse(claimedRows[0].received_at);
+          if (!Number.isFinite(receivedAt) || Date.now() - receivedAt < OUTBOX_MATCH_RETRY_WINDOW_MS) {
+            throw new Error("outbox row not yet available");
+          }
+        } else if (matchingRows.some((row) => (DELIVERY_RANK[row.delivery_status] ?? 0) <= deliveryRank)) {
+          // The outbox row may have appeared after the first update.
+          const { data: lateRows, error: lateError } = await admin
+            .from("email_outbox")
+            .update({ delivery_status: newStatus, delivery_updated_at: now, updated_at: now })
+            .eq("provider_message_id", emailId)
+            .or(`delivery_status.is.null,delivery_status.in.(${eligible.join(",")})`)
+            .select("id");
+          if (lateError) throw lateError;
+          if (!lateRows?.length) throw new Error("outbox row changed during delivery update");
+        }
+      }
     }
 
     const { data: finalizedRows, error: finalizeError } = await admin

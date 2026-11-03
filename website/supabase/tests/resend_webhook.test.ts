@@ -82,6 +82,9 @@ describe("resend webhook database processing", () => {
   let claimLost: boolean;
   let outboxError: boolean;
   let outboxExists: boolean;
+  let lookupError: boolean;
+  let eventReceivedAt: string;
+  let appearsOnLookup: boolean;
 
   beforeEach(() => {
     calls = [];
@@ -90,6 +93,9 @@ describe("resend webhook database processing", () => {
     claimLost = false;
     outboxError = false;
     outboxExists = true;
+    lookupError = false;
+    eventReceivedAt = new Date().toISOString();
+    appearsOnLookup = false;
     mock.createClient.mockImplementation(() => ({
       from(table: string) {
         let action = "select";
@@ -98,18 +104,23 @@ describe("resend webhook database processing", () => {
         const execute = () => {
           calls.push({ table, action, payload, filters: [...filters] });
           if (table === "email_outbox") {
+            if (action === "select") {
+              if (appearsOnLookup) outboxExists = true;
+              return { data: outboxExists ? [{ id: "outbox", delivery_status: outboxStatus }] : [], error: lookupError ? new Error("lookup failed") : null };
+            }
             if (outboxError) return { data: null, error: new Error("update failed") };
             const filter = filters.find(([name]) => name === "or")?.[1] as string;
             const eligible = filter.match(/in\.\(([^)]*)\)/)?.[1].split(",") ?? [];
-            if (outboxExists && (!outboxStatus || eligible.includes(outboxStatus))) outboxStatus = payload.delivery_status;
-            return { data: null, error: null };
+            const updated = outboxExists && (!outboxStatus || eligible.includes(outboxStatus));
+            if (updated) outboxStatus = payload.delivery_status;
+            return { data: updated ? [{ id: "outbox" }] : [], error: null };
           }
           if (action === "select") return { data: eventStatus ? { id: "event", processing_status: eventStatus } : null, error: null };
           if (action === "insert") { eventStatus = "received"; return { data: null, error: null }; }
           if (payload.processing_status === "processing") {
             if (claimLost) return { data: [], error: null };
             eventStatus = "processing";
-            return { data: [{ id: "event" }], error: null };
+            return { data: [{ id: "event", received_at: eventReceivedAt }], error: null };
           }
           eventStatus = payload.processing_status;
           return { data: [{ id: "event" }], error: null };
@@ -178,13 +189,56 @@ describe("resend webhook database processing", () => {
     const res = await dispatch("email.sent");
     expect(res.status).toBe(200);
     expect(outboxStatus).toBe("bounced");
-    expect(calls.find((call) => call.table === "email_outbox")?.filters).toContainEqual(["or", "delivery_status.is.null,delivery_status.in.(sent)"]);
+    expect(calls.find((call) => call.table === "email_outbox" && call.action === "update")?.filters).toContainEqual(["or", "delivery_status.is.null,delivery_status.in.(sent)"]);
+    expect(calls).toEqual(expect.arrayContaining([expect.objectContaining({ table: "email_outbox", action: "select", filters: expect.arrayContaining([["provider_message_id", "msg_1"]]) })]));
+    expect(eventStatus).toBe("processed");
   });
 
-  it("acknowledges an event with no matching outbox row", async () => {
+  it("updates a row that appears between the conditional update and lookup", async () => {
     outboxExists = false;
+    appearsOnLookup = true;
+    const res = await dispatch();
+    expect(res.status).toBe(200);
+    expect(outboxStatus).toBe("delivered");
+    expect(calls.filter((call) => call.table === "email_outbox" && call.action === "update")).toHaveLength(2);
+    expect(eventStatus).toBe("processed");
+  });
+
+  it("retries a recent unmatched event, then processes it when the row appears", async () => {
+    outboxExists = false;
+    const first = await dispatch();
+    expect(first.status).toBe(500);
+    expect(eventStatus).toBe("failed");
+    expect(calls.some((call) => call.payload?.processing_status === "processed")).toBe(false);
+    outboxExists = true;
+    const retry = await dispatch();
+    expect(retry.status).toBe(200);
+    expect(outboxStatus).toBe("delivered");
+    expect(eventStatus).toBe("processed");
+  });
+
+  it("acknowledges an unmatched event after the window measured from initial receipt", async () => {
+    outboxExists = false;
+    eventStatus = "failed";
+    eventReceivedAt = new Date(Date.now() - 5 * 60_000 - 1000).toISOString();
     const res = await dispatch();
     expect(res.status).toBe(200);
     expect(eventStatus).toBe("processed");
+  });
+
+  it("retries when the matching-row lookup fails", async () => {
+    outboxStatus = "bounced";
+    lookupError = true;
+    const res = await dispatch("email.sent");
+    expect(res.status).toBe(500);
+    expect(eventStatus).toBe("failed");
+  });
+
+  it("retries rather than silently acknowledging an invalid receipt timestamp", async () => {
+    outboxExists = false;
+    eventReceivedAt = "invalid";
+    const res = await dispatch();
+    expect(res.status).toBe(500);
+    expect(eventStatus).toBe("failed");
   });
 });

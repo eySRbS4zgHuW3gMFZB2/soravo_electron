@@ -133,6 +133,7 @@ Requirements:
 - Store the returned signing secret as `RESEND_WEBHOOK_SECRET`.
 - Receiver verifies the exact raw request body.
 - Delivery events update `email_outbox.delivery_status` by `provider_message_id`.
+- An unmatched message ID returns a retryable error for five minutes from first receipt; a later delivery is acknowledged after that window. Auth SMTP messages without outbox rows follow the same rule. A retry from Resend is required for processing after the window.
 - Delivery events never mutate payment, subscription or entitlement state.
 
 Current status: implemented in code; deployed/registered status remains implementation-complete-pending-deployment.

@@ -49,6 +49,7 @@ beforeEach(() => {
   mocked.createClient.mockReset().mockImplementation(() => ({
     rpc: async (_name: string, args: Record<string, unknown>) => {
       claimArgs = args;
+      rows = rows.map((candidate) => ({ ...candidate, claim_token: args.p_claim_token }));
       return { data: rows, error: null };
     },
     from: (table: string) => {
@@ -65,8 +66,11 @@ beforeEach(() => {
         maybeSingle() { this._single = true; return this; },
         then(resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) {
           if (!this._hasPayload) {
-            const base = rows.length ? rows[0] : null;
-            const data = this._single ? base : (rows.length ? [base] : []);
+            const matches = rows.filter((candidate) => filters.every(([operation, column, value]) => {
+              if (operation === "eq") return candidate[column] === value;
+              return typeof candidate[column] === "string" && typeof value === "string" && candidate[column] > value;
+            }));
+            const data = this._single ? (matches[0] ?? null) : matches;
             return Promise.resolve({ data, error: null }).then(resolve, reject);
           }
           updates.push({ payload, filters: [...filters] });
@@ -79,7 +83,7 @@ beforeEach(() => {
 });
 
 function row(overrides: Record<string, unknown> = {}) {
-  return { id: "row-1", user_id: "user-1", recipient_email: "alice@example.com", template_key: "welcome", idempotency_key: "outbox-key", status: "processing", attempt_count: 1, metadata: {}, claim_token: "unused", ...overrides };
+  return { id: "row-1", user_id: "user-1", recipient_email: "alice@example.com", template_key: "welcome", idempotency_key: "outbox-key", status: "processing", attempt_count: 1, metadata: {}, claim_token: "unused", lease_expires_at: "2999-01-01T00:00:00.000Z", ...overrides };
 }
 
 function request() {
@@ -125,7 +129,6 @@ describe("process-email-outbox", () => {
     env.EMAIL_BATCH_SIZE = "100";
     rows = [row()];
     const res = await handler(request());
-    console.log("DEBUG updates", JSON.stringify(updates.map((u) => u.payload)));
     expect(await res.json()).toMatchObject({ claimed: 1, sent: 1, failed: 0 });
     expect(claimArgs.p_batch_size).toBe(100);
     expect(claimArgs.p_lease_seconds).toBeGreaterThan(100 * 15);
@@ -141,7 +144,15 @@ describe("process-email-outbox", () => {
     expect(updates[1].filters).toContainEqual(["eq", "claim_token", claimArgs.p_claim_token]);
   });
 
-  it("does not send when its claim has expired or been reclaimed", async () => {
+  it("rejects an expired claim in the final read before renewing or sending", async () => {
+    rows = [row({ lease_expires_at: "2000-01-01T00:00:00.000Z" })];
+    const res = await handler(request());
+    expect(await res.json()).toMatchObject({ claimed: 1, sent: 0, skipped: 1 });
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(updates).toHaveLength(0);
+  });
+
+  it("does not send when lease renewal returns no matching claim", async () => {
     rows = [row()];
     renewalRows = [];
     const res = await handler(request());
