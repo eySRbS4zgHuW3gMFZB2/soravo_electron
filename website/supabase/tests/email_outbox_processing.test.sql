@@ -1,6 +1,6 @@
 -- Migration 013: confirmation, retry leases, payment notifications, and erasure.
 BEGIN;
-SELECT plan(18);
+SELECT plan(28);
 
 INSERT INTO auth.users (id, email) VALUES
   ('10000000-0000-0000-0000-000000000001', NULL),
@@ -44,16 +44,17 @@ SELECT is((SELECT (metadata->>'periodEnd')::timestamptz FROM public.email_outbox
 SELECT ok((SELECT subscription_period_end = now() + interval '40 days' FROM public.entitlements WHERE user_id = '10000000-0000-0000-0000-000000000003' AND plan_code = 'monthly'), 'existing prepaid period is extended by thirty days');
 
 -- Initial monthly capture queues activation, not renewal.
+INSERT INTO auth.users (id, email) VALUES ('10000000-0000-0000-0000-000000000004', 'new-subscriber@example.com');
 INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
 VALUES ('razorpay', 'evt-initial-monthly', 'payment.captured', true, 'processing', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd');
-SELECT is(public.finalize_webhook_payment_atomic('razorpay', 'evt-initial-monthly', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid, '10000000-0000-0000-0000-000000000003'::uuid, 'monthly', 'pay-initial-monthly', 'order-initial-monthly', 1200, 'USD', now() + interval '30 days', false, true), 1, 'initial monthly capture finalizes');
+SELECT is(public.finalize_webhook_payment_atomic('razorpay', 'evt-initial-monthly', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid, '10000000-0000-0000-0000-000000000004'::uuid, 'monthly', 'pay-initial-monthly', 'order-initial-monthly', 1200, 'USD', now() + interval '30 days', false, true), 1, 'initial monthly capture finalizes');
 SELECT is((SELECT count(*)::int FROM public.email_outbox WHERE idempotency_key = 'subscription_activated:razorpay:pay-initial-monthly'), 1, 'initial monthly capture queues activation');
 SELECT is((SELECT count(*)::int FROM public.email_outbox WHERE idempotency_key = 'subscription_renewed:razorpay:pay-initial-monthly'), 0, 'initial monthly capture does not queue renewal');
 
 -- Existing active entitlement capture queues renewal, not activation.
 INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
 VALUES ('razorpay', 'evt-second-monthly', 'payment.captured', true, 'processing', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee');
-SELECT is(public.finalize_webhook_payment_atomic('razorpay', 'evt-second-monthly', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'::uuid, '10000000-0000-0000-0000-000000000003'::uuid, 'monthly', 'pay-second-monthly', 'order-second-monthly', 1200, 'USD', now() + interval '30 days', false, true), 1, 'second monthly capture finalizes');
+SELECT is(public.finalize_webhook_payment_atomic('razorpay', 'evt-second-monthly', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'::uuid, '10000000-0000-0000-0000-000000000004'::uuid, 'monthly', 'pay-second-monthly', 'order-second-monthly', 1200, 'USD', now() + interval '30 days', false, true), 1, 'second monthly capture finalizes');
 SELECT is((SELECT count(*)::int FROM public.email_outbox WHERE idempotency_key = 'subscription_renewed:razorpay:pay-second-monthly'), 1, 'renewal capture queues renewal');
 SELECT is((SELECT count(*)::int FROM public.email_outbox WHERE idempotency_key = 'subscription_activated:razorpay:pay-second-monthly'), 0, 'renewal capture does not queue activation');
 
