@@ -912,3 +912,10 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - UI automation could read the Soravo window but Windows capture reported `IGraphicsCaptureItemInterop.CreateForMonitor` and accessibility click geometry was unavailable. The owner completed the live UI flow manually and confirmed success. No E2E credentials were copied or exposed.
 - The task worktree's ignored `website/.env.local` contains only the two public Supabase Vite config entries. `node_modules` paths are ignored junctions to existing dependency folders. Runtime commits `0bc0a64` and `17dddcb` were squash-merged through [PR #42](https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron/pull/42) as `9fa4c130589eba83b87f5ea59caf69859f35c2a1`. Documentation remains uncommitted for a separate docs branch. No deployment or production service mutation occurred.
 - Skills loaded: `supabase`, `tauri-v2`, `playwright-best-practices`, `code-review`, `rust-best-practices`. Considered but not loaded: `security-review` (no auth/security contract changes), `playwright-cli` (Playwright API route smoke was used; owner manually confirmed the full callback). CodeRabbit review completed; the valid Linux release finding was fixed and the checks are rerunning.
+
+### 2026-11-03 transactional email status
+- Branch: eature/transactional-email-resend-monitoring
+- Implementation complete for shared email service, templates, outbox migration, Resend webhook receiver.
+- Tests: website vitest email service, Resend signature, existing Razorpay tests pass.
+- Razorpay webhook unchanged; audit documented in Soravo_Fresh_Engineering_Pack/30_RAZORPAY_INTEGRATION_DESIGN.md.
+- Remaining owner actions: add RESEND_WEBHOOK_SECRET; create/verify Resend webhook post-deployment; apply migration via repository process.

@@ -64,3 +64,13 @@ current Resend dashboard were not available to this agent. Owner action:
 Monitor Supabase Auth logs, Resend delivery/bounce/complaint dashboards, and
 application error states for rate limits, SMTP failures, and reset-link issues.
 Redact one-time links and tokens from logs.
+
+## Application-level transactional email (2026-11-03)
+
+- Shared helper: `website/supabase/functions/_shared/email.ts`
+- Resend webhook receiver: `website/supabase/functions/resend-webhook/`
+- Secret names (values never committed): `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`
+- Sender: `Soravo <account@notifications.soravo.xyz>`
+- Reply-to: `admin@soravo.xyz`
+- Auth SMTP remains separate and must keep its own sender/domain configuration.
+- `email_outbox` table is server-only and stores idempotency keys/retry state.

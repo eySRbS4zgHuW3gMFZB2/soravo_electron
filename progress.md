@@ -1208,3 +1208,13 @@ Owner stopped the old app/server; ports 5173 and 5174 were free. Diagnosed local
 
 AUTH-DEV-SERVER-01 CodeRabbit and integration follow-up — 2026-11-02
 Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-01` as PR #42. CodeRabbit found that treating every `register_all()` failure as fatal could block Linux release startup; inspection of the locked `tauri-plugin-deep-link` 2.6.3 source confirmed filesystem and `xdg-mime` errors can propagate. Fixed in `17dddcb`: dev registration failure remains fatal and Linux release logs and continues. Owner-confirmed E2E remains successful. CodeRabbit, engineering-pack, Windows packaging and Linux packaging checks passed. PR #42 was squash-merged to `main` as `9fa4c130589eba83b87f5ea59caf69859f35c2a1`. Docs will be committed separately per repository convention.
+
+## 2026-11-03: Transactional email, Resend webhook monitoring, Razorpay audit
+
+- Branch/task: feature/transactional-email-resend-monitoring
+- Added migration 012_email_outbox_and_resend_delivery.sql with server-only email_outbox, RLS, claim helper.
+- Added shared Edge Function email service and seven approved lifecycle templates.
+- Added resend-webhook Edge Function with Svix signature verification, replay protection, dedup, out-of-order-safe delivery state updates.
+- Added email service tests and Resend webhook signature tests.
+- Razorpay webhook retained as-is; audit documented in pack 30.
+- No legacy project touched. No production deployment performed.

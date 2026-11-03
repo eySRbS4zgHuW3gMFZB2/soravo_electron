@@ -86,6 +86,15 @@
 - Rate-limit auth, device registration, license checks, webhook failure paths
 - Log outcomes and correlation IDs, never tokens/secrets/audio/transcripts
 
+### Email integration boundary (added 2026-11-03)
+
+Transactional email is handled by the new server-side `resend-webhook` Edge
+Function and the shared `_shared/email.ts` helper. Razorpay webhook processing
+remains the source of truth for payment/entitlement state. Email delivery
+failures are recorded in `email_outbox` and must never roll back or alter a
+successful payment or entitlement transition. The legacy `razorpay-webhook`
+endpoint is reused; no duplicate Razorpay webhook was created.
+
 ### Next Implementation Task
 
 1. Implement server-side order creation endpoint (Supabase Edge Function)
