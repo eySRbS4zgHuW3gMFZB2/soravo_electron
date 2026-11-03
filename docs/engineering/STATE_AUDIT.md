@@ -100,3 +100,11 @@
 - CONFIRMED: the worktree inventory was corrected, section reloads were separated from overview retries, and stale section errors were cleared on new requests. Migration 008 adds a service-role-only search RPC with literal, case-insensitive, deduplicated, email-first matching and stable ordering by creation time and ID within each group; this ordering can change page placement. Exact totals require database-wide match counting.
 - VALIDATION: 32 handler/API/UI tests, PostgreSQL 16 migration replay and 132 database assertions, website typecheck/build, Deno check, and 3 admin Chromium tests passed. The first browser run required Chromium installation; the passing rerun emitted the existing Pages redirect warning. See the round 3 entry in `Soravo_Fresh_Engineering_Pack/18_PROGRESS_AND_HANDOFF.md` and the historical external `workspace-context/validation-record.md` for exact evidence; that historical record was unavailable in this workspace for this documentation update.
 - LIMITATIONS: live Supabase integration and current-head remote CI/review policy were not verified. No integration, push or provider mutation was performed. Apply migration 008 before deploying the updated Edge Function.
+
+## P2-EMAIL-01 final repair — activation/renewal classification
+- Commit: 1344abb
+- Root cause: webhook read external entitlement state and passed flags to finalize while SQL finalization had the protected entitlement transition.
+- Repair: classification logic now runs inside inalize_webhook_payment_atomic using the entitlement row read under the existing advisory lock; webhook no longer supplies activation/renewal flags.
+- SQL still honors renewal-period extension and stores actual extended period end in renewal metadata.
+- TypeScript reporting/attempt consistency and tester coverage extended.
+- Validation: website Vitest 6 files/138 tests passed; root typecheck passed. SQL migration test syntax updated; hosted PostgreSQL was unavailable locally, so pgTAP execution is deferred to CI.

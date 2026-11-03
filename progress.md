@@ -1238,3 +1238,11 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 ## P2-EMAIL-01 retry follow-up — 2026-11-03
 
 - Resend concurrent idempotency conflicts now retry within the attempt limit; the scheduler credential guidance and Razorpay gateway configuration were corrected.
+
+## P2-EMAIL-01 final repair — activation/renewal classification
+- Commit: 1344abb
+- Root cause: webhook read external entitlement state and passed flags to finalize while SQL finalization had the protected entitlement transition.
+- Repair: classification logic now runs inside inalize_webhook_payment_atomic using the entitlement row read under the existing advisory lock; webhook no longer supplies activation/renewal flags.
+- SQL still honors renewal-period extension and stores actual extended period end in renewal metadata.
+- TypeScript reporting/attempt consistency and tester coverage extended.
+- Validation: website Vitest 6 files/138 tests passed; root typecheck passed. SQL migration test syntax updated; hosted PostgreSQL was unavailable locally, so pgTAP execution is deferred to CI.

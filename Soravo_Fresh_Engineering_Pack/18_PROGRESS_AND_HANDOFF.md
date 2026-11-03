@@ -938,3 +938,11 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 ### P2-EMAIL-01 retry follow-up — 2026-11-03
 
 - Reviewed PR head `153fe54b4d73d7d64d92b7cf97e8e5d4a349bf69` on the runtime task branch. Resend concurrent-key conflicts retry within the existing attempt cap; invalid-key conflicts stay permanent. Documented worker credential precedence and configured Razorpay signature-authenticated webhook access. No hosted settings changed. Scoped verification is in `workspace-context/validation-record.md`.
+
+## P2-EMAIL-01 final repair — activation/renewal classification
+- Commit: 1344abb
+- Root cause: webhook read external entitlement state and passed flags to finalize while SQL finalization had the protected entitlement transition.
+- Repair: classification logic now runs inside inalize_webhook_payment_atomic using the entitlement row read under the existing advisory lock; webhook no longer supplies activation/renewal flags.
+- SQL still honors renewal-period extension and stores actual extended period end in renewal metadata.
+- TypeScript reporting/attempt consistency and tester coverage extended.
+- Validation: website Vitest 6 files/138 tests passed; root typecheck passed. SQL migration test syntax updated; hosted PostgreSQL was unavailable locally, so pgTAP execution is deferred to CI.
