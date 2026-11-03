@@ -87,9 +87,61 @@ Deno.serve(async (req: Request) => {
       continue;
     }
 
+    // Final authorization immediately before the external provider request.
+    // The external HTTP request is outside the database transaction; reread the
+    // exact row and all authorization facts from the current database state.
+    const finalCheckNow = new Date();
+    const { data: authorizedRow, error: authorizationError } = await admin
+      .from("email_outbox")
+      .select("id, recipient_email, template_key, idempotency_key, metadata, status, claim_token, lease_expires_at")
+      .eq("id", row.id)
+      .eq("claim_token", claimToken)
+      .eq("status", "processing")
+      .gt("lease_expires_at", finalCheckNow.toISOString())
+      .maybeSingle();
+
+    if (
+      authorizationError ||
+      !authorizedRow ||
+      !authorizedRow.recipient_email ||
+      authorizedRow.recipient_email === "[redacted]"
+    ) {
+      if (!authorizationError && authorizedRow?.recipient_email === "[redacted]") {
+        await admin
+          .from("email_outbox")
+          .update({
+            status: "failed_permanent",
+            last_error_code: "redacted_recipient",
+            next_attempt_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", row.id)
+          .eq("claim_token", claimToken)
+          .eq("status", "processing");
+      }
+      skipped += 1;
+      continue;
+    }
+
+    // The database read and external HTTP request are not atomic. Renew the lease
+    // only after the final read proves this worker still owns an unexpired claim.
+    const leaseRenewalNow = new Date();
+    const { data: renewedRows, error: renewalError } = await admin
+      .from("email_outbox")
+      .update({ lease_expires_at: new Date(leaseRenewalNow.getTime() + 60_000).toISOString() })
+      .eq("id", row.id)
+      .eq("claim_token", claimToken)
+      .eq("status", "processing")
+      .gt("lease_expires_at", leaseRenewalNow.toISOString())
+      .select("id");
+    if (renewalError || !renewedRows?.length) {
+      skipped += 1;
+      continue;
+    }
+
     let rendered;
     try {
-      rendered = renderTemplate(row.template_key, row.metadata ?? {});
+      rendered = renderTemplate(authorizedRow.template_key, authorizedRow.metadata ?? {});
     } catch {
       failed += 1;
       await admin
@@ -106,32 +158,12 @@ Deno.serve(async (req: Request) => {
       continue;
     }
 
-    // A row may have expired or been reclaimed while earlier rows were sent.
-    // Renew only an unexpired claim we still own before making an external call.
-    const leaseNow = new Date();
-    const { data: renewedRows, error: renewalError } = await admin
-      .from("email_outbox")
-      .update({ lease_expires_at: new Date(leaseNow.getTime() + 60_000).toISOString() })
-      .eq("id", row.id)
-      .eq("claim_token", claimToken)
-      .eq("status", "processing")
-      .gt("lease_expires_at", leaseNow.toISOString())
-      .select("id");
-    if (renewalError) {
-      failed += 1;
-      continue;
-    }
-    if (!renewedRows?.length) {
-      skipped += 1;
-      continue;
-    }
-
     const result = await sendResendEmail({
-      to: row.recipient_email,
+      to: authorizedRow.recipient_email,
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
-      idempotencyKey: row.idempotency_key,
+      idempotencyKey: authorizedRow.idempotency_key,
     });
 
     if (result.ok) {

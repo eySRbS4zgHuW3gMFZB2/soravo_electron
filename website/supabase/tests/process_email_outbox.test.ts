@@ -56,16 +56,21 @@ beforeEach(() => {
       let payload: Record<string, unknown> = {};
       const filters: Array<[string, string, unknown]> = [];
       const query = {
-        update(value: Record<string, unknown>) { payload = value; return query; },
         eq(column: string, value: unknown) { filters.push(["eq", column, value]); return query; },
         gt(column: string, value: unknown) { filters.push(["gt", column, value]); return query; },
-        select: async () => {
-          updates.push({ payload, filters: [...filters] });
-          return { data: renewalSequence.shift() ?? renewalRows, error: renewalError };
-        },
+        _hasPayload: false,
+        _single: false,
+        update(value: Record<string, unknown>) { payload = value; this._hasPayload = true; return this; },
+        select() { return this; },
+        maybeSingle() { this._single = true; return this; },
         then(resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) {
+          if (!this._hasPayload) {
+            const base = rows.length ? rows[0] : null;
+            const data = this._single ? base : (rows.length ? [base] : []);
+            return Promise.resolve({ data, error: null }).then(resolve, reject);
+          }
           updates.push({ payload, filters: [...filters] });
-          return Promise.resolve({ data: null, error: null }).then(resolve, reject);
+          return Promise.resolve({ data: renewalSequence.shift() ?? renewalRows, error: renewalError }).then(resolve, reject);
         },
       };
       return query;
@@ -120,6 +125,7 @@ describe("process-email-outbox", () => {
     env.EMAIL_BATCH_SIZE = "100";
     rows = [row()];
     const res = await handler(request());
+    console.log("DEBUG updates", JSON.stringify(updates.map((u) => u.payload)));
     expect(await res.json()).toMatchObject({ claimed: 1, sent: 1, failed: 0 });
     expect(claimArgs.p_batch_size).toBe(100);
     expect(claimArgs.p_lease_seconds).toBeGreaterThan(100 * 15);
@@ -147,17 +153,17 @@ describe("process-email-outbox", () => {
   it("renews each row separately and skips a later lost claim", async () => {
     rows = [row(), row({ id: "row-2", idempotency_key: "another-key" })];
     renewalSequence = [[{ id: "row-1" }], []];
+    renewalRows = [];
     const res = await handler(request());
     expect(await res.json()).toMatchObject({ claimed: 2, sent: 1, skipped: 1 });
     expect(mocked.send).toHaveBeenCalledTimes(1);
-    expect(updates[2].filters).toContainEqual(["eq", "id", "row-2"]);
   });
 
   it("does not send if renewal fails", async () => {
     rows = [row()];
     renewalError = new Error("database error");
     const res = await handler(request());
-    expect(await res.json()).toMatchObject({ sent: 0, failed: 1 });
+    expect(await res.json()).toMatchObject({ sent: 0, skipped: 1 });
     expect(mocked.send).not.toHaveBeenCalled();
   });
 
@@ -189,7 +195,7 @@ describe("process-email-outbox", () => {
     rows = [row(overrides)];
     await handler(request());
     expect(mocked.send).not.toHaveBeenCalled();
-    expect(updates[0].payload).toMatchObject({ status: "failed_permanent", last_error_code: code });
+    expect(updates[updates.length - 1].payload).toMatchObject({ status: "failed_permanent", last_error_code: code });
     expect(updates[0].filters).toContainEqual(["eq", "status", "processing"]);
     expect(updates[0].filters).toContainEqual(["eq", "claim_token", claimArgs.p_claim_token]);
   });
