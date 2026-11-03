@@ -1,6 +1,6 @@
 # Progress and Handoff — Mandatory Living Record
 
-**Last updated:** 2026-10-27 (pack published to branch `docs/engineering-pack`; pull request open, awaiting owner approval to merge)  
+**Last updated:** 2026-11-03 (pack published to branch `docs/engineering-pack`; pull request open, awaiting owner approval to merge)<br>
 **Current status:** The pack is committed and pushed on `docs/engineering-pack`, with a pull request open into `main`. `main` is untouched. No repository rename, DNS change, production change, deployment, Supabase data change or secret operation has been performed. Implementation has started; completed tasks are recorded in the dated entries below.
 
 ## Owner-approved decisions
