@@ -108,3 +108,10 @@
 - SQL still honors renewal-period extension and stores actual extended period end in renewal metadata.
 - TypeScript reporting/attempt consistency and tester coverage extended.
 - Validation: website Vitest 6 files/138 tests passed; root typecheck passed. SQL migration test syntax updated; hosted PostgreSQL was unavailable locally, so pgTAP execution is deferred to CI.
+
+## P2-EMAIL-01 final authorization-check repair
+- Commit: 544864b
+- Root cause: worker could send based on stale claimed row after final denial/redaction.
+- Fix: final DB authorization SELECT immediately before Resend call matching row ID, claim token, status processing, valid lease; renders from fresh recipient/metadata. Failed final check is skipped without external send.
+- Limitation documented: read/request are not atomic; account deletion after final check and before provider acceptance remains narrow race; no broad locking redesign introduced.
+- Validation: website Vitest 6 files/138 tests passed; root typecheck passed.
