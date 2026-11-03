@@ -39,9 +39,34 @@ INSERT INTO public.webhook_events (provider, provider_event_id, event_type, sign
 VALUES ('razorpay', 'evt-period', 'payment.captured', true, 'processing', 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
 INSERT INTO public.entitlements (user_id, plan_code, status, issued_at, last_verified_at, subscription_period_end, lifetime)
 VALUES ('10000000-0000-0000-0000-000000000003', 'monthly', 'active', now(), now(), now() + interval '10 days', false);
-SELECT is(public.finalize_webhook_payment_atomic('razorpay', 'evt-period', 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid, '10000000-0000-0000-0000-000000000003'::uuid, 'monthly', 'payment-period', 'order-period', 1200, 'USD', now() + interval '30 days', false, false, false, true), 1, 'renewal payment finalizes');
+SELECT is(public.finalize_webhook_payment_atomic('razorpay', 'evt-period', 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid, '10000000-0000-0000-0000-000000000003'::uuid, 'monthly', 'payment-period', 'order-period', 1200, 'USD', now() + interval '30 days', false, true), 1, 'renewal payment finalizes');
 SELECT is((SELECT (metadata->>'periodEnd')::timestamptz FROM public.email_outbox WHERE idempotency_key = 'subscription_renewed:razorpay:payment-period'), (SELECT subscription_period_end FROM public.entitlements WHERE user_id = '10000000-0000-0000-0000-000000000003' AND plan_code = 'monthly'), 'renewal email uses stored extended period');
 SELECT ok((SELECT subscription_period_end = now() + interval '40 days' FROM public.entitlements WHERE user_id = '10000000-0000-0000-0000-000000000003' AND plan_code = 'monthly'), 'existing prepaid period is extended by thirty days');
+
+-- Initial monthly capture queues activation, not renewal.
+INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
+VALUES ('razorpay', 'evt-initial-monthly', 'payment.captured', true, 'processing', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd');
+SELECT is(public.finalize_webhook_payment_atomic('razorpay', 'evt-initial-monthly', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid, '10000000-0000-0000-0000-000000000003'::uuid, 'monthly', 'pay-initial-monthly', 'order-initial-monthly', 1200, 'USD', now() + interval '30 days', false, true), 1, 'initial monthly capture finalizes');
+SELECT is((SELECT count(*)::int FROM public.email_outbox WHERE idempotency_key = 'subscription_activated:razorpay:pay-initial-monthly'), 1, 'initial monthly capture queues activation');
+SELECT is((SELECT count(*)::int FROM public.email_outbox WHERE idempotency_key = 'subscription_renewed:razorpay:pay-initial-monthly'), 0, 'initial monthly capture does not queue renewal');
+
+-- Existing active entitlement capture queues renewal, not activation.
+INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
+VALUES ('razorpay', 'evt-second-monthly', 'payment.captured', true, 'processing', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee');
+SELECT is(public.finalize_webhook_payment_atomic('razorpay', 'evt-second-monthly', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'::uuid, '10000000-0000-0000-0000-000000000003'::uuid, 'monthly', 'pay-second-monthly', 'order-second-monthly', 1200, 'USD', now() + interval '30 days', false, true), 1, 'second monthly capture finalizes');
+SELECT is((SELECT count(*)::int FROM public.email_outbox WHERE idempotency_key = 'subscription_renewed:razorpay:pay-second-monthly'), 1, 'renewal capture queues renewal');
+SELECT is((SELECT count(*)::int FROM public.email_outbox WHERE idempotency_key = 'subscription_activated:razorpay:pay-second-monthly'), 0, 'renewal capture does not queue activation');
+
+-- Lifetime activation queues activation once.
+INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
+VALUES ('razorpay', 'evt-lifetime', 'payment.captured', true, 'processing', 'ffffffff-ffff-4fff-8fff-ffffffffffff');
+SELECT is(public.finalize_webhook_payment_atomic('razorpay', 'evt-lifetime', 'ffffffff-ffff-4fff-8fff-ffffffffffff'::uuid, '10000000-0000-0000-0000-000000000003'::uuid, 'lifetime', 'pay-lifetime', 'order-lifetime', 5000, 'USD', NULL, true, true), 1, 'lifetime capture finalizes');
+SELECT is((SELECT count(*)::int FROM public.email_outbox WHERE idempotency_key = 'subscription_activated:razorpay:pay-lifetime'), 1, 'lifetime capture queues activation');
+
+INSERT INTO public.webhook_events (provider, provider_event_id, event_type, signature_valid, processing_status, claim_token)
+VALUES ('razorpay', 'evt-lifetime-replay', 'payment.captured', true, 'processing', '12345678-1234-4234-8234-123456789012');
+SELECT is(public.finalize_webhook_payment_atomic('razorpay', 'evt-lifetime-replay', '12345678-1234-4234-8234-123456789012'::uuid, '10000000-0000-0000-0000-000000000003'::uuid, 'lifetime', 'pay-lifetime', 'order-lifetime', 5000, 'USD', NULL, true, true), 1, 'lifetime replay finalizes idempotently');
+SELECT is((SELECT count(*)::int FROM public.email_outbox WHERE idempotency_key = 'subscription_activated:razorpay:pay-lifetime'), 1, 'lifetime replay does not queue another activation');
 
 -- Account erasure redacts even though the foreign key also sets user_id null.
 DELETE FROM auth.users WHERE id = '10000000-0000-0000-0000-000000000003';

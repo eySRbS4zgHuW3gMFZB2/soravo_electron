@@ -172,6 +172,9 @@ DECLARE
   v_payment_already_captured BOOLEAN := FALSE;
   v_recipient_email TEXT;
   v_stored_period_end TIMESTAMPTZ;
+  v_existing_entitlement_status TEXT;
+  v_existing_entitlement_period_end TIMESTAMPTZ;
+  v_was_renewal BOOLEAN := FALSE;
 BEGIN
   IF p_provider IS NULL OR p_provider = '' THEN
     RAISE EXCEPTION 'invalid provider';
@@ -302,6 +305,18 @@ BEGIN
   END IF;
 
   IF NOT v_payment_already_captured THEN
+    SELECT status, subscription_period_end
+      INTO v_existing_entitlement_status, v_existing_entitlement_period_end
+    FROM public.entitlements
+    WHERE user_id = p_user_id
+      AND plan_code = p_plan
+    FOR UPDATE;
+
+    v_was_renewal := (p_plan = 'monthly'
+      AND v_existing_entitlement_status = 'active'
+      AND v_existing_entitlement_period_end IS NOT NULL
+      AND v_existing_entitlement_period_end > now());
+
     INSERT INTO public.entitlements (
       user_id, plan_code, status, issued_at, last_verified_at,
       subscription_period_end, lifetime
@@ -350,21 +365,9 @@ BEGIN
         )
         ON CONFLICT (idempotency_key) DO NOTHING;
       END IF;
-      IF p_queue_subscription_activated THEN
-        INSERT INTO public.email_outbox (
-          user_id, recipient_email, template_key, idempotency_key, status, metadata
-        )
-        VALUES (
-          p_user_id,
-          v_recipient_email,
-          'subscription_activated',
-          'subscription_activated:razorpay:' || p_provider_payment_id,
-          'pending',
-          jsonb_build_object('plan', p_plan)
-        )
-        ON CONFLICT (idempotency_key) DO NOTHING;
-      END IF;
-      IF p_queue_subscription_renewed THEN
+      -- Activation/renewal classification is owned by this transaction using the
+      -- entitlement row locked above. Caller-side classification is obsolete.
+      IF v_was_renewal THEN
         INSERT INTO public.email_outbox (
           user_id, recipient_email, template_key, idempotency_key, status, metadata
         )
@@ -375,6 +378,19 @@ BEGIN
           'subscription_renewed:razorpay:' || p_provider_payment_id,
           'pending',
           jsonb_build_object('plan', p_plan, 'periodEnd', v_stored_period_end::text)
+        )
+        ON CONFLICT (idempotency_key) DO NOTHING;
+      ELSE
+        INSERT INTO public.email_outbox (
+          user_id, recipient_email, template_key, idempotency_key, status, metadata
+        )
+        VALUES (
+          p_user_id,
+          v_recipient_email,
+          'subscription_activated',
+          'subscription_activated:razorpay:' || p_provider_payment_id,
+          'pending',
+          jsonb_build_object('plan', p_plan)
         )
         ON CONFLICT (idempotency_key) DO NOTHING;
       END IF;

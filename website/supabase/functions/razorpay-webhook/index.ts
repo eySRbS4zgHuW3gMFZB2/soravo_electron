@@ -258,31 +258,8 @@ Deno.serve(async (req: Request) => {
       userId = String(pendingSubscriptionPayment?.user_id ?? "");
     }
     const plan = derivePlan(amountMinor, currency);
-    // Queue subscription state emails only on the first captured payment for a plan.
-    let queueSubscriptionActivated = false;
-    let queueSubscriptionRenewed = false;
-    if (userId && plan) {
-      try {
-        const { data: existingEntitlement } = await admin
-          .from("entitlements")
-          .select("status, subscription_period_end")
-          .eq("user_id", userId)
-          .eq("plan_code", plan)
-          .maybeSingle();
-        if (plan === "monthly") {
-          const periodEnd = existingEntitlement?.subscription_period_end
-            ? new Date(String(existingEntitlement.subscription_period_end))
-            : null;
-          const active = existingEntitlement?.status === "active" && periodEnd !== null && (periodEnd as Date) > new Date();
-          queueSubscriptionRenewed = Boolean(active);
-          queueSubscriptionActivated = !active;
-        } else {
-          queueSubscriptionActivated = !existingEntitlement || existingEntitlement.status !== "lifetime_active";
-        }
-      } catch {
-        queueSubscriptionActivated = true;
-      }
-    }
+    // Notification classification is authoritative inside the finalization SQL transaction.
+    // The webhook must not make this decision from an unserialized external read.
     const isCapturedPaymentEvent =
       (eventTypeLower === "payment.captured" ||
         eventTypeLower === "subscription.charged" ||
@@ -352,8 +329,8 @@ Deno.serve(async (req: Request) => {
               console.error("razorpay-webhook: failed-payment insert failed", failedInsertError.code);
             }
             try {
-              const { data: failedUser } = await admin.auth.admin.getUserById(failedUserId);
-              const recipient = failedUser?.user?.email;
+              const { data: failedUser, error: failedUserError } = await admin.auth.admin.getUserById(failedUserId);
+              const recipient = !failedUserError ? failedUser?.user?.email : undefined;
               if (recipient) {
                 const { error: emailInsertError } = await admin.from("email_outbox").insert({
                   user_id: failedUserId,
@@ -378,8 +355,8 @@ Deno.serve(async (req: Request) => {
 
       if (eventTypeLower.includes("refunded") && userId) {
         try {
-          const { data: refundUser } = await admin.auth.admin.getUserById(userId);
-          const recipient = refundUser?.user?.email;
+          const { data: refundUser, error: refundUserError } = await admin.auth.admin.getUserById(userId);
+          const recipient = !refundUserError ? refundUser?.user?.email : undefined;
           if (recipient) {
             const { error: emailInsertError } = await admin.from("email_outbox").insert({
               user_id: userId,
@@ -525,8 +502,6 @@ Deno.serve(async (req: Request) => {
         p_period_end: periodEnd,
         p_lifetime: plan === "lifetime",
         p_queue_payment_receipt: true,
-        p_queue_subscription_activated: queueSubscriptionActivated,
-        p_queue_subscription_renewed: queueSubscriptionRenewed,
       }
     );
     if (finalizeError) throw finalizeError;
