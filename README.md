@@ -144,3 +144,7 @@ Outputs: `src-tauri/target/release/bundle/` (NSIS installer + MSI)
 ## License
 
 MIT
+
+## Email infrastructure
+See \docs/engineering/RESEND_INFRASTRUCTURE_AND_OPERATIONS.md\ and \docs/engineering/AUTH_EMAIL_RESEND_SETUP.md\.
+

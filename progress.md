@@ -1218,3 +1218,11 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 - Added email service tests and Resend webhook signature tests.
 - Razorpay webhook retained as-is; audit documented in pack 30.
 - No legacy project touched. No production deployment performed.
+
+### P2-EMAIL-01 update (2026-11-03)
+- Added producers in auth trigger and Razorpay finalization RPC (migration 013).
+- Added claim batch RPC and worker function process-email-outbox.
+- Added retention cleanup function and schedule script.
+- Docs: new RESEND_INFRASTRUCTURE_AND_OPERATIONS.md; AUTH doc corrected.
+- Tests: 109 passing.
+

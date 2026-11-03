@@ -919,3 +919,8 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - Tests: website vitest email service, Resend signature, existing Razorpay tests pass.
 - Razorpay webhook unchanged; audit documented in Soravo_Fresh_Engineering_Pack/30_RAZORPAY_INTEGRATION_DESIGN.md.
 - Remaining owner actions: add RESEND_WEBHOOK_SECRET; create/verify Resend webhook post-deployment; apply migration via repository process.
+
+### P2-EMAIL-01 continuation
+- Branch current worktree implements outbox producers, claim batch, worker, retention, docs.
+- Latest local tests: website vitest 6 files/109 tests passing; root typecheck passed.
+

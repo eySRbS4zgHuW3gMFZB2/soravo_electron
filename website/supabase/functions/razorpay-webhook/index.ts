@@ -258,7 +258,31 @@ Deno.serve(async (req: Request) => {
       userId = String(pendingSubscriptionPayment?.user_id ?? "");
     }
     const plan = derivePlan(amountMinor, currency);
-
+    // Queue subscription state emails only on the first captured payment for a plan.
+    let queueSubscriptionActivated = false;
+    let queueSubscriptionRenewed = false;
+    if (userId && plan) {
+      try {
+        const { data: existingEntitlement } = await admin
+          .from("entitlements")
+          .select("status, subscription_period_end")
+          .eq("user_id", userId)
+          .eq("plan_code", plan)
+          .maybeSingle();
+        if (plan === "monthly") {
+          const periodEnd = existingEntitlement?.subscription_period_end
+            ? new Date(String(existingEntitlement.subscription_period_end))
+            : null;
+          const active = existingEntitlement?.status === "active" && periodEnd !== null && (periodEnd as Date) > new Date();
+          queueSubscriptionRenewed = Boolean(active);
+          queueSubscriptionActivated = !active;
+        } else {
+          queueSubscriptionActivated = !existingEntitlement || existingEntitlement.status !== "lifetime_active";
+        }
+      } catch {
+        queueSubscriptionActivated = true;
+      }
+    }
     const isCapturedPaymentEvent =
       (eventTypeLower === "payment.captured" ||
         eventTypeLower === "subscription.charged" ||
@@ -327,10 +351,49 @@ Deno.serve(async (req: Request) => {
             if (failedInsertError && failedInsertError.code !== "23505") {
               console.error("razorpay-webhook: failed-payment insert failed", failedInsertError.code);
             }
+            try {
+              const { data: failedUser } = await admin.auth.admin.getUserById(failedUserId);
+              const recipient = failedUser?.user?.email;
+              if (recipient) {
+                await admin.from("email_outbox").insert({
+                  user_id: failedUserId,
+                  recipient_email: recipient,
+                  template_key: "subscription_payment_failed",
+                  idempotency_key: `subscription_payment_failed:razorpay:${String(entity.id)}`,
+                  status: "pending",
+                  metadata: { plan: plan ?? "subscription" },
+                } as Record<string, unknown>);
+              }
+            } catch (emailError) {
+              console.error("razorpay-webhook: failed-payment email enqueue failed", (emailError as { code?: string })?.code);
+            }
           }
         }
       } catch (error) {
         throw error;
+      }
+
+      if (eventTypeLower.includes("refunded") && userId) {
+        try {
+          const { data: refundUser } = await admin.auth.admin.getUserById(userId);
+          const recipient = refundUser?.user?.email;
+          if (recipient) {
+            await admin.from("email_outbox").insert({
+              user_id: userId,
+              recipient_email: recipient,
+              template_key: "refund",
+              idempotency_key: `refund:razorpay:${entity?.id ?? providerEventId}`,
+              status: "pending",
+              metadata: {
+                paymentReference: entity?.id ?? providerEventId,
+                amountDisplay: (amountMinor / 100).toFixed(2),
+                currency: currency || "USD",
+              },
+            } as Record<string, unknown>);
+          }
+        } catch (emailError) {
+          console.error("razorpay-webhook: refund email enqueue failed", (emailError as { code?: string })?.code);
+        }
       }
 
       // Acknowledge authorization-only, failed, or unsupported events without granting entitlement.
@@ -455,6 +518,9 @@ Deno.serve(async (req: Request) => {
         p_currency: currency,
         p_period_end: periodEnd,
         p_lifetime: plan === "lifetime",
+        p_queue_payment_receipt: true,
+        p_queue_subscription_activated: queueSubscriptionActivated,
+        p_queue_subscription_renewed: queueSubscriptionRenewed,
       }
     );
     if (finalizeError) throw finalizeError;
