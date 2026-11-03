@@ -1208,3 +1208,54 @@ Owner stopped the old app/server; ports 5173 and 5174 were free. Diagnosed local
 
 AUTH-DEV-SERVER-01 CodeRabbit and integration follow-up — 2026-11-02
 Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-01` as PR #42. CodeRabbit found that treating every `register_all()` failure as fatal could block Linux release startup; inspection of the locked `tauri-plugin-deep-link` 2.6.3 source confirmed filesystem and `xdg-mime` errors can propagate. Fixed in `17dddcb`: dev registration failure remains fatal and Linux release logs and continues. Owner-confirmed E2E remains successful. CodeRabbit, engineering-pack, Windows packaging and Linux packaging checks passed. PR #42 was squash-merged to `main` as `9fa4c130589eba83b87f5ea59caf69859f35c2a1`. Docs will be committed separately per repository convention.
+
+## 2026-11-03: Transactional email, Resend webhook monitoring, Razorpay audit
+
+- Branch/task: feature/transactional-email-resend-monitoring
+- Added migration 012_email_outbox_and_resend_delivery.sql with server-only email_outbox, RLS, claim helper.
+- Added shared Edge Function email service and seven approved lifecycle templates.
+- Added resend-webhook Edge Function with Svix signature verification, replay protection, dedup, out-of-order-safe delivery state updates.
+- Added email service tests and Resend webhook signature tests.
+- Razorpay webhook retained as-is; audit documented in pack 30.
+- No legacy project touched. No production deployment performed.
+
+### P2-EMAIL-01 update (2026-11-03)
+- Added producers in auth trigger and Razorpay finalization RPC (migration 013).
+- Added claim batch RPC and worker function process-email-outbox.
+- Added retention cleanup function and schedule script.
+- Docs: new RESEND_INFRASTRUCTURE_AND_OPERATIONS.md; AUTH doc corrected.
+- Tests: 109 passing.
+
+
+<!-- coderabbit-ai-generated:v1 -->
+
+## P2-EMAIL-01 review repair — 2026-11-03
+
+- Repaired outbox claiming, lease fencing, sender idempotency, webhook error handling, payment finalization, and user erasure. Migration 013 and focused database tests are included in CI. Verification and remaining deployment steps are recorded in the handoff.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+## P2-EMAIL-01 retry follow-up — 2026-11-03
+
+- Resend concurrent idempotency conflicts now retry within the attempt limit; the scheduler credential guidance and Razorpay gateway configuration were corrected.
+
+## P2-EMAIL-01 final repair — activation/renewal classification
+- Commit: 1344abb
+- Root cause: webhook read external entitlement state and passed flags to finalize while SQL finalization had the protected entitlement transition.
+- Repair: classification logic now runs inside finalize_webhook_payment_atomic using the entitlement row read under the existing advisory lock; webhook no longer supplies activation/renewal flags.
+- SQL still honors renewal-period extension and stores actual extended period end in renewal metadata.
+- TypeScript reporting/attempt consistency and tester coverage extended.
+- Validation: website Vitest 6 files/138 tests passed; root typecheck passed. SQL migration test syntax updated; hosted PostgreSQL was unavailable locally, so pgTAP execution is deferred to CI.
+
+## P2-EMAIL-01 final authorization-check repair
+- Commit: 544864b
+- Root cause: worker could send based on stale claimed row after final denial/redaction.
+- Fix: final DB authorization SELECT immediately before Resend call matching row ID, claim token, status processing, valid lease; renders from fresh recipient/metadata. Failed final check is skipped without external send.
+- Limitation documented: read/request are not atomic; account deletion after final check and before provider acceptance remains narrow race; no broad locking redesign introduced.
+- Validation: website Vitest 6 files/138 tests passed; root typecheck passed.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+## P2-EMAIL-01 webhook retry follow-up — 2026-11-03
+
+- Unmatched Resend message IDs now return retryable errors for five minutes from initial receipt to allow the outbox provider ID to be saved. Later deliveries are acknowledged if still unmatched; this also applies to Auth SMTP events. The worker test now checks claim and lease filters.

@@ -93,6 +93,11 @@ jobs:
       - name: Apply admin role upgrade
         run: psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/011_admin_role_upgrade.sql
 
+      - name: Apply email outbox migrations
+        run: |
+          psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/012_email_outbox_and_resend_delivery.sql
+          psql -v ON_ERROR_STOP=1 -f website/supabase/migrations/013_email_outbox_producers_claim_and_retention.sql
+
       - name: Run pgTAP SQL tests
         run: |
            pg_prove \
@@ -103,4 +108,5 @@ jobs:
             website/supabase/tests/admin_role_rls.test.sql \
             website/supabase/tests/admin_upgrade.test.sql \
             website/supabase/tests/admin_dashboard_overview.test.sql \
-            website/supabase/tests/admin_user_search.test.sql
+            website/supabase/tests/admin_user_search.test.sql \
+            website/supabase/tests/email_outbox_processing.test.sql

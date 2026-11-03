@@ -1,6 +1,6 @@
 # Progress and Handoff — Mandatory Living Record
 
-**Last updated:** 2026-10-27 (pack published to branch `docs/engineering-pack`; pull request open, awaiting owner approval to merge)  
+**Last updated:** 2026-11-03 (pack published to branch `docs/engineering-pack`; pull request open, awaiting owner approval to merge)<br>
 **Current status:** The pack is committed and pushed on `docs/engineering-pack`, with a pull request open into `main`. `main` is untouched. No repository rename, DNS change, production change, deployment, Supabase data change or secret operation has been performed. Implementation has started; completed tasks are recorded in the dated entries below.
 
 ## Owner-approved decisions
@@ -912,3 +912,51 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - UI automation could read the Soravo window but Windows capture reported `IGraphicsCaptureItemInterop.CreateForMonitor` and accessibility click geometry was unavailable. The owner completed the live UI flow manually and confirmed success. No E2E credentials were copied or exposed.
 - The task worktree's ignored `website/.env.local` contains only the two public Supabase Vite config entries. `node_modules` paths are ignored junctions to existing dependency folders. Runtime commits `0bc0a64` and `17dddcb` were squash-merged through [PR #42](https://github.com/eySRbS4zgHuW3gMFZB2/soravo_electron/pull/42) as `9fa4c130589eba83b87f5ea59caf69859f35c2a1`. Documentation remains uncommitted for a separate docs branch. No deployment or production service mutation occurred.
 - Skills loaded: `supabase`, `tauri-v2`, `playwright-best-practices`, `code-review`, `rust-best-practices`. Considered but not loaded: `security-review` (no auth/security contract changes), `playwright-cli` (Playwright API route smoke was used; owner manually confirmed the full callback). CodeRabbit review completed; the valid Linux release finding was fixed and the checks are rerunning.
+
+### 2026-11-03 transactional email status
+- Branch: eature/transactional-email-resend-monitoring
+- Implementation complete for shared email service, templates, outbox migration, Resend webhook receiver.
+- Tests: website vitest email service, Resend signature, existing Razorpay tests pass.
+- Razorpay webhook unchanged; audit documented in Soravo_Fresh_Engineering_Pack/30_RAZORPAY_INTEGRATION_DESIGN.md.
+- Remaining owner actions: add RESEND_WEBHOOK_SECRET; create/verify Resend webhook post-deployment; apply migration via repository process.
+
+### P2-EMAIL-01 continuation
+- Branch current worktree implements outbox producers, claim batch, worker, retention, docs.
+- Latest local tests: website vitest 6 files/109 tests passing; root typecheck passed.
+
+
+<!-- coderabbit-ai-generated:v1 -->
+
+### P2-EMAIL-01 review repair — 2026-11-03
+
+- Checkout: runtime-isolated `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `feature/transactional-email-resend-monitoring`, reviewed base `e54afe127ef48ab8294edff4a06543ef2853e783`. Remote history was rewritten; prior head preserved locally.
+- Repaired email idempotency and retry handling, claim fencing and recovery, webhook delivery updates, payment notification handling, renewal dates, and user redaction. Configure worker secrets, deploy functions and migrations, and install the retention schedule through the owner process. No hosted state was changed.
+- Scoped Vitest, Deno, and PostgreSQL checks passed; exact commands and inputs are in `workspace-context/validation-record.md`. Supabase and security-review skill files were unavailable; checks used repository tests and a manual security review.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+### P2-EMAIL-01 retry follow-up — 2026-11-03
+
+- Reviewed PR head `153fe54b4d73d7d64d92b7cf97e8e5d4a349bf69` on the runtime task branch. Resend concurrent-key conflicts retry within the existing attempt cap; invalid-key conflicts stay permanent. Documented worker credential precedence and configured Razorpay signature-authenticated webhook access. No hosted settings changed. Scoped verification is in `workspace-context/validation-record.md`.
+
+## P2-EMAIL-01 final repair — activation/renewal classification
+- Commit: 1344abb
+- Root cause: webhook read external entitlement state and passed flags to finalize while SQL finalization had the protected entitlement transition.
+- Repair: classification logic now runs inside finalize_webhook_payment_atomic using the entitlement row read under the existing advisory lock; webhook no longer supplies activation/renewal flags.
+- SQL still honors renewal-period extension and stores actual extended period end in renewal metadata.
+- TypeScript reporting/attempt consistency and tester coverage extended.
+- Validation: website Vitest 6 files/138 tests passed; root typecheck passed. SQL migration test syntax updated; hosted PostgreSQL was unavailable locally, so pgTAP execution is deferred to CI.
+
+## P2-EMAIL-01 final authorization-check repair
+- Commit: 544864b
+- Root cause: worker could send based on stale claimed row after final denial/redaction.
+- Fix: final DB authorization SELECT immediately before Resend call matching row ID, claim token, status processing, valid lease; renders from fresh recipient/metadata. Failed final check is skipped without external send.
+- Limitation documented: read/request are not atomic; account deletion after final check and before provider acceptance remains narrow race; no broad locking redesign introduced.
+- Validation: website Vitest 6 files/138 tests passed; root typecheck passed.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+### P2-EMAIL-01 webhook retry follow-up — 2026-11-03
+
+- Reviewed PR head `1b1936e32e23277b2999ec257bb98fe46c653aed`. Unmatched Resend events now retry for five minutes from their stored receipt time rather than being acknowledged immediately; a subsequent delivery after that window is acknowledged. Auth SMTP events without an outbox row follow the same rule. Matching higher-ranked statuses remain unchanged.
+- Updated worker claim/lease test fixtures and checked the affected webhook and worker tests. Exact validation is in `workspace-context/validation-record.md`. No hosted state was changed.

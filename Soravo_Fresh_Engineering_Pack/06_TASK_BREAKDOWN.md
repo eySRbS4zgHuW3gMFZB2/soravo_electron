@@ -118,3 +118,6 @@ Use IDs in branch names, PR titles, worktree paths and progress notes.
 ## Task-specific work items
 
 - SORAVO-DESKTOP-AUTH-REPAIR-30: Repair and accept the Windows desktop browser-auth flow, including deep-link lifecycle, PKCE handoff/OTP contract, secure session persistence, restart behavior, and documented evidence. Worktree: `.worktrees/SORAVO-DESKTOP-AUTH-REPAIR-30-desktop-auth`; branch: `fix/SORAVO-DESKTOP-AUTH-REPAIR-30-desktop-auth`.
+
+## P2-email - Transactional email and Resend monitoring
+- P2-EMAIL-01: Implement shared Resend email service, outbox migration, and webhook receiver.

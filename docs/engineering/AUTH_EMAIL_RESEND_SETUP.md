@@ -33,23 +33,20 @@ Current Cloudflare DNS for `soravo.xyz` contains Zoho business email records:
 
 These must be preserved. Do not overwrite, delete, or create a conflicting SPF record.
 
-Preferred sender domain: `mail.soravo.xyz`, sender `no-reply@mail.soravo.xyz`.
+Authoritative Resend infrastructure documentation:
+`docs/engineering/RESEND_INFRASTRUCTURE_AND_OPERATIONS.md`.
 
-No Resend DNS records were added because the exact records required by the
-current Resend dashboard were not available to this agent. Owner action:
+The approved transactional sender is now:
+- From: `Soravo <account@notifications.soravo.xyz>`
+- Reply-to: `admin@soravo.xyz`
 
-1. Open the Resend dashboard and add/verify the `mail.soravo.xyz` domain.
-2. Copy the exact DNS records Resend requires (name, type, value).
-3. Add only those records in Cloudflare for the `mail.soravo.xyz` subdomain.
-4. Verify the domain in Resend.
-5. Create a least-privilege Resend API key for SMTP.
-6. In Supabase Auth custom SMTP settings, use the Resend-documented values:
-   - host `smtp.resend.com`
-   - username `resend`
-   - password = Resend API key
-   - recommended TLS/port from current Resend/Supabase docs
-   - sender `no-reply@mail.soravo.xyz`
-7. Disable link tracking for authentication emails if it could alter URLs.
+Do not use obsolete `mail.soravo.xyz` or `no-reply@mail.soravo.xyz` instructions.
+
+Supabase Auth SMTP uses Resend SMTP, but the actual saved state must be verified
+before it is documented as configured. Do not claim it was saved or tested
+without dashboard evidence.
+
+Disable link tracking for authentication emails if it could alter URLs.
 
 ## Free-tier limits
 
@@ -64,3 +61,13 @@ current Resend dashboard were not available to this agent. Owner action:
 Monitor Supabase Auth logs, Resend delivery/bounce/complaint dashboards, and
 application error states for rate limits, SMTP failures, and reset-link issues.
 Redact one-time links and tokens from logs.
+
+## Application-level transactional email (2026-11-03)
+
+- Shared helper: `website/supabase/functions/_shared/email.ts`
+- Resend webhook receiver: `website/supabase/functions/resend-webhook/`
+- Secret names (values never committed): `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`
+- Sender: `Soravo <account@notifications.soravo.xyz>`
+- Reply-to: `admin@soravo.xyz`
+- Auth SMTP remains separate and must keep its own sender/domain configuration.
+- `email_outbox` table is server-only and stores idempotency keys/retry state.

@@ -258,7 +258,8 @@ Deno.serve(async (req: Request) => {
       userId = String(pendingSubscriptionPayment?.user_id ?? "");
     }
     const plan = derivePlan(amountMinor, currency);
-
+    // Notification classification is authoritative inside the finalization SQL transaction.
+    // The webhook must not make this decision from an unserialized external read.
     const isCapturedPaymentEvent =
       (eventTypeLower === "payment.captured" ||
         eventTypeLower === "subscription.charged" ||
@@ -327,10 +328,55 @@ Deno.serve(async (req: Request) => {
             if (failedInsertError && failedInsertError.code !== "23505") {
               console.error("razorpay-webhook: failed-payment insert failed", failedInsertError.code);
             }
+            try {
+              const { data: failedUser, error: failedUserError } = await admin.auth.admin.getUserById(failedUserId);
+              const recipient = !failedUserError ? failedUser?.user?.email : undefined;
+              if (recipient) {
+                const { error: emailInsertError } = await admin.from("email_outbox").insert({
+                  user_id: failedUserId,
+                  recipient_email: recipient,
+                  template_key: "subscription_payment_failed",
+                  idempotency_key: `subscription_payment_failed:razorpay:${String(entity.id)}`,
+                  status: "pending",
+                  metadata: { plan: plan ?? "subscription" },
+                } as Record<string, unknown>);
+                if (emailInsertError && emailInsertError.code !== "23505") {
+                  console.error("razorpay-webhook: failed-payment email enqueue failed", emailInsertError.code);
+                }
+              }
+            } catch (emailError) {
+              console.error("razorpay-webhook: failed-payment email enqueue failed", (emailError as { code?: string })?.code);
+            }
           }
         }
       } catch (error) {
         throw error;
+      }
+
+      if (eventTypeLower.includes("refunded") && userId) {
+        try {
+          const { data: refundUser, error: refundUserError } = await admin.auth.admin.getUserById(userId);
+          const recipient = !refundUserError ? refundUser?.user?.email : undefined;
+          if (recipient) {
+            const { error: emailInsertError } = await admin.from("email_outbox").insert({
+              user_id: userId,
+              recipient_email: recipient,
+              template_key: "refund",
+              idempotency_key: `refund:razorpay:${entity?.id ?? providerEventId}`,
+              status: "pending",
+              metadata: {
+                paymentReference: entity?.id ?? providerEventId,
+                amountDisplay: (amountMinor / 100).toFixed(2),
+                currency: currency || "USD",
+              },
+            } as Record<string, unknown>);
+            if (emailInsertError && emailInsertError.code !== "23505") {
+              console.error("razorpay-webhook: refund email enqueue failed", emailInsertError.code);
+            }
+          }
+        } catch (emailError) {
+          console.error("razorpay-webhook: refund email enqueue failed", (emailError as { code?: string })?.code);
+        }
       }
 
       // Acknowledge authorization-only, failed, or unsupported events without granting entitlement.
@@ -455,6 +501,7 @@ Deno.serve(async (req: Request) => {
         p_currency: currency,
         p_period_end: periodEnd,
         p_lifetime: plan === "lifetime",
+        p_queue_payment_receipt: true,
       }
     );
     if (finalizeError) throw finalizeError;

@@ -1,0 +1,213 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocked = vi.hoisted(() => ({ createClient: vi.fn(), send: vi.fn() }));
+vi.mock("https://esm.sh/@supabase/supabase-js@2.49.0", () => ({ createClient: mocked.createClient }));
+vi.mock("../functions/_shared/email.ts", () => ({
+  RESEND_TIMEOUT_MS: 15_000,
+  renderTemplate: (key: string) => {
+    if (key === "invalid") throw new Error("invalid template");
+    return { subject: "subject", html: "html", text: "text" };
+  },
+  sendResendEmail: mocked.send,
+}));
+
+let handler: (request: Request) => Promise<Response>;
+let env: Record<string, string>;
+let rows: Array<Record<string, unknown>>;
+let updates: Array<{ payload: Record<string, unknown>; filters: Array<[string, string, unknown]> }>;
+let claimArgs: Record<string, unknown>;
+let renewalRows: Array<{ id: string }>;
+let renewalSequence: Array<Array<{ id: string }>>;
+let renewalError: Error | null;
+
+beforeAll(async () => {
+  env = {
+    SUPABASE_URL: "https://supabase.invalid",
+    SUPABASE_SERVICE_ROLE_KEY: "synthetic-service-key",
+    RESEND_API_KEY: "synthetic-resend-key",
+  };
+  vi.stubGlobal("Deno", {
+    env: { get: (key: string) => env[key] },
+    serve: (callback: typeof handler) => { handler = callback; },
+  });
+  await import("../functions/process-email-outbox/index.ts");
+});
+
+afterAll(() => vi.unstubAllGlobals());
+
+beforeEach(() => {
+  rows = [];
+  updates = [];
+  renewalRows = [{ id: "row-1" }];
+  renewalSequence = [];
+  renewalError = null;
+  claimArgs = {};
+  delete env.EMAIL_BATCH_SIZE;
+  delete env.EMAIL_WORKER_SECRET;
+  delete env.CRON_SECRET;
+  mocked.send.mockReset().mockResolvedValue({ ok: true, messageId: "provider-1", retryable: false, statusCode: 200 });
+  mocked.createClient.mockReset().mockImplementation(() => ({
+    rpc: async (_name: string, args: Record<string, unknown>) => {
+      claimArgs = args;
+      rows = rows.map((candidate) => ({ ...candidate, claim_token: args.p_claim_token }));
+      return { data: rows, error: null };
+    },
+    from: (table: string) => {
+      expect(table).toBe("email_outbox");
+      let payload: Record<string, unknown> = {};
+      const filters: Array<[string, string, unknown]> = [];
+      const query = {
+        eq(column: string, value: unknown) { filters.push(["eq", column, value]); return query; },
+        gt(column: string, value: unknown) { filters.push(["gt", column, value]); return query; },
+        _hasPayload: false,
+        _single: false,
+        update(value: Record<string, unknown>) { payload = value; this._hasPayload = true; return this; },
+        select() { return this; },
+        maybeSingle() { this._single = true; return this; },
+        then(resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) {
+          if (!this._hasPayload) {
+            const matches = rows.filter((candidate) => filters.every(([operation, column, value]) => {
+              if (operation === "eq") return candidate[column] === value;
+              return typeof candidate[column] === "string" && typeof value === "string" && candidate[column] > value;
+            }));
+            const data = this._single ? (matches[0] ?? null) : matches;
+            return Promise.resolve({ data, error: null }).then(resolve, reject);
+          }
+          updates.push({ payload, filters: [...filters] });
+          return Promise.resolve({ data: renewalSequence.shift() ?? renewalRows, error: renewalError }).then(resolve, reject);
+        },
+      };
+      return query;
+    },
+  }));
+});
+
+function row(overrides: Record<string, unknown> = {}) {
+  return { id: "row-1", user_id: "user-1", recipient_email: "alice@example.com", template_key: "welcome", idempotency_key: "outbox-key", status: "processing", attempt_count: 1, metadata: {}, claim_token: "unused", lease_expires_at: "2999-01-01T00:00:00.000Z", ...overrides };
+}
+
+function request() {
+  return new Request("https://worker.invalid", { method: "POST", headers: { Authorization: "Bearer synthetic-service-key" } });
+}
+
+describe("process-email-outbox", () => {
+  it("rejects unauthorized requests", async () => {
+    const res = await handler(new Request("https://worker.invalid", { method: "POST" }));
+    expect(res.status).toBe(401);
+    expect(mocked.createClient).not.toHaveBeenCalled();
+  });
+
+  it("accepts service-role bearer and empty claims", async () => {
+    const res = await handler(request());
+    expect(res.status).toBe(200);
+    expect((await res.json()).claimed).toBe(0);
+  });
+
+  it("accepts the configured worker secret in the dedicated header", async () => {
+    env.EMAIL_WORKER_SECRET = "synthetic-worker-secret";
+    const res = await handler(new Request("https://worker.invalid", { method: "POST", headers: { "x-email-worker-secret": "synthetic-worker-secret" } }));
+    expect(res.status).toBe(200);
+    expect((await handler(request())).status).toBe(401);
+  });
+
+  it("rejects a mismatched bearer even when the worker-secret header matches", async () => {
+    env.EMAIL_WORKER_SECRET = "synthetic-worker-secret";
+    const res = await handler(new Request("https://worker.invalid", { method: "POST", headers: {
+      Authorization: "Bearer wrong-secret", "x-email-worker-secret": "synthetic-worker-secret",
+    } }));
+    expect(res.status).toBe(401);
+    expect(mocked.createClient).not.toHaveBeenCalled();
+  });
+
+  it("accepts CRON_SECRET as a bearer when the worker secret is unset", async () => {
+    env.CRON_SECRET = "synthetic-cron-secret";
+    const res = await handler(new Request("https://worker.invalid", { method: "POST", headers: { Authorization: "Bearer synthetic-cron-secret" } }));
+    expect(res.status).toBe(200);
+  });
+
+  it("fences a send, passes the outbox key, and finalizes with the status column", async () => {
+    env.EMAIL_BATCH_SIZE = "100";
+    rows = [row()];
+    const res = await handler(request());
+    expect(await res.json()).toMatchObject({ claimed: 1, sent: 1, failed: 0 });
+    expect(claimArgs.p_batch_size).toBe(100);
+    expect(claimArgs.p_lease_seconds).toBeGreaterThan(100 * 15);
+    expect(updates[0].payload).toHaveProperty("lease_expires_at");
+    expect(updates[0].filters).toEqual(expect.arrayContaining([
+      ["eq", "id", "row-1"], ["eq", "claim_token", claimArgs.p_claim_token],
+      ["eq", "status", "processing"], ["gt", "lease_expires_at", expect.any(String)],
+    ]));
+    expect(mocked.send).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: "outbox-key" }));
+    expect(mocked.send.mock.calls[0][0]).not.toHaveProperty("headers");
+    expect(updates[1].payload).toMatchObject({ status: "sent", provider_message_id: "provider-1" });
+    expect(updates[1].filters).toContainEqual(["eq", "status", "processing"]);
+    expect(updates[1].filters).toContainEqual(["eq", "claim_token", claimArgs.p_claim_token]);
+  });
+
+  it("rejects an expired claim in the final read before renewing or sending", async () => {
+    rows = [row({ lease_expires_at: "2000-01-01T00:00:00.000Z" })];
+    const res = await handler(request());
+    expect(await res.json()).toMatchObject({ claimed: 1, sent: 0, skipped: 1 });
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(updates).toHaveLength(0);
+  });
+
+  it("does not send when lease renewal returns no matching claim", async () => {
+    rows = [row()];
+    renewalRows = [];
+    const res = await handler(request());
+    expect(await res.json()).toMatchObject({ claimed: 1, sent: 0, skipped: 1 });
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(updates).toHaveLength(1);
+  });
+
+  it("renews each row separately and skips a later lost claim", async () => {
+    rows = [row(), row({ id: "row-2", idempotency_key: "another-key" })];
+    renewalSequence = [[{ id: "row-1" }], []];
+    renewalRows = [];
+    const res = await handler(request());
+    expect(await res.json()).toMatchObject({ claimed: 2, sent: 1, skipped: 1 });
+    expect(mocked.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not send if renewal fails", async () => {
+    rows = [row()];
+    renewalError = new Error("database error");
+    const res = await handler(request());
+    expect(await res.json()).toMatchObject({ sent: 0, skipped: 1 });
+    expect(mocked.send).not.toHaveBeenCalled();
+  });
+
+  it("uses the status column when scheduling a retry", async () => {
+    rows = [row()];
+    mocked.send.mockResolvedValue({ ok: false, retryable: true, statusCode: 429, errorCode: "rate_limit" });
+    const res = await handler(request());
+    expect(await res.json()).toMatchObject({ sent: 0, failed: 1 });
+    expect(updates[1].payload).toMatchObject({ status: "failed_retryable", last_error_code: "rate_limit" });
+    expect(updates[1].filters).toContainEqual(["eq", "status", "processing"]);
+  });
+
+  it.each([
+    ["retryable conflict", true, 1, "failed_retryable"],
+    ["permanent conflict", false, 1, "failed_permanent"],
+    ["attempt cap", true, 8, "failed_permanent"],
+  ])("honors provider retryability and the attempt limit for %s", async (_label, retryable, attempts, status) => {
+    rows = [row({ attempt_count: attempts })];
+    mocked.send.mockResolvedValue({ ok: false, retryable, statusCode: 409, errorCode: "provider_conflict" });
+    await handler(request());
+    expect(updates[1].payload).toMatchObject({ status, last_error_code: "provider_conflict" });
+    expect(updates[1].payload.next_attempt_at).toEqual(status === "failed_retryable" ? expect.any(String) : null);
+  });
+
+  it.each([
+    ["redacted recipient", { recipient_email: "[redacted]" }, "redacted_recipient"],
+    ["invalid template", { template_key: "invalid" }, "invalid_template"],
+  ])("uses the status column for %s", async (_label, overrides, code) => {
+    rows = [row(overrides)];
+    await handler(request());
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(updates[updates.length - 1].payload).toMatchObject({ status: "failed_permanent", last_error_code: code });
+    expect(updates[0].filters).toContainEqual(["eq", "status", "processing"]);
+    expect(updates[0].filters).toContainEqual(["eq", "claim_token", claimArgs.p_claim_token]);
+  });
+});
