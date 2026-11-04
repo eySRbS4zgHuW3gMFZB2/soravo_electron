@@ -82,9 +82,9 @@ Do not modify these records as part of application work.
 
 Display name: `Soravo`.
 From: `account@notifications.soravo.xyz`.
-Reply-to: `admin@soravo.xyz`.
+Reply-to: `support@soravo.xyz`.
 
-The sender address does not require a separate Zoho mailbox to send through Resend. `admin@soravo.xyz` is the reply destination.
+The sender address does not require a separate Zoho mailbox to send through Resend. `support@soravo.xyz` is the transactional reply destination; administrative messages remain available at `admin@soravo.xyz` when that mailbox is appropriate.
 
 ## Supabase Auth SMTP
 

@@ -2,7 +2,7 @@
 // Server-only. Never import into browser bundles.
 
 export const EMAIL_SENDER = "Soravo <account@notifications.soravo.xyz>";
-export const EMAIL_REPLY_TO = "admin@soravo.xyz";
+export const EMAIL_REPLY_TO = "support@soravo.xyz";
 export const RESEND_API_URL = "https://api.resend.com/emails";
 export const RESEND_TIMEOUT_MS = 15000;
 
@@ -59,7 +59,7 @@ export function redactEmail(value: string | null | undefined): string {
 }
 
 function baseTemplate(title: string, bodyHtml: string): string {
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title></head><body style="margin:0;padding:0;background:#f7f7f5;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:24px 0;"><tr><td align="center"><table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;padding:32px;"><tr><td><p style="margin:0 0 16px;font-size:14px;font-weight:600;letter-spacing:0.02em;color:#163300;">Soravo</p><h1 style="margin:0 0 16px;font-size:24px;line-height:1.2;color:#0e0f0c;">${escapeHtml(title)}</h1>${bodyHtml}</td></tr></table><p style="margin:16px 0 0;font-size:12px;color:#6b6b6b;">Soravo transactional email. Reply to admin@soravo.xyz.</p></td></tr></table></body></html>`;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title></head><body style="margin:0;padding:0;background:#f7f7f5;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:24px 0;"><tr><td align="center"><table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;padding:32px;"><tr><td><p style="margin:0 0 16px;font-size:14px;font-weight:600;letter-spacing:0.02em;color:#163300;">Soravo</p><h1 style="margin:0 0 16px;font-size:24px;line-height:1.2;color:#0e0f0c;">${escapeHtml(title)}</h1>${bodyHtml}</td></tr></table><p style="margin:16px 0 0;font-size:12px;color:#6b6b6b;">Soravo transactional email. Reply to support@soravo.xyz.</p></td></tr></table></body></html>`;
 }
 
 const templates: Record<string, (data: Record<string, unknown>) => TemplateResult> = {

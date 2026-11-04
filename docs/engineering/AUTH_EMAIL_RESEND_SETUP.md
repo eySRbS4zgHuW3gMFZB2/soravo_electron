@@ -38,7 +38,7 @@ Authoritative Resend infrastructure documentation:
 
 The approved transactional sender is now:
 - From: `Soravo <account@notifications.soravo.xyz>`
-- Reply-to: `admin@soravo.xyz`
+- Reply-to: `support@soravo.xyz`
 
 Do not use obsolete `mail.soravo.xyz` or `no-reply@mail.soravo.xyz` instructions.
 
@@ -68,6 +68,6 @@ Redact one-time links and tokens from logs.
 - Resend webhook receiver: `website/supabase/functions/resend-webhook/`
 - Secret names (values never committed): `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`
 - Sender: `Soravo <account@notifications.soravo.xyz>`
-- Reply-to: `admin@soravo.xyz`
+- Reply-to: `support@soravo.xyz`
 - Auth SMTP remains separate and must keep its own sender/domain configuration.
 - `email_outbox` table is server-only and stores idempotency keys/retry state.
