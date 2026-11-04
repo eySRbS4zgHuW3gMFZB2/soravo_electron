@@ -960,3 +960,13 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 
 - Reviewed PR head `1b1936e32e23277b2999ec257bb98fe46c653aed`. Unmatched Resend events now retry for five minutes from their stored receipt time rather than being acknowledged immediately; a subsequent delivery after that window is acknowledged. Auth SMTP events without an outbox row follow the same rule. Matching higher-ranked statuses remain unchanged.
 - Updated worker claim/lease test fixtures and checked the affected webhook and worker tests. Exact validation is in `workspace-context/validation-record.md`. No hosted state was changed.
+
+## Production activation noted (2026-11-03)
+- Database migrations applied: 010, 011, 012, 013.
+- Retention job created: soravo-cleanup-email-outbox-retention (0 3 * * *).
+- Deployed Edge Functions: resend-webhook v1 verify_jwt=false; process-email-outbox v1 verify_jwt=false.
+- RESEND_API_KEY availability tested at runtime via 503 health check; value not exposed.
+- RESEND_WEBHOOK_SECRET intentionally not created; manual owner step required.
+- EMAIL_WORKER_SECRET not configured; manual owner step required.
+- Worker schedule intentionally not created with hardcoded secret.
+- Webhook registration intentionally not performed during this pass.

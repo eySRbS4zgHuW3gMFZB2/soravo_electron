@@ -1259,3 +1259,13 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 ## P2-EMAIL-01 webhook retry follow-up — 2026-11-03
 
 - Unmatched Resend message IDs now return retryable errors for five minutes from initial receipt to allow the outbox provider ID to be saved. Later deliveries are acknowledged if still unmatched; this also applies to Auth SMTP events. The worker test now checks claim and lease filters.
+
+## Production activation noted (2026-11-03)
+- Database migrations applied: 010, 011, 012, 013.
+- Retention job created: soravo-cleanup-email-outbox-retention (0 3 * * *).
+- Deployed Edge Functions: resend-webhook v1 verify_jwt=false; process-email-outbox v1 verify_jwt=false.
+- RESEND_API_KEY availability tested at runtime via 503 health check; value not exposed.
+- RESEND_WEBHOOK_SECRET intentionally not created; manual owner step required.
+- EMAIL_WORKER_SECRET not configured; manual owner step required.
+- Worker schedule intentionally not created with hardcoded secret.
+- Webhook registration intentionally not performed during this pass.
