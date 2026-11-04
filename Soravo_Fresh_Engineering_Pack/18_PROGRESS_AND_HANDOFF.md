@@ -1,4 +1,4 @@
-# Progress and Handoff — Mandatory Living Record
+﻿# Progress and Handoff â€” Mandatory Living Record
 
 **Last updated:** 2026-11-03 (pack published to branch `docs/engineering-pack`; pull request open, awaiting owner approval to merge)<br>
 **Current status:** The pack is committed and pushed on `docs/engineering-pack`, with a pull request open into `main`. `main` is untouched. No repository rename, DNS change, production change, deployment, Supabase data change or secret operation has been performed. Implementation has started; completed tasks are recorded in the dated entries below.
@@ -24,7 +24,7 @@
 ## Decisions approved in the 2026-10-22 memo (highest authority in this pack)
 
 - **Website: rebuild fresh; preserve the current site until cutover.** The historical repository is a behavioral/content reference only for approved website content and behavior; its implementation, schema, migrations, Edge Functions and Handy-derived desktop code are not ported. `soravo.xyz` and its DNS/email configuration stay untouched until the replacement passes its launch checklist. Recorded as ADR-0008 and `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`.
-- **Repository rename: CI first.** Order is backup/audit → baseline CI and release-packaging checks → rename checklist → rename → post-rename verification. Recorded as ADR-0009, and in `05_IMPLEMENTATION_PLAN.md` Phase 0, `06_TASK_BREAKDOWN.md` P0 and `21_RENAME_AND_MIGRATION_RUNBOOK.md`.
+- **Repository rename: CI first.** Order is backup/audit â†’ baseline CI and release-packaging checks â†’ rename checklist â†’ rename â†’ post-rename verification. Recorded as ADR-0009, and in `05_IMPLEMENTATION_PLAN.md` Phase 0, `06_TASK_BREAKDOWN.md` P0 and `21_RENAME_AND_MIGRATION_RUNBOOK.md`.
 - **Production domain: preserved through the migration.** Cutover is a separate, explicitly approved, reversible step with a URL inventory, tested redirects and a rehearsed rollback. Recorded in `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`, Phase 8 and tasks P3-09/P8-09/P8-10.
 - **CrispASR packaging finding corrected** in `23_SOURCE_AUDIT_NOTES.md`; the bundled layout is ACCEPTED in ADR-0010 (2026-10-22, task P0-01) and a clean-machine install proving engine launch is an explicit release blocker.
 - **ADR/TDD consistency:** ADR-0003 is ACCEPTED for Supabase Edge Functions (2026-10-23). ADR-0010 is ACCEPTED for Tauri `bundle.resources` map form with bundled VC++ runtime; its recorded rationale, redistribution checks and clean-machine release gates remain binding; ADR-0005 is accepted for the public `soravo-releases` artifacts-only host.
@@ -35,8 +35,8 @@
 - Installed git is **2.56.0**; `.worktrees/` is already git-ignored in the active repository, so a worktree directory cannot be committed by accident.
 - The active repository currently holds **three registered worktrees**: `settings-system` and `snippets-scratchpad` are on **detached HEAD**, and `wispr-redesign` is on `feature/wispr-redesign`. Detached-HEAD worktrees are exactly the pattern the new policy ends.
 - The git safety guarantees the policy relies on were **verified empirically** against a throwaway repository, not assumed:
-  - a branch already checked out in one worktree **cannot** be checked out in another — *"already used by worktree at …"*;
-  - a branch held by a worktree **cannot** be deleted — *"cannot delete branch … used by worktree at …"*;
+  - a branch already checked out in one worktree **cannot** be checked out in another â€” *"already used by worktree at â€¦"*;
+  - a branch held by a worktree **cannot** be deleted â€” *"cannot delete branch â€¦ used by worktree at â€¦"*;
   - the main working tree **cannot** switch to a branch another worktree holds;
   - a worktree directory deleted outside git leaves a `prunable` registration, cleared by `git worktree prune`.
 - **The stash is repository-wide, not per-worktree.** Verified: a stash created in one worktree is visible from another. This is recorded as a shared-repository hazard in the policy, with "prefer committing over stashing" as the rule.
@@ -60,7 +60,7 @@
 - Audit of the active repository: `main` at `3ac4e3e`, clean working tree except the untracked pack folder, remote `soravo_electron`, eight local branches all with remote counterparts, three registered worktrees.
 - **CrispASR engine locations confirmed against the checkout:** `third-party/bin/` is git-ignored with **0 tracked files** (40 files exist only on a developer machine, from `npm run fetch:asr`); the engine is **committed** at `third-party/crispasr/extracted/crispasr-windows-x86_64-cpu/` (`crispasr.exe` 18.3 MB, `openblas.dll` 1.7 MB, `crispasr-quantize.exe` 0.6 MB, LICENSE, THIRD_PARTY_NOTICES.txt); `third-party/crispasr/crispasr.zip` (8.7 MB) is also committed.
 - `find_crispasr_binary` in `src-tauri/src/lib.rs` searches `<root>/third-party/bin/<exe>` then the children of `<root>/third-party/crispasr/extracted/`, over roots `current_dir`, `project_root` and the Tauri `resource_dir`. None of the first two exist on an installed machine, and `resource_dir` holds no engine.
-- A release build was produced for inspection: `Soravo_0.1.0_x64_en-US.msi` (~6.15 MB) and `Soravo_0.1.0_x64-setup.exe` (~4.28 MB), both far smaller than the ~20 MB engine — corroborating that the engine is not bundled.
+- A release build was produced for inspection: `Soravo_0.1.0_x64_en-US.msi` (~6.15 MB) and `Soravo_0.1.0_x64-setup.exe` (~4.28 MB), both far smaller than the ~20 MB engine â€” corroborating that the engine is not bundled.
 - The historical repository `soravo` currently holds the live production deployment: its `homepage` is `soravo.xyz`, and the Cloudflare Pages project `soravo` was last deployed from that repository's commit `33d3d4c`. The Pages project is deployed by **direct upload**, not by Cloudflare's Git integration, so a repository rename does not by itself break the deployed site. Recorded as planning context only.
 - The historical repository's Supabase project is observed as **paused** (`status: INACTIVE`), reinforcing that it must not be treated as a live dependency.
 - `soravo_deprecated` is confirmed available as a repository name.
@@ -69,32 +69,32 @@
 
 Documentation only, all inside `Soravo_Fresh_Engineering_Pack/`:
 
-- `00_README.md` — memo decisions added; new "Decisions still open" section; corrected engine-packaging baseline; production-site context; worktree policy added to the read order and to a new "Mandatory policies" section.
-- `01_AUTHORITY_AND_SOURCE_OF_TRUTH.md` — memo named as highest authority; old-repository boundary clarified as behavioral/content reference only; rename ordering fixed to CI-first.
-- `02_PRODUCT_REQUIREMENTS.md` — website section states fresh build per ADR-0008 and production-site preservation.
-- `04_TECHNICAL_DESIGN.md` — new "Engine packaging (blocking)" section; backend placement softened to PROPOSED with ADR-0003 pointer; new "Website rebuild strategy" section.
-- `05_IMPLEMENTATION_PLAN.md` — Phase 0 reordered (CI before rename, production untouched); Phase 1 packaging and clean-install gate; Phase 2 ADR-0003 decision task; Phase 3 fresh-build and production-untouched; Phase 8 ADR-0005 gate and cutover; new "Task discipline" section binding every task to a worktree.
-- `06_TASK_BREAKDOWN.md` — P0 reordered and expanded (P0-01..P0-09); P1 corrected for the real engine path, ADR-0010 and the clean-machine gate (P1-01..P1-08); P2-08 backend decision and P2-09 DNS/email record added; P3-01 fresh build and P3-09 URL inventory added; P8-00 host gate, P8-09 cutover preparation and P8-10 cutover added; worktree and branch naming added to the header and to the per-task checklist.
-- `07_AI_AGENT_OPERATING_RULES.md` — memo added to the mandatory session-start reading list; PROPOSED-ADR rule and production-cutover prohibition added; new "Worktrees — mandatory" section; worktree creation added to the required task loop; worktree details added to the completion report.
-- `09_GITHUB_CI_POLICY.md` — CI-before-rename rule; release workflow must inspect the artifact for the engine; production hostname must not be a CI target; task-ID branch convention tied to worktrees.
-- `12_TEST_AND_BENCHMARK_PROTOCOL.md` — clean-machine engine-launch case and production-unchanged case added.
-- `13_RELEASE_RUNBOOK.md` — ADR-0005 publish gate; clean-install requirement; separate website-cutover rollback pointer.
-- `15_ADR_INDEX.md` — ADR-0003/0005 statuses made unambiguous; ADR-0006 ordering constraint; new ADR-0008, ADR-0009, ADR-0010.
-- `16_PRIVACY_LEGAL_LAUNCH_CHECKLIST.md` — production-cutover checklist added.
-- `17_DEFINITION_OF_DONE.md` — clean-machine engine gate and cutover items added; general section now requires a dedicated worktree, isolation from other worktrees, review on the worktree diff, and post-integration worktree and build-output cleanup.
-- `18_PROGRESS_AND_HANDOFF.md` — this file.
-- `19_STATE_AUDIT_PROTOCOL.md` — audit-finding reconfirmation step added; worktree list added to the standard audit with a dedicated worktree audit section; `git worktree list` added to the safe commands.
-- `21_RENAME_AND_MIGRATION_RUNBOOK.md` — CI-first precondition and post-rename verification checklist added.
-- `23_SOURCE_AUDIT_NOTES.md` — finding 3 corrected with the verified paths; "later verification notes" section added.
-- `24_AGENT_PROMPT_TEMPLATE.md` — worktree field, worktree rules, tests-in-worktree and worktree reporting added.
-- `26_MANIFEST.json` — version 1.2.0, new file, memo decisions, open decisions, mandatory-policies block, corrected note.
-- `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md` — **new document**.
-- `28_GIT_WORKTREE_POLICY.md` — **new document**.
-- `INDEX.md` — new documents and the memo indexed; memo declared highest authority.
+- `00_README.md` â€” memo decisions added; new "Decisions still open" section; corrected engine-packaging baseline; production-site context; worktree policy added to the read order and to a new "Mandatory policies" section.
+- `01_AUTHORITY_AND_SOURCE_OF_TRUTH.md` â€” memo named as highest authority; old-repository boundary clarified as behavioral/content reference only; rename ordering fixed to CI-first.
+- `02_PRODUCT_REQUIREMENTS.md` â€” website section states fresh build per ADR-0008 and production-site preservation.
+- `04_TECHNICAL_DESIGN.md` â€” new "Engine packaging (blocking)" section; backend placement softened to PROPOSED with ADR-0003 pointer; new "Website rebuild strategy" section.
+- `05_IMPLEMENTATION_PLAN.md` â€” Phase 0 reordered (CI before rename, production untouched); Phase 1 packaging and clean-install gate; Phase 2 ADR-0003 decision task; Phase 3 fresh-build and production-untouched; Phase 8 ADR-0005 gate and cutover; new "Task discipline" section binding every task to a worktree.
+- `06_TASK_BREAKDOWN.md` â€” P0 reordered and expanded (P0-01..P0-09); P1 corrected for the real engine path, ADR-0010 and the clean-machine gate (P1-01..P1-08); P2-08 backend decision and P2-09 DNS/email record added; P3-01 fresh build and P3-09 URL inventory added; P8-00 host gate, P8-09 cutover preparation and P8-10 cutover added; worktree and branch naming added to the header and to the per-task checklist.
+- `07_AI_AGENT_OPERATING_RULES.md` â€” memo added to the mandatory session-start reading list; PROPOSED-ADR rule and production-cutover prohibition added; new "Worktrees â€” mandatory" section; worktree creation added to the required task loop; worktree details added to the completion report.
+- `09_GITHUB_CI_POLICY.md` â€” CI-before-rename rule; release workflow must inspect the artifact for the engine; production hostname must not be a CI target; task-ID branch convention tied to worktrees.
+- `12_TEST_AND_BENCHMARK_PROTOCOL.md` â€” clean-machine engine-launch case and production-unchanged case added.
+- `13_RELEASE_RUNBOOK.md` â€” ADR-0005 publish gate; clean-install requirement; separate website-cutover rollback pointer.
+- `15_ADR_INDEX.md` â€” ADR-0003/0005 statuses made unambiguous; ADR-0006 ordering constraint; new ADR-0008, ADR-0009, ADR-0010.
+- `16_PRIVACY_LEGAL_LAUNCH_CHECKLIST.md` â€” production-cutover checklist added.
+- `17_DEFINITION_OF_DONE.md` â€” clean-machine engine gate and cutover items added; general section now requires a dedicated worktree, isolation from other worktrees, review on the worktree diff, and post-integration worktree and build-output cleanup.
+- `18_PROGRESS_AND_HANDOFF.md` â€” this file.
+- `19_STATE_AUDIT_PROTOCOL.md` â€” audit-finding reconfirmation step added; worktree list added to the standard audit with a dedicated worktree audit section; `git worktree list` added to the safe commands.
+- `21_RENAME_AND_MIGRATION_RUNBOOK.md` â€” CI-first precondition and post-rename verification checklist added.
+- `23_SOURCE_AUDIT_NOTES.md` â€” finding 3 corrected with the verified paths; "later verification notes" section added.
+- `24_AGENT_PROMPT_TEMPLATE.md` â€” worktree field, worktree rules, tests-in-worktree and worktree reporting added.
+- `26_MANIFEST.json` â€” version 1.2.0, new file, memo decisions, open decisions, mandatory-policies block, corrected note.
+- `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md` â€” **new document**.
+- `28_GIT_WORKTREE_POLICY.md` â€” **new document**.
+- `INDEX.md` â€” new documents and the memo indexed; memo declared highest authority.
 
-Total: 20 files modified, 2 files added. The owner-supplied `SORAVO_DECISION_MEMO_2026-10-22.md` was **not modified** — verified byte-identical by SHA-256 against the pre-edit backup. Eight further documents were correctly left untouched because neither the memo nor the worktree policy required changes to them: `03_COMMERCIAL_RULES.md`, `08_SKILLS_AND_MCP_POLICY.md`, `10_SECURITY_BASELINE.md`, `11_ENVIRONMENT_AND_SECRETS.md`, `14_FREE_BINARY_HOSTING_OPTIONS.md`, `20_SERVICE_LIMITS_AND_MONITORING.md`, `22_REVERSE_ENGINEERING_AND_PROVENANCE.md`, `25_REFERENCE_LINKS.md`.
+Total: 20 files modified, 2 files added. The owner-supplied `SORAVO_DECISION_MEMO_2026-10-22.md` was **not modified** â€” verified byte-identical by SHA-256 against the pre-edit backup. Eight further documents were correctly left untouched because neither the memo nor the worktree policy required changes to them: `03_COMMERCIAL_RULES.md`, `08_SKILLS_AND_MCP_POLICY.md`, `10_SECURITY_BASELINE.md`, `11_ENVIRONMENT_AND_SECRETS.md`, `14_FREE_BINARY_HOSTING_OPTIONS.md`, `20_SERVICE_LIMITS_AND_MONITORING.md`, `22_REVERSE_ENGINEERING_AND_PROVENANCE.md`, `25_REFERENCE_LINKS.md`.
 
-## CodeRabbit review disposition — pull request #13
+## CodeRabbit review disposition â€” pull request #13
 
 All 15 inline findings and the summary's retained security concern were checked against the current files. **All 16 were valid and all 16 were fixed.** None was dismissed.
 
@@ -105,7 +105,7 @@ All 15 inline findings and the summary's retained security concern were checked 
 | 3 | `04_TECHNICAL_DESIGN.md`: verify a Linux engine artifact before keeping Linux as a launch target | **Fixed, and escalated.** Verified: the repository tracks a Windows engine only. Linux is now marked **BLOCKED** across the pack, with task P1-05 added to obtain, license, track and bundle a Linux engine. |
 | 4 | `05_IMPLEMENTATION_PLAN.md`: Phase 0 rename gate conflicts with the Phase 1 packaging work | **Fixed (major).** The circular dependency is resolved by a documented failing-baseline exception: Phase 0 requires the packaging check to **exist, run and report**, with its red result recorded; Phase 1 makes it a required green check. A red check for any other reason still blocks the rename. |
 | 5 | `05_IMPLEMENTATION_PLAN.md`: Phase 3 uses the pre-rename repository name | **Fixed.** Phase 3 now refers to `soravo_deprecated`. |
-| 6 | `09_GITHUB_CI_POLICY.md`: "has no reviewable diff" is wrong for a detached worktree | **Fixed.** The real defect — no named branch, easier to lose or misidentify — is stated instead. |
+| 6 | `09_GITHUB_CI_POLICY.md`: "has no reviewable diff" is wrong for a detached worktree | **Fixed.** The real defect â€” no named branch, easier to lose or misidentify â€” is stated instead. |
 | 7 | `10_SECURITY_BASELINE.md`: "Audit logs and use." is incomplete | **Fixed.** Now reads "Audit logs and use them to assess impact and scope." |
 | 8 | `13_RELEASE_RUNBOOK.md`: `sha256sum <artifact files>` is not valid shell | **Fixed.** Replaced with explicit artifact paths and a valid glob, with a note on why the placeholder is wrong. |
 | 9 | `18_PROGRESS_AND_HANDOFF.md`: handoff template omits the worktree path | **Fixed.** The template now records the worktree path, as the policy requires. |
@@ -117,7 +117,7 @@ All 15 inline findings and the summary's retained security concern were checked 
 | 15 | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: an unqualified snapshot restore can discard post-cutover records | **Fixed (major).** The recovery sequence is now: freeze writes, export post-snapshot records, apply a tested forward-fix or merge, restore only as a last resort, and verify no exported record is missing. |
 | 16 | Summary, security architecture review: a content classification must not remove a route's authorization | **Fixed.** Route sensitivity and required authorization are now recorded separately from the Preserve/Redirect/Retire/Block content disposition, and are carried over unchanged. |
 
-## Second CodeRabbit review disposition — pull request #13
+## Second CodeRabbit review disposition â€” pull request #13
 
 A second review was run on the revised branch. It returned 9 findings covering 6 distinct issues. **All were valid and all were fixed.**
 
@@ -130,7 +130,7 @@ A second review was run on the revised branch. It returned 9 findings covering 6
 | E | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: the keepalive gate blocked cutover on an undecided workflow | **Fixed.** A successful keepalive run is required only once ADR-0007 is accepted; otherwise the approved project-health monitoring check is required instead. |
 | F | `27_PRODUCTION_CUTOVER_AND_ROLLBACK.md`: the rollback export covered creates but not updates or deletes | **Fixed.** The change set now covers every post-snapshot create, update and delete with counts by operation, snapshot restore requires a separately available and verified replay procedure, and the replay is verified against the change set. |
 
-## Third CodeRabbit review disposition — pull request #13
+## Third CodeRabbit review disposition â€” pull request #13
 
 The GitHub App posted a further review against the revised branch. It raised 8 comments, of which 2 were re-statements of findings already fixed and **6 were new**. **All 6 new findings were valid and all 6 are fixed.**
 
@@ -141,9 +141,9 @@ The GitHub App posted a further review against the revised branch. It raised 8 c
 | I | `13_RELEASE_RUNBOOK.md` step 6 required a Linux build unconditionally, contradicting the Linux block | **Fixed.** The step now builds only platforms with a supported engine. |
 | J | `13_RELEASE_RUNBOOK.md` offered a `dist/*.exe` checksum glob that omitted the MSI | **Fixed.** The glob now covers both extensions, and the requirement states that every published installer must have a checksum entry. |
 | K | The rollback rehearsal did not require exercising the post-migration schema, so a rollback could fail before service verification | **Fixed.** The rehearsal must now prove the previous deployment can run against the resulting schema, or that the migration's rollback and forward-fix path works. |
-| L | The replay verification compared counts, and equal counts can hide a missing record behind an unrelated one | **Fixed.** Verification is now by record identity — stable record IDs and relevant fields — with an explicit duplicate check. |
+| L | The replay verification compared counts, and equal counts can hide a missing record behind an unrelated one | **Fixed.** Verification is now by record identity â€” stable record IDs and relevant fields â€” with an explicit duplicate check. |
 
-## Fourth CodeRabbit review disposition — pull request #13
+## Fourth CodeRabbit review disposition â€” pull request #13
 
 A fourth review, run against the final content including the CI workflow, returned 6 findings covering 4 distinct issues. **All 4 were valid and all 4 are fixed.**
 
@@ -154,13 +154,13 @@ A fourth review, run against the final content including the CI workflow, return
 | O | The cutover step ran a **Razorpay test-mode** payment against the **production** ledger, which could record a paid production entitlement with no live charge | **Fixed.** The test-mode payment now runs against staging before cutover and verifies only staging records. Production is verified with a separately approved live payment, with approval, reconciliation and refund evidence recorded. This was a genuine revenue-integrity defect. |
 | P | The checksum command wrote `dist/`-prefixed paths into `SHA256SUMS`, which breaks `sha256sum -c` from a clean download directory, and listed a fixed two-file set | **Fixed.** Entries use bare published asset names, and the command covers exactly the installer formats that are actually published. |
 
-## Fifth CodeRabbit review disposition — pull request #13
+## Fifth CodeRabbit review disposition â€” pull request #13
 
 A fifth review, run against the final content including the CI workflow, returned 9 findings across repeated runs, covering 8 distinct issues. **All 8 were valid and all 8 are fixed.**
 
 | # | Finding | Disposition |
 |---|---|---|
-| Q | The Linux release gate required a clean-runner build and a clean-machine install, but the pack prohibited any Linux build until the gate passed — making the gate impossible to complete | **Fixed.** Verification builds are permitted once P1-05 delivers the engine. Publication and support claims stay prohibited until the whole gate passes. Aligned in `05_IMPLEMENTATION_PLAN.md`, `06_TASK_BREAKDOWN.md` and `09_GITHUB_CI_POLICY.md`. |
+| Q | The Linux release gate required a clean-runner build and a clean-machine install, but the pack prohibited any Linux build until the gate passed â€” making the gate impossible to complete | **Fixed.** Verification builds are permitted once P1-05 delivers the engine. Publication and support claims stay prohibited until the whole gate passes. Aligned in `05_IMPLEMENTATION_PLAN.md`, `06_TASK_BREAKDOWN.md` and `09_GITHUB_CI_POLICY.md`. |
 | R | The cutover rehearsal did not test the change-set replay, which the rollback procedure requires | **Fixed.** The rehearsal must now capture a post-snapshot change set with creates, updates and deletes, replay it, and verify by record identity. |
 | S | The rollback procedure restored traffic before freezing writers, letting the two versions interleave | **Fixed.** Freezing every writer is now step 1, before routing is restored, and the freeze is released only after the recovered state is verified. |
 | T | The staging payment check sat at step 7, after step 3 had already deployed to production | **Fixed.** The staging payment check is now a prerequisite, before the procedure. Step 7 is the production live-payment verification only. |
@@ -169,21 +169,21 @@ A fifth review, run against the final content including the CI workflow, returne
 | W | `00_README.md` allowed the historical repository only as a documentation record, omitting the approved website reference | **Fixed.** Both permitted uses are now stated, with the prohibition on porting implementation retained. |
 | X | The agent rules prohibited branch deletion outright, which conflicts with the policy's mandatory merged-branch cleanup | **Fixed.** Merged task-branch cleanup is expected work; the prohibition still covers unmerged, unrelated and other-task branches. |
 
-## Sixth CodeRabbit review disposition — pull request #13
+## Sixth CodeRabbit review disposition â€” pull request #13
 
 A sixth review against the final content returned 9 findings covering 7 distinct issues. **All 7 were valid and all 7 are fixed.**
 
 | # | Finding | Disposition |
 |---|---|---|
-| Y | The release runbook uploaded artifacts to the **public** host at step 10, before the clean-machine install test at step 12, so a broken installer could be downloaded before the gate caught it | **Fixed.** The order is now: upload to a private or draft staging release → verify staged links → **clean-machine install test** → publish the verified artifacts to the public host → verify public links → publish notes → update `latest`. Updating `latest` does not remove access to already-public assets, so publication is what must wait. |
+| Y | The release runbook uploaded artifacts to the **public** host at step 10, before the clean-machine install test at step 12, so a broken installer could be downloaded before the gate caught it | **Fixed.** The order is now: upload to a private or draft staging release â†’ verify staged links â†’ **clean-machine install test** â†’ publish the verified artifacts to the public host â†’ verify public links â†’ publish notes â†’ update `latest`. Updating `latest` does not remove access to already-public assets, so publication is what must wait. |
 | Z | The release runbook still said "do not build" Linux before the gate, contradicting the verification-build allowance | **Fixed.** Verification builds are permitted once P1-05 delivers the engine; publication and support claims stay prohibited until the gate passes. |
-| AA | The rollback exported the change set during the rollback, but an export from current tables cannot reconstruct a deleted row or the prior state of an updated row — so change capture must be running *before* the snapshot | **Fixed.** A durable change-capture or provider-supported recovery mechanism must be enabled and tested before the production snapshot and any production write, with its retention and recovery of deleted rows and prior update states recorded. The pack now states explicitly that Supabase point-in-time recovery is a separate paid add-on and must not be assumed on the free tier, and that the cutover must not proceed without a tested mechanism. |
+| AA | The rollback exported the change set during the rollback, but an export from current tables cannot reconstruct a deleted row or the prior state of an updated row â€” so change capture must be running *before* the snapshot | **Fixed.** A durable change-capture or provider-supported recovery mechanism must be enabled and tested before the production snapshot and any production write, with its retention and recovery of deleted rows and prior update states recorded. The pack now states explicitly that Supabase point-in-time recovery is a separate paid add-on and must not be assumed on the free tier, and that the cutover must not proceed without a tested mechanism. |
 | AB | The cutover step 4 asked a logged-out browser to verify the account dashboard, which an unauthenticated visitor cannot reach | **Fixed.** The logged-out session now verifies the public pages and admin access denial; the dashboard, entitlement display and device list are verified after signing in with a test account. |
 | AC | The worktree recovery text still suggested recovering uncommitted files from the reflog, which cannot restore never-committed content | **Fixed.** The reflog recovers recorded commits only; uncommitted files need an external copy. |
 | AD | The rename runbook required confirming that Cloudflare's Git integration would be updated, which cannot be satisfied for the observed direct-upload deployment method | **Fixed.** The actual deployment method is recorded first, and the source-link step applies only if Git integration is configured. |
 | AE | The CI policy's website workflow had a path filter, which would leave a required check pending on unrelated pull requests | **Fixed.** The workflow runs on every pull request and reports success when the change does not affect the website paths, matching the pattern used by the pack's own CI workflow. |
 
-## Seventh CodeRabbit review disposition — pull request #13
+## Seventh CodeRabbit review disposition â€” pull request #13
 
 A seventh review against the final content returned 3 findings. **All 3 were valid and all 3 are fixed.**
 
@@ -193,7 +193,7 @@ A seventh review against the final content returned 3 findings. **All 3 were val
 | AG | The CI workflow resolved Markdown links only against bare filenames inside the pack, so a valid link such as `../README.md` failed, and a broken link carrying a fragment was not checked at all | **Fixed.** The validator now resolves a link target relative to the file that contains it, strips an optional fragment, skips absolute URLs, protocol-relative URLs and in-page anchors, and checks the resolved path. Verified with four new cases: a valid outside link passes, a broken link with a fragment is caught, a broken link outside the pack is caught, and external URLs and anchors are not flagged. The seven earlier failure modes were re-tested and still caught. |
 | AH | The rename runbook moved the local folder without repairing the nested worktrees, whose recorded paths move with it | **Fixed.** Every registered worktree path is recorded before the move, `git worktree repair` is run afterwards, each registration is verified, and pruning is forbidden until they are verified. |
 
-## Eighth CodeRabbit review disposition — pull request #13
+## Eighth CodeRabbit review disposition â€” pull request #13
 
 An eighth review against the final content returned 2 findings. **Both were valid and both are fixed.**
 
@@ -202,24 +202,24 @@ An eighth review against the final content returned 2 findings. **Both were vali
 | AI | `git worktree repair` without path arguments does not complete the repair when the main folder and its nested linked worktrees all move | **Fixed.** The runbook now supplies every new linked-worktree path, and verification uses `git worktree list --porcelain`. |
 | AJ | Pruning a worktree whose directory was deleted removed the registration before the detached-HEAD commit had been preserved, losing its only readily identifiable reference | **Fixed.** The recovery procedure and the state audit protocol now require inspecting `git worktree list --porcelain` and creating a rescue branch at any detached HEAD **before** pruning. |
 
-## Ninth CodeRabbit review disposition — pull request #13
+## Ninth CodeRabbit review disposition â€” pull request #13
 
 A ninth review against the final content returned 2 findings. **Both were valid and both are fixed.**
 
 | # | Finding | Disposition |
 |---|---|---|
-| AK | The rollback procedure restored routing to the previous deployment **before** recovering the datastore, so a rollback target that needed the migration's rollback or forward-fix would receive customers while it could not read the current schema or data | **Fixed.** The order is now: freeze writers → recover the data → verify the rollback target is compatible with the recovered datastore → restore routing → disable redirects → verify → unfreeze writers. Traffic stays off the previous deployment until the compatibility check passes. |
+| AK | The rollback procedure restored routing to the previous deployment **before** recovering the datastore, so a rollback target that needed the migration's rollback or forward-fix would receive customers while it could not read the current schema or data | **Fixed.** The order is now: freeze writers â†’ recover the data â†’ verify the rollback target is compatible with the recovered datastore â†’ restore routing â†’ disable redirects â†’ verify â†’ unfreeze writers. Traffic stays off the previous deployment until the compatibility check passes. |
 | AL | The manifest's platform note did not carry the verification-build allowance, so an agent reading only the manifest would conclude that no Linux build was permitted after P1-05 | **Fixed.** The note now states the same distinction as the implementation plan: verification builds are permitted once the engine exists; publication and support claims are not. |
 
-## Tenth CodeRabbit review disposition — pull request #13
+## Tenth CodeRabbit review disposition â€” pull request #13
 
 A tenth review against the final content returned 1 finding. **It was valid and it is fixed.**
 
 | # | Finding | Disposition |
 |---|---|---|
-| AM | The post-rename checklist required "no stale `soravo_electron` references" anywhere, which can never pass: the source audit notes and the owner decision memo must keep the old name because it is the repository identity at the time of those records | **Fixed.** The check is now scoped to active references — clone commands, live URLs, CI and release configuration, allowlists — while dated historical records are explicitly preserved. The pack's own note that a blanket check is the wrong test was kept. |
+| AM | The post-rename checklist required "no stale `soravo_electron` references" anywhere, which can never pass: the source audit notes and the owner decision memo must keep the old name because it is the repository identity at the time of those records | **Fixed.** The check is now scoped to active references â€” clone commands, live URLs, CI and release configuration, allowlists â€” while dated historical records are explicitly preserved. The pack's own note that a blanket check is the wrong test was kept. |
 
-## Eleventh CodeRabbit review disposition — pull request #13
+## Eleventh CodeRabbit review disposition â€” pull request #13
 
 An eleventh review against the final content returned 2 findings. **Both were valid and both are fixed.**
 
@@ -228,20 +228,20 @@ An eleventh review against the final content returned 2 findings. **Both were va
 | AN | The release runbook checked that public links resolve but never compared the downloaded bytes with `SHA256SUMS`, and the artifact tested at step 12 is not the copy step 13 publishes | **Fixed.** Step 14 now downloads each published installer and verifies its SHA-256 against `SHA256SUMS`. A resolving link is not the same as a link serving the verified bytes. |
 | AO | The worktree policy permitted only task IDs already in the breakdown, so an unplanned fix could not create a compliant worktree before its ID existed | **Fixed.** A new task ID may be assigned and recorded in the breakdown **before** the worktree is created. An unplanned fix is not blocked from starting. |
 
-## Twelfth CodeRabbit review disposition — pull request #13
+## Twelfth CodeRabbit review disposition â€” pull request #13
 
 A twelfth review against the final content returned 4 findings, and the GitHub App's own review of an earlier head returned 2 further distinct issues. **All 6 distinct findings were valid and all 6 are fixed.**
 
 | # | Finding | Disposition |
 |---|---|---|
 | AP | The rollback's compatibility check required the previous deployment to write through the same paths while every writer was frozen, so it could not pass without an exception | **Fixed.** Customer writes stay frozen, and writability is verified with a controlled isolated test using a dedicated test account and a disposable record, or a documented test-only exception naming the write, its authorisation and its reversal. The check no longer unfreezes customer writers. |
-| AQ | The change-set verification step was worded as verifying "the replayed" change set, so an operator who took the preferred forward-fix path could skip identity verification | **Fixed.** The verification now explicitly applies to whichever path was taken — forward-fix or restore-then-replay — and an operator who follows the forward-fix path cannot skip it. |
-| AR | The worktree policy required a new task ID to be recorded in the breakdown **before** the worktree existed, while also requiring all task edits to happen inside the worktree — an ordering the policy could not satisfy | **Fixed.** The pre-creation task-ID entry is now defined as a planning record and the only exception to rule 4, and rule 4 is scoped to implementation and task-scoped edits. |
+| AQ | The change-set verification step was worded as verifying "the replayed" change set, so an operator who took the preferred forward-fix path could skip identity verification | **Fixed.** The verification now explicitly applies to whichever path was taken â€” forward-fix or restore-then-replay â€” and an operator who follows the forward-fix path cannot skip it. |
+| AR | The worktree policy required a new task ID to be recorded in the breakdown **before** the worktree existed, while also requiring all task edits to happen inside the worktree â€” an ordering the policy could not satisfy | **Fixed.** The pre-creation task-ID entry is now defined as a planning record and the only exception to rule 4, and rule 4 is scoped to implementation and task-scoped edits. |
 | AS | The manifest's platform note still said Linux may not be built before P1-05 completed, contradicting the verification-build allowance in the same sentence | **Fixed.** The prohibition now names publication and support claims only, matching the implementation plan. |
 | AT | `05_IMPLEMENTATION_PLAN.md` and `06_TASK_BREAKDOWN.md` named the checksum manifest `SHA-256SUMS` while the release runbook creates and publishes `SHA256SUMS` | **Fixed.** `SHA256SUMS` is now the single canonical filename across every document. |
 | AU | The rollback procedure's staging-payment gate ran after the production hostname had already been deployed to | **Fixed in an earlier round:** the staging payment is a prerequisite, and step 7 is the production live-payment verification only. |
 
-## Thirteenth CodeRabbit review disposition — pull request #13
+## Thirteenth CodeRabbit review disposition â€” pull request #13
 
 A thirteenth review against the final content returned 5 findings covering 4 distinct issues. **All 4 were valid and all 4 are fixed.**
 
@@ -249,20 +249,20 @@ A thirteenth review against the final content returned 5 findings covering 4 dis
 |---|---|---|
 | AV | Phase 1 still listed "Add Linux CI build and real Linux smoke test" while also declaring Phase 1 Windows-only, which could prevent the phase from closing | **Fixed.** The Linux build and smoke test are removed from Phase 1 and belong solely to the separate Linux gate and tasks P1-07/P1-08. |
 | AW | The reference list described the historical repository as "documentation shape only", omitting the approved website reference | **Fixed.** Both permitted uses are now stated, with the prohibition on implementation copying retained. |
-| AX | The pre-creation task-ID record was left uncommitted in the main working tree, so it was absent from the new worktree and left main dirty | **Fixed.** The sequence is now: assign the ID and add the entry to the breakdown → **commit that planning record to the base ref the worktree is created from** → create the worktree from that base. Every other task edit stays inside the worktree. |
+| AX | The pre-creation task-ID record was left uncommitted in the main working tree, so it was absent from the new worktree and left main dirty | **Fixed.** The sequence is now: assign the ID and add the entry to the breakdown â†’ **commit that planning record to the base ref the worktree is created from** â†’ create the worktree from that base. Every other task edit stays inside the worktree. |
 | AY | The same task-ID rule needed its scope stated against rule 4 | **Fixed.** Rule 4 is scoped to implementation and task-scoped edits, with the pre-creation planning record as the single named exception. |
 
-## Fourteenth CodeRabbit review disposition — pull request #13
+## Fourteenth CodeRabbit review disposition â€” pull request #13
 
 A fourteenth review against the final content returned 3 findings, all in the worktree policy. **All 3 were valid and all 3 are fixed.** They exposed a chain of contradictions in the task-ID rule that earlier rounds had been patching one layer at a time, so this round replaces that rule rather than adjusting it.
 
 | # | Finding | Disposition |
 |---|---|---|
-| AZ | The task-ID rule required the planning entry to be committed to the base ref before the worktree existed, but a local commit to `main` does not appear in `origin/main`, and publishing it directly to a protected `main` bypasses the required pull-request workflow — so the documented new-task path could not be followed at all | **Fixed.** The rule is replaced. The ID is **assigned** first, with nothing written to any file; the worktree and branch are created from `origin/main`; and the breakdown entry is then added **inside the new worktree** as its first edit, committed on the task branch. The main tree is never touched, the entry travels with the branch, and no commit is made directly to `main`. The lifecycle's Create step and the evidence list were updated to match. |
+| AZ | The task-ID rule required the planning entry to be committed to the base ref before the worktree existed, but a local commit to `main` does not appear in `origin/main`, and publishing it directly to a protected `main` bypasses the required pull-request workflow â€” so the documented new-task path could not be followed at all | **Fixed.** The rule is replaced. The ID is **assigned** first, with nothing written to any file; the worktree and branch are created from `origin/main`; and the breakdown entry is then added **inside the new worktree** as its first edit, committed on the task branch. The main tree is never touched, the entry travels with the branch, and no commit is made directly to `main`. The lifecycle's Create step and the evidence list were updated to match. |
 | BA | Rule 4 needed its scope stated against the task-ID exception, which the rewrite removes | **Fixed.** Rule 4 is restored to plain form: all implementation and task-scoped edits happen inside the worktree, and the main working tree is not edited during a worktree task. |
 | BB | `git worktree prune` is repository-wide and can remove another task's registration during an unrelated cleanup, including the reference a detached HEAD needs | **Fixed.** The routine cleanup step now requires `git worktree list --porcelain` and the rescue check **before every prune**, not only during recovery. |
 
-## Fifteenth CodeRabbit review disposition — pull request #13
+## Fifteenth CodeRabbit review disposition â€” pull request #13
 
 A fifteenth review against the final content returned 3 findings covering 2 distinct issues. **Both were valid and both are fixed.**
 
@@ -271,17 +271,17 @@ A fifteenth review against the final content returned 3 findings covering 2 dist
 | BC | The release task required publishing a Linux installation guide during a Windows-only release, while Linux publication and support claims remain blocked until the Linux gate passes | **Fixed.** The Windows guide is published now; the Linux guide is published only after the Linux release gate passes. |
 | BD | The release runbook uploaded the artifacts to the public host as a normal release, so the bytes customers could fetch were only verified after they were already reachable | **Fixed.** The upload is now a **draft** on the public host: the hosted draft is downloaded and its checksum verified **before** it is published, and the public links and the published asset are re-checked from a logged-out browser afterwards. |
 
-## Fourteenth CodeRabbit review disposition — pull request #13
+## Fourteenth CodeRabbit review disposition â€” pull request #13
 
 A fourteenth review against the final content returned 3 findings. **All 3 were valid and all 3 are fixed.**
 
 | # | Finding | Disposition |
 |---|---|---|
 | AZ | The rollback's compatibility check required the previous deployment to write through the same paths while every production writer was frozen, so it could not pass without an exception that was never specified | **Fixed.** Customer writes stay frozen, and writability is verified with a controlled isolated test using a dedicated test account and a disposable record, or a documented test-only exception naming the write, its authorisation and its reversal. The check no longer unfreezes customer writers. |
-| BA | The change-set verification step was worded as verifying "the replayed" change set, so an operator who took the preferred forward-fix path could skip identity verification | **Fixed.** The verification now explicitly applies to whichever path was taken — forward-fix or restore-then-replay — and an operator who follows the forward-fix path cannot skip it. |
-| BB | The worktree policy required a new task ID to be recorded in the breakdown before the worktree existed, while also requiring all task edits to happen inside the worktree — an ordering the policy could not satisfy | **Fixed.** The pre-creation task-ID entry is now defined as a planning record and the only exception to rule 4, and rule 4 is scoped to implementation and task-scoped edits. |
+| BA | The change-set verification step was worded as verifying "the replayed" change set, so an operator who took the preferred forward-fix path could skip identity verification | **Fixed.** The verification now explicitly applies to whichever path was taken â€” forward-fix or restore-then-replay â€” and an operator who follows the forward-fix path cannot skip it. |
+| BB | The worktree policy required a new task ID to be recorded in the breakdown before the worktree existed, while also requiring all task edits to happen inside the worktree â€” an ordering the policy could not satisfy | **Fixed.** The pre-creation task-ID entry is now defined as a planning record and the only exception to rule 4, and rule 4 is scoped to implementation and task-scoped edits. |
 
-## Fifteenth CodeRabbit review disposition — pull request #13
+## Fifteenth CodeRabbit review disposition â€” pull request #13
 
 A fifteenth review against the final content returned 3 findings covering 2 distinct issues. **Both were valid and both are fixed.**
 
@@ -290,7 +290,7 @@ A fifteenth review against the final content returned 3 findings covering 2 dist
 | BC | The release task required publishing a Linux installation guide during a Windows-only release, while Linux publication and support claims stay blocked until the Linux release gate passes | **Fixed.** The Windows guide is published now; the Linux guide is published only after the Linux release gate passes. |
 | BD | The release runbook uploaded the artifacts to the public host as a normal release, so the bytes customers could fetch were only verified after they were already reachable | **Fixed.** The upload is now a draft on the public host: the hosted draft is downloaded and its checksum verified before it is published, and the public links and the published asset are re-checked from a logged-out browser afterwards. |
 
-## Sixteenth CodeRabbit review disposition — pull request #13
+## Sixteenth CodeRabbit review disposition â€” pull request #13
 
 A sixteenth review against the final content returned 3 findings. **All 3 were valid and all 3 are fixed.**
 
@@ -300,7 +300,7 @@ A sixteenth review against the final content returned 3 findings. **All 3 were v
 | BF | The change-set verification only applied to the replayed path, so an operator following the forward-fix path could skip identity verification | **Fixed.** Verification now applies to whichever path was taken. |
 | BG | The worktree policy required a task ID to be recorded in the breakdown before the worktree existed, while requiring all task edits inside the worktree | **Fixed.** The pre-creation ID entry is now a planning record and the only exception to rule 4. |
 
-## Seventeenth CodeRabbit review disposition — pull request #13
+## Seventeenth CodeRabbit review disposition â€” pull request #13
 
 A seventeenth review against the final content returned 3 findings. **All 3 were valid and all 3 are fixed.**
 
@@ -310,9 +310,9 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 | BI | The worktree removal step did not check for ignored files, which `git worktree remove` deletes even when the tree reports clean | **Fixed.** The cleanup step now requires listing ignored files first, preserving any that are needed, before removing the worktree. |
 | BJ | The task-ID rule required a planning entry to be committed to `main` before the worktree existed, which would leave the main tree dirty and bypass protected main; then required the entry inside the worktree, which it could not already have | **Fixed.** The sequence is now: assign the ID (no file write), create the worktree and branch from `origin/main`, then record the entry inside the worktree as its first edit. The main tree is never touched. |
 
-## Third follow-up session — 2026-10-22 (pack discoverability + skill/subagent rules)
+## Third follow-up session â€” 2026-10-22 (pack discoverability + skill/subagent rules)
 
-**Worktree:** `.worktrees/docs-pack-discoverability` · **Branch:** `docs/pack-discoverability` · **Base:** `2cea188` (`origin/main`)
+**Worktree:** `.worktrees/docs-pack-discoverability` Â· **Branch:** `docs/pack-discoverability` Â· **Base:** `2cea188` (`origin/main`)
 
 - Made the engineering pack discoverable from the repo root: `AGENTS.md` now has an "Engineering pack" section and `README.md` now links to `Soravo_Fresh_Engineering_Pack/` with the instruction to read `00_README.md` first. Before this PR the pack had no pointer from the repository root, so a new agent landing in the repo had no way to find the mandatory reading gate.
 - Added the mandatory **Skill Selection Gate** and **Subagent-First Orchestration** rules to `07_AI_AGENT_OPERATING_RULES.md` and `08_SKILLS_AND_MCP_POLICY.md`, and wired them into the pack's `00_README.md` read order.
@@ -320,9 +320,9 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 - Subagent-first orchestration: delegate independent, well-scoped work by default; the main agent owns destructive/irreversible work; each subagent gets its own worktree or directory scope; subagent output is evidence, not authority; re-read every changed file, run the relevant tests, and inspect the diff before accepting anything; a subagent that edited outside its scope is a blocker.
 - No application source, production configuration, repository name, existing worktree, or unrelated file was touched.
 
-## Publication session — 2026-10-22
+## Publication session â€” 2026-10-22
 
-**Worktree:** `.worktrees/docs-engineering-pack` · **Branch:** `docs/engineering-pack` · **Base:** `3ac4e3e` (`origin/main`)
+**Worktree:** `.worktrees/docs-engineering-pack` Â· **Branch:** `docs/engineering-pack` Â· **Base:** `3ac4e3e` (`origin/main`)
 
 - The pack was published under `28_GIT_WORKTREE_POLICY.md`: a dedicated worktree and named branch created from `origin/main`, all edits made inside it, and the main working tree never edited.
 - **`git worktree add -b <branch> origin/main` silently set the new branch's upstream to `origin/main`.** A bare `git push` would then have targeted `main`. The upstream was unset before pushing, and the push used an explicit refspec.
@@ -367,9 +367,9 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 - Confirmed no secrets logged:
 
 
-## P0-01 session — 2026-10-22 (Windows CrispASR packaging audit)
+## P0-01 session â€” 2026-10-22 (Windows CrispASR packaging audit)
 
-**Worktree:** .worktrees/P0-01-crispasr-packaging · **Branch:** chore/P0-01-crispasr-packaging · **Base:**  6face1 (origin/main)
+**Worktree:** .worktrees/P0-01-crispasr-packaging Â· **Branch:** chore/P0-01-crispasr-packaging Â· **Base:**  6face1 (origin/main)
 
 ### Audit findings (all CONFIRMED against the live checkout)
 
@@ -377,7 +377,7 @@ A seventeenth review against the final content returned 3 findings. **All 3 were
 2. **Tracked engine:** 	hird-party/crispasr/extracted/crispasr-windows-x86_64-cpu/ contains crispasr.exe (19.2 MB), openblas.dll (1.7 MB), crispasr-quantize.exe (0.6 MB), LICENSE (MIT), THIRD_PARTY_NOTICES.txt. Git-ignored 	hird-party/bin/ has 0 tracked files.
 3. **Runtime lookup fails on installed machine:**  ind_crispasr_binary() searches current_dir and project_root (don't exist on installed machine) and 
 esource_dir (no engine because  undle.resources is empty).
-4. **VC++ Redistributable dependency (NEW):** crispasr.exe depends on MSVCP140.dll, VCRUNTIME140.dll, VCRUNTIME140_1.dll, VCOMP140.DLL — none tracked, none on a clean Windows install. openblas.dll also depends on VCRUNTIME140.dll.
+4. **VC++ Redistributable dependency (NEW):** crispasr.exe depends on MSVCP140.dll, VCRUNTIME140.dll, VCRUNTIME140_1.dll, VCOMP140.DLL â€” none tracked, none on a clean Windows install. openblas.dll also depends on VCRUNTIME140.dll.
 5. **Licensing:** MIT (Copyright 2023-2026 The ggml authors). Redistribution permitted. LICENSE and THIRD_PARTY_NOTICES.txt must be included in bundle.
 6. **Historical ADR-0010 finding (superseded):** the initial audit found the layout PROPOSED; ADR-0010 was subsequently ACCEPTED (2026-10-22, task P0-01), as recorded in the implementation outcome below.
 7. **Linux BLOCKED:** No Linux engine artifact. Confirmed.
@@ -396,10 +396,10 @@ esource_dir()/crispasr/crispasr.exe. Works identically in dev and production. ex
 
 ### Minimal implementation plan
 
-Phase A: ADR-0010 decision — completed as ACCEPTED (2026-10-22, task P0-01): bundle.resources (map form).
-Phase B: Bundle config — set bundle.resources, bundle.windows.bundleVCRuntime: true.
-Phase C: Runtime lookup — add resource_dir/crispasr/ to find_crispasr_binary.
-Phase D: Build and verify — inspect installer for engine + DLLs + notices.
+Phase A: ADR-0010 decision â€” completed as ACCEPTED (2026-10-22, task P0-01): bundle.resources (map form).
+Phase B: Bundle config â€” set bundle.resources, bundle.windows.bundleVCRuntime: true.
+Phase C: Runtime lookup â€” add resource_dir/crispasr/ to find_crispasr_binary.
+Phase D: Build and verify â€” inspect installer for engine + DLLs + notices.
 Phase E: Automated CI packaging check.
 Phase F: Clean-machine verification procedure.
 Phase G: Linux BLOCKED (no changes).
@@ -435,17 +435,17 @@ Findings and plan reported to owner. Awaiting approval before implementation.
 
 ### CodeRabbit findings addressed
 
-1. Pin dtolnay/rust-toolchain to SHA — FIXED
-2. Source/target mapping check — FIXED
-3. --bundle requires path — FIXED
-4. CR bytes in 18_PROGRESS_AND_HANDOFF.md — FIXED
-5. VC++ DLLs co-located with engine — FIXED
+1. Pin dtolnay/rust-toolchain to SHA â€” FIXED
+2. Source/target mapping check â€” FIXED
+3. --bundle requires path â€” FIXED
+4. CR bytes in 18_PROGRESS_AND_HANDOFF.md â€” FIXED
+5. VC++ DLLs co-located with engine â€” FIXED
 
 ### Linux: BLOCKED (no Linux engine)
 
-## P1-05 session — 2026-10-22 (Linux CrispASR packaging — AppImage)
+## P1-05 session â€” 2026-10-22 (Linux CrispASR packaging â€” AppImage)
 
-**Worktree:** .worktrees/P1-05-linux-engine · **Branch:** chore/P1-05-linux-engine · **Base:** 4b953f5 (origin/main)
+**Worktree:** .worktrees/P1-05-linux-engine Â· **Branch:** chore/P1-05-linux-engine Â· **Base:** 4b953f5 (origin/main)
 
 ### Implementation completed
 
@@ -488,9 +488,9 @@ Findings and plan reported to owner. Awaiting approval before implementation.
 
 ### Tests run
 
-- cargo test — all tests pass (need to re-run after edits).
-- npm run typecheck — need to run.
-- Packaging verification script — need to run.
+- cargo test â€” all tests pass (need to re-run after edits).
+- npm run typecheck â€” need to run.
+- Packaging verification script â€” need to run.
 - Clean-machine Linux test (P1-08): NOT VERIFIED. No clean Linux VM available.
   CI builds on ubuntu-latest but runtime transcription on a real Linux host was not
   performed. Do not claim runtime verification.
@@ -498,18 +498,18 @@ Findings and plan reported to owner. Awaiting approval before implementation.
 ### Remaining risks
 
 - glibc >= 2.35 required for prebuilt binary (built on Ubuntu 22.04).
-- AVX2 CPU baseline — pre-Haswell CPUs need crispasr-linux-x86_64-cpu-legacy.
+- AVX2 CPU baseline â€” pre-Haswell CPUs need crispasr-linux-x86_64-cpu-legacy.
 - libgomp redistribution carries GPL-3.0+GCC-exception corresponding-source obligation.
 - AppImage portability not verified on real Linux host.
 
 ### CodeRabbit findings addressed
 
-1. VC++ DLL co-location — FIXED (all VC++ DLLs in crispasr/ on Windows).
-2. Tauri CLI pinned to lockfile — FIXED (added to devDependencies).
-3. Setup-node SHA pinned — FIXED (previous task).
-4. --bundle requires path — FIXED.
-5. Full bundled-path lookup — FIXED (resource_dir.join("crispasr-linux").join("crispasr")).
-6. CR bytes in progress log — FIXED.
+1. VC++ DLL co-location â€” FIXED (all VC++ DLLs in crispasr/ on Windows).
+2. Tauri CLI pinned to lockfile â€” FIXED (added to devDependencies).
+3. Setup-node SHA pinned â€” FIXED (previous task).
+4. --bundle requires path â€” FIXED.
+5. Full bundled-path lookup â€” FIXED (resource_dir.join("crispasr-linux").join("crispasr")).
+6. CR bytes in progress log â€” FIXED.
 
 ### Next task
 
@@ -612,7 +612,7 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Clean-machine Linux test still outstanding (P1-08)
 - PR #17 and PR #18 not yet merged
 
-## Auth and device review fixes — 2026-10-24 (P2-06 / P3-04 / P4-04)
+## Auth and device review fixes â€” 2026-10-24 (P2-06 / P3-04 / P4-04)
 
 - Task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/harden-auth-and-device-registration/c8575ad5`; base `1ae7c4c402d11ee2f9f41dea9c2c5c88299a3aa3`. The cloud runtime supplies this isolated task checkout; retained for review, with no integration performed.
 - Verified all four supplied findings: preserve current session and clear loading on returned/rejected restoration errors; catch sign-out failures with a retry message; describe confirmation as account creation; log entitlement/RPC/unexpected registration errors while retaining existing 500 responses.
@@ -620,7 +620,7 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Temporary behavioral harness: 11 checks passed, covering real components and handler with synthetic fixtures; no production services or credentials used. Website typecheck, production build, and all 19 existing tests also passed. Validation evidence is kept outside the repository in `workspace-context/validation-record.md`.
 - No architecture/entitlement contract changes. Rollback: revert this patch. Work remains uncommitted for the user's review.
 
-## P2-11 review fixes — 2026-10-24
+## P2-11 review fixes â€” 2026-10-24
 
 - Task checkout: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/clarify-task-scopes-webhook-claims/e23753fb`; base `66ac18f2f0275109960f7fd192a43be0214571dc`. The cloud runtime supplies this isolated task checkout; retained for review with no integration performed.
 - All three supplied findings were confirmed. Restored P2-10 ownership of device, entitlement and webhook DB tests (per `df9d608`); P2-11 owns reconciliation. Corrected the Edge Function serve command to run from `website/` using `supabase/.env.local`.
@@ -630,7 +630,7 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Security/limits: repairs ledger claim fencing only. Payment/entitlement writes remain separate transactions without the broader side-effect fencing required by ADR-0003; this pre-existing gap remains open. No provider credentials, configuration, data or production state changed. Deno deployment compatibility was not exercised. Rollback: revert this patch. Changes remain uncommitted.
 
 
-## Release gates and routing review fixes — 2026-10-27
+## Release gates and routing review fixes â€” 2026-10-27
 
 - Task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; branch `coderabbit/release-gates-and-routing/d7d742a1`; base/current HEAD `7202d2b802da2ae0751dbd28b2096f2782b6a17d`. The cloud runtime supplies this isolated task checkout; the documentation subagent edits only this pack, excluding `19_STATE_AUDIT_PROTOCOL.md`. Checkout retained for review; no integration performed.
 - Verified ADR-0003 and ADR-0005 are ACCEPTED. Moved backend placement and binary hosting out of open decisions; aligned the operating rule, runbook, task breakdown, manifest and matching handoff entries. Host publication still requires clean-machine verification and owner approval, with the Linux release gate required when publishing Linux artifacts.
@@ -641,7 +641,7 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Validation: website typecheck/build and 42 unit tests passed; final Playwright run passed 29 tests (21 Vite, 8 Pages) with no redirect warnings. Release harness passed 63 subprocess assertions using actual synthetic NSIS archives and 7-Zip extraction, PowerShell version/staging checks, real local Git tags and an explicit synthetic gh stub. Configuration/tracked-engine verification, manifest assertions, pack CI validator (35 documents) and whitespace checks passed. Exact commands and input identities are recorded in `workspace-context/validation-record.md` outside the repository. Real Windows build/MSI execution, clean-machine installation and remote release creation remain unverified. Integrated diff manually inspected; no external state changed.
 - No production, provider, repository visibility or secret changes. Rollback: revert this task patch. Changes remain uncommitted in the assigned task checkout.
 
-## ADR-0010 status alignment — 2026-10-27
+## ADR-0010 status alignment â€” 2026-10-27
 
 - Verified the supplied finding: `15_ADR_INDEX.md` records ADR-0010 as ACCEPTED (2026-10-22, task P0-01), with a rationale for Tauri `bundle.resources` map form and bundled VC++ runtime. Current `tauri.conf.json` agrees. The stale PROPOSED restriction conflicted with that accepted decision; this task resolves the documentation conflict without changing the ADR or application behavior.
 - Aligned the operating rule, README, technical design, implementation plan, task breakdown, manifest and source-audit follow-up. Moved the layout out of open decisions. Marked the initial P0-01 finding and prior conflict reports as superseded while preserving the decision rationale and historical evidence.
@@ -649,28 +649,28 @@ Run cargo test, typecheck, packaging verification, then push PR and await CodeRa
 - Task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/align-adr-0010-status/ca3e3e92`; base `3029944856e698ede53154bc243d9ebfc0d867c6`. The isolated cloud checkout is the sole registered worktree, initially clean, and is retained for review; no integration performed.
 - Skills: loaded `code-review` for diff review. Rust/Tauri, security and deployment skills were considered unnecessary for this documentation-only status correction. No knowledge-base directory is present. The task is small and sequential, so no subagent was needed.
 - Validation: engineering-pack CI validator passed (35 documents); bounded ADR/status, manifest, configuration-agreement and gate-preservation assertions passed; `git diff --check` and manual diff inspection passed. Results and input identities are recorded in `workspace-context/validation-record.md` outside Git. No provider, production, credential or repository setting changes. Rollback: revert this documentation patch.
-## 2026-10-27 — Auth test CORS review fix
+## 2026-10-27 â€” Auth test CORS review fix
 
 Confirmed missing CORS handling in `website/e2e/auth.spec.ts`. All six Supabase mocks now share headers for the configured Playwright origin, GET/POST/OPTIONS and SDK request headers; OPTIONS returns 204 before the existing response. Application contracts and auth response fixtures are preserved. Task checkout: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; branch `coderabbit/auth-test-cors-preflight/73226cf9`; base `15dff3c59e870f797705ff7142c7495482e102ea`. Retained the runtime-provided isolated checkout; no integration performed.
 
 Skills: loaded `code-review`; Playwright, Supabase and security skills unavailable in declared directories/catalog. Small sequential task, no delegation. Validation: auth Playwright 7/7, direct route harness 12/12, website typecheck/build passed. The original unit-test command expanded an unquoted shell glob and found no tests; the quoted-glob rerun passed all 48 tests and is recorded in `workspace-context/validation-record.md` outside the repository. No live services, credentials or production changes.
 
-### 2026-10-27 — Delivery conflict resolution
+### 2026-10-27 â€” Delivery conflict resolution
 
 Merged remote head `5c34e97bf0d04c4716c9b4af9c6e49a18c6bd433` into task commit `9e48ed2` on `feature/supabase-resend-auth-e2e`. Retained remote JSON mock helper, CORS methods, unit-test script and password recovery changes; retained typed Route handling and Supabase API version header allowance. Fresh checks passed: auth browser 7/7, route harness 12/12, unit tests 48/48, website/spec typecheck and build. No push performed.
 
 
-## 2026-10-27 — P3-04/P2-06 recovery visibility review (87c71ff9)
+## 2026-10-27 â€” P3-04/P2-06 recovery visibility review (87c71ff9)
 
 Reused isolated checkout `/home/vercel-sandbox/workspace/repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `coderabbit/verify-password-recovery-state/87c71ff9`, base `260ff874d256694cdd607c0703617cb0b13375ef` (sole named Git worktree, initially clean). The finding was partly addressed: AuthProvider already retains recovery identity in memory and restores saved identity. Fixed remaining loading and missing-ID gaps, removed unused page tracking, and preserved recovery with unavailable storage. Baseline regression run had 3 failures; final website suite 63/63, typecheck/build and recovery browser smoke 1/1 pass. Skill: code-review loaded; repository Supabase/security/React/Playwright skills unavailable; small sequential fix used no subagents. Evidence/input hashes: workspace-context/validation-record.md outside checkout. Uncommitted changes ready for delivery; no integration or remote changes.
 
 
-## 2026-10-27 — P2-06/P3-04 recovery initialization gate (7804fa0e)
+## 2026-10-27 â€” P2-06/P3-04 recovery initialization gate (7804fa0e)
 
 Confirmed the supplied finding against HEAD and auth-js 2.118.0: initialization schedules PASSWORD_RECOVERY after resolving and returns only an error, so INITIAL_SESSION or the restoration finally block can expose an invalid-link state prematurely. Keep token-bearing recovery callbacks loading until the event records identity; release loading on initialization/session errors, missing identity or sign-out. URL hints never authorize recovery. Five new cases cover deferred hash/query recovery and failure completion; baseline reproduced two failures, final targeted tests 36/36, website suite 68/68, typecheck/build pass. Auth browser suite 7/7 passed; manual diff/security inspection and git diff --check passed. Exact input hashes: workspace-context/validation-record.md outside Git.
 
 Retained the runtime-isolated sole task checkout `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `coderabbit/fix-password-recovery-loading/7804fa0e`, base `cfb565df8ce325c834c79ced3f66ec329fddb30b`; initially clean, no integration performed. Skills: code-review loaded; Supabase/security/React/Playwright skills unavailable in declared directory/catalog. Small sequential task, no delegation. Existing recovery identity, storage and invalid-link contracts preserved. No provider state or credentials used. Base CI was green; patch CI has not run. Rollback: revert this scoped patch.
-## API and recurring subscription review fixes — 2026-10-27
+## API and recurring subscription review fixes â€” 2026-10-27
 
 - Isolated runtime task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/api-subscription-hardening/8b15d30d`; base `74ec17eae3f6dbe0840b2766cdcfb5d08ac4e00a`. Retained for review; no commit, push or integration performed.
 - Verified each supplied finding against the baseline. Removed seven API aliases; current callers/tests already use canonical exports, so no import edits were needed. Existing entitlement/subscription guards and created-ID reuse were already implemented; moved those checks into a serialized database reservation before external creation, repairing the remaining concurrency gap.
@@ -681,7 +681,7 @@ Retained the runtime-isolated sole task checkout `repos/github.com/eysrbs4zghuw3
 
 - Final validation: 57 valid Vitest tests (27 affected handler tests rerun after the correlation-note edit; 30 unaffected results reused), browser typecheck/build passed; clean migration replay and all 74 pgTAP assertions passed, plus three concurrent PostgreSQL-session scenarios. Manual integrated security review completed, fixing service-role filtered-delete privileges and equal-time metadata enrichment before final verification. `git diff --check` passed. Disposable database stopped. No selected local checks outstanding; changes remain uncommitted.
 
-## P2-12 subscription ordering review follow-up — 2026-10-27
+## P2-12 subscription ordering review follow-up â€” 2026-10-27
 
 - Isolated cloud task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/harden-subscription-event-ordering/d316d0d5`; base `74ec17eae3f6dbe0840b2766cdcfb5d08ac4e00a`. Retained with uncommitted changes for review; no integration performed.
 - All six supplied findings confirmed and fixed. PricingPage clears captured constructor options and runs RTL cleanup. Checkout fails with 502 on guard read errors; pending/resumed join existing billable statuses in both lookup paths and the unique index. Only created checkout sessions are reused.
@@ -690,7 +690,7 @@ Retained the runtime-isolated sole task checkout `repos/github.com/eysrbs4zghuw3
 - Skills: code-review loaded; Supabase/Postgres/security skills considered but absent from repository-adjacent directory/session catalog. Knowledge-base directory unavailable. A read-only subagent independently checked baseline contracts and final changes. Primary agent performed all edits and executable checks.
 - Validation: website typecheck/build and 72 Vitest tests passed. PostgreSQL 17.11 with synthetic Supabase bootstrap/pgTAP passed 46 SQL assertions, then 7 guard assertions after upgrading the original predicate. Detailed commands/content hashes live in `workspace-context/validation-record.md` outside Git. Handlers use synthetic PostgREST/Auth/provider fixtures and real Supabase query builders; Deno deployment/live providers and remote CI were not exercised. Production configuration and data were untouched. Rollback: revert this patch before deployment; deployed index rollback requires a separate reviewed migration.
 
-## Delivery merge for subscription hardening — 2026-10-27
+## Delivery merge for subscription hardening â€” 2026-10-27
 
 - User authorized merging remote head `147fd3377295ff7df7009c088d3d8dea4d52f24a` into the runtime delivery branch `feature/razorpay-recurring-sandbox` at local task commit `96a7866`. Shared base `74ec17eae3f6dbe0840b2766cdcfb5d08ac4e00a`; same isolated checkout/worktree. Both parent histories and their progress/audit records are retained. No push is authorized or performed.
 - Kept the atomic checkout reservation, alias removal, provider correlation/recovery and terminal-wins event ordering. Incorporated remote pending/resumed billable guards, lookup failure 502 responses, legacy race recovery, stale-event ledger/response diagnostics, metadata error logging and PricingPage test cleanup. The remote stale-capture contract allows only monotonic paid-period enrichment while preserving status/watermark; the common atomic RPC now implements that behavior, with direct SQL regressions and all remote handler scenarios retained.
@@ -698,7 +698,7 @@ Retained the runtime-isolated sole task checkout `repos/github.com/eysrbs4zghuw3
 - Validation: fresh website typecheck/build and all 85 Vitest tests passed; fresh schema and original-003 upgrade paths passed all 87 pgTAP assertions. Duplicate billable rows intentionally rejected migration 004 while retaining the old index transactionally. Three overlapping PostgreSQL session scenarios passed. An early test attempt ran before test conflict resolution and failed; the corrected merged suite passed. Exact input identities/commands are in the external validation record.
 - Skill selection unchanged from the task: code-review already loaded; unavailable Supabase/Postgres/security skills not claimed. A read-only subagent compared both contracts and reviewed the integrated merge; primary agent owns conflict resolution and executed validation. No provider, production, dependency or desktop configuration changes. Deno/live provider/remote CI remain unverified. Merge commit is prepared locally for automatic delivery; no push.
 
-## Subscription insert error review follow-up — 2026-10-27
+## Subscription insert error review follow-up â€” 2026-10-27
 
 - Isolated runtime task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; branch `coderabbit/fix-subscription-insert-errors/969be6a5`; base `f45731b86f01481601426ed7c12f85feedfa4907`. Retained for review; no commit, push or integration performed.
 - The checkout finding is partially current: failed saves already return HTTP 500, but provider compensation was missing. Added immediate cancellation attempts only for non-23505 save failures, retaining the HTTP failure and reconciliation reservation even if cancellation fails. The 23505 race path is unchanged. Existing README reservation/reconciliation and entitlement contracts are preserved.
@@ -707,21 +707,21 @@ Retained the runtime-isolated sole task checkout `repos/github.com/eysrbs4zghuw3
 - Validation: website typecheck/build and 88 Vitest tests passed, including cancellation success, HTTP rejection and network exception, no successful checkout payload after save failure, reservation retention and unchanged legacy races. Fresh migration replay and all 87 pgTAP assertions passed on disposable PostgreSQL 16; manual diff/security inspection confirmed compensation stays inside the authenticated monthly checkout error path, logs no provider payloads/secrets, and preserves the 23505 branch and reservation contract. Detailed checks are tracked in `workspace-context/validation-record.md` outside the repository. Installed missing website dependencies using the unchanged lockfile.
 - No schema, dependency version, provider configuration or production state changes. Provider calls use synthetic fixtures; Deno deployment and live cancellation remain unverified. Rollback: revert this patch.
 
-## Checkout lookup and locking review fixes — 2026-10-27
+## Checkout lookup and locking review fixes â€” 2026-10-27
 
 - Isolated runtime task checkout/worktree: `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`; assigned branch `coderabbit/harden-checkout-error-handling-locking/c935e5b0`; base `f45731b86f01481601426ed7c12f85feedfa4907`. Retained for review; no integration performed.
 - All three supplied findings confirmed. Initial and both retry plan lookup paths now log query error code/request ID and return 502 before further provider creation. Subscription creation failure logs include the reservation request ID. Migration 005 uses a per-user transaction advisory lock and a plain Auth user existence check, preserving `Unknown user` and existing checkout reservation/reconciliation guarantees.
-- Regression coverage: initial/retry plan query failures, provider status/request ID logging, reservation release/retention and unknown users. Website typecheck/build and 91 Vitest tests passed; fresh migrations 001–005 and 88 pgTAP assertions passed on disposable PostgreSQL 18.6. Overlapping SQL sessions verified advisory serialization, independent-user progress, concurrent non-key Auth updates, and release on commit/rollback. Detailed commands/input hashes: external `workspace-context/validation-record.md`.
+- Regression coverage: initial/retry plan query failures, provider status/request ID logging, reservation release/retention and unknown users. Website typecheck/build and 91 Vitest tests passed; fresh migrations 001â€“005 and 88 pgTAP assertions passed on disposable PostgreSQL 18.6. Overlapping SQL sessions verified advisory serialization, independent-user progress, concurrent non-key Auth updates, and release on commit/rollback. Detailed commands/input hashes: external `workspace-context/validation-record.md`.
 - Skills: loaded `code-review`; Supabase/Postgres/security skills unavailable in repository-adjacent/session paths. Knowledge-base absent. Small sequential repair performed in the existing isolated task checkout. Manual diff/security review found no secret exposure or authorization/entitlement changes. Provider responses use synthetic fixtures; live providers, Deno deployment and remote CI are unverified. Rollback: revert the patch before deployment; existing deployed databases require separately applying the revised function definition.
 
-## Delivery merge for subscription insert compensation — 2026-10-27
+## Delivery merge for subscription insert compensation â€” 2026-10-27
 
 - User requested merging remote head `b645e8246c4089c9ca6f73bdc9a25b0d577e884f` into local task commit `d8d7ec4a8d49b05d575e22976d66a76f4d182867` and committing locally without pushing. Shared base: `f45731b86f01481601426ed7c12f85feedfa4907`. Runtime delivery branch: `feature/razorpay-recurring-sandbox`; same isolated checkout/worktree `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`.
 - Resolved both documentation conflicts by retaining both parent entries in full. Verified automatic source/test merges against both parents: remote plan lookup failures, correlated logging, per-user advisory lock and unknown-user assertion coexist with local cancellation compensation, HTTP 500, retained reservations and unchanged 23505 race handling. No additional application behavior changes.
 - Validation: all 30 merged checkout tests passed freshly; 64 unchanged tests and website typecheck/build results reused after matching relevant source/config/dependency/runtime inputs. Fresh PostgreSQL 16.15 migration replay and all 88 pgTAP assertions passed. Both-parent content preservation, manual integrated review and whitespace checks passed; a read-only subagent independently checked the source/test merge. Detailed input identities/results remain in the external workspace validation record.
 - Skill selection from the original task retained. Both parent histories are preserved in the merge commit. No push, production/provider changes or deployment performed. Disposable database and task-owned Docker daemon stopped. Live cancellation, Deno deployment and remote CI remain unverified.
 
-## Cancellation deadline and guideline audit follow-up — 2026-10-27
+## Cancellation deadline and guideline audit follow-up â€” 2026-10-27
 
 - Both supplied findings confirmed. Corrected the earlier guideline audit to acknowledge root `AGENTS.md` and the engineering-pack reading gate. Added a five-second abort deadline to cancellation after a non-23505 subscription save failure, with timer cleanup in `finally`. HTTP 500 and reservation retention for reconciliation remain unchanged, including after timeout; legacy race recovery is preserved.
 - P6-03/P6-08 follow-up in isolated runtime checkout `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, assigned branch `coderabbit/bound-cancellation-and-update-audit/8e133da2`, base `10da4424140e30beb80ed5361a81f904c4d4da52`. Small sequential repair; no delegation. Skills: loaded `code-review`; Supabase/Postgres/security skills considered but unavailable in the declared repository-adjacent/session catalog. Root guidance and pack reading gate applied; additional knowledge-base guidance absent.
@@ -753,7 +753,7 @@ Remaining: GitHub Actions database verification, CodeRabbit findings, owner boot
 
 <!-- coderabbit-ai-generated-section:v1:4474a8696de9975950b731b41e95cf707e36aa1ebdf3b8c0120fc3f264c2dbdd -->
 
-## P7-08 readiness repair round 1 — 2026-10-30
+## P7-08 readiness repair round 1 â€” 2026-10-30
 
 - Expected/input head: `4052f9ba9c2d7dea88a9821aa198c2027f320a12`. Worktree: runtime-isolated `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, assigned branch `coderabbit/admin-dashboard-readiness-fixes/triage_r`; initially clean, sole registered named worktree. UI/client files delegated under exclusive file scope; integrated diff reread and tested by the parent.
 - Replaced capped overview row fetches with service-role-only SQL aggregate `admin_dashboard_overview()` in migration 007, preserving response fields, metric definitions, UTC day buckets, all-or-error handling and fail-closed audit writes. Apply 007 before deploying the updated Edge Function. CI now applies 007 and includes its pgTAP regression tests.
@@ -768,7 +768,7 @@ Remaining: GitHub Actions database verification, CodeRabbit findings, owner boot
 
 - Remote branch and PR head refreshed and still matched the expected head after validation. Required remote CI/review policy on the published repair remain unverified; no publication, comment mutation, deployment, bootstrap or provider data/configuration change performed. Host owns publication and final review-thread handling.
 
-## P7-08 readiness repair round 3 — 2026-10-30
+## P7-08 readiness repair round 3 â€” 2026-10-30
 
 - Input head `ca48d47231a2ca76526a8fd9a9bc0adee5a29bcd`. Fixed the earlier worktree inventory, separated section reloads from overview retries, and cleared stale section errors on new requests.
 - Migration 008 adds a service-role-only search RPC. Matching remains literal, case-insensitive, deduplicated, and email-first; within each group it now uses creation time and ID for stable pagination, which can change page placement. Exact totals still require database-wide match counting. Apply migration 008 before the updated Edge Function.
@@ -900,7 +900,7 @@ PR #41 Windows release auth-origin validation repair - 2026-11-02
 Changed .github/workflows/release.yml only: validation now uses case-sensitive PowerShell comparisons and rejects noncanonical origins before npm run tauri:build.
 Validation: focused origin cases passed; typecheck/build passed; Rust tests remain environmentally blocked. No push occurred yet.
 
-## Desktop auth local dev-server regression — 2026-11-02
+## Desktop auth local dev-server regression â€” 2026-11-02
 
 Status: owner completed the full sign-in round trip successfully from the same-worktree dev launch. Runtime fix merged to `main`; docs commit is being prepared separately.
 
@@ -927,7 +927,7 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 
 <!-- coderabbit-ai-generated:v1 -->
 
-### P2-EMAIL-01 review repair — 2026-11-03
+### P2-EMAIL-01 review repair â€” 2026-11-03
 
 - Checkout: runtime-isolated `repos/github.com/eysrbs4zghuw3gmfzb2/soravo_electron`, branch `feature/transactional-email-resend-monitoring`, reviewed base `e54afe127ef48ab8294edff4a06543ef2853e783`. Remote history was rewritten; prior head preserved locally.
 - Repaired email idempotency and retry handling, claim fencing and recovery, webhook delivery updates, payment notification handling, renewal dates, and user redaction. Configure worker secrets, deploy functions and migrations, and install the retention schedule through the owner process. No hosted state was changed.
@@ -935,11 +935,11 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 
 <!-- coderabbit-ai-generated:v1 -->
 
-### P2-EMAIL-01 retry follow-up — 2026-11-03
+### P2-EMAIL-01 retry follow-up â€” 2026-11-03
 
 - Reviewed PR head `153fe54b4d73d7d64d92b7cf97e8e5d4a349bf69` on the runtime task branch. Resend concurrent-key conflicts retry within the existing attempt cap; invalid-key conflicts stay permanent. Documented worker credential precedence and configured Razorpay signature-authenticated webhook access. No hosted settings changed. Scoped verification is in `workspace-context/validation-record.md`.
 
-## P2-EMAIL-01 final repair — activation/renewal classification
+## P2-EMAIL-01 final repair â€” activation/renewal classification
 - Commit: 1344abb
 - Root cause: webhook read external entitlement state and passed flags to finalize while SQL finalization had the protected entitlement transition.
 - Repair: classification logic now runs inside finalize_webhook_payment_atomic using the entitlement row read under the existing advisory lock; webhook no longer supplies activation/renewal flags.
@@ -956,7 +956,21 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 
 <!-- coderabbit-ai-generated:v1 -->
 
-### P2-EMAIL-01 webhook retry follow-up — 2026-11-03
+### P2-EMAIL-01 webhook retry follow-up â€” 2026-11-03
 
 - Reviewed PR head `1b1936e32e23277b2999ec257bb98fe46c653aed`. Unmatched Resend events now retry for five minutes from their stored receipt time rather than being acknowledged immediately; a subsequent delivery after that window is acknowledged. Auth SMTP events without an outbox row follow the same rule. Matching higher-ranked statuses remain unchanged.
 - Updated worker claim/lease test fixtures and checked the affected webhook and worker tests. Exact validation is in `workspace-context/validation-record.md`. No hosted state was changed.
+
+## November 4 2026 - Production activation and reconciliation
+
+- Base SHA: a9a5a8f193fab6924ce264dbe3435c3ed626e7f1
+- Main CI results verified as completed and successful: CI, Website CI, Database tests, Packaging, and preview Pages.
+- Supabase production is Soravo_fresh (vfrhplskegqqdxbykyvx).
+- Migrations 010 through 013 are applied.
+- Edge Functions are ACTIVE v2 with verify_jwt=false.
+- EMAIL_WORKER_SECRET, RESEND_WEBHOOK_SECRET, RESEND_API_KEY and Auth SMTP are configured; values are never documented.
+- Resend webhook has processed email.sent and email.delivered.
+- A welcome email was successfully delivered.
+- Worker and retention schedules are active.
+- Website is live from Cloudflare Pages commit a9a5a8f...
+- Remaining work: lifecycle/renewal/refund safe testing and release approval.

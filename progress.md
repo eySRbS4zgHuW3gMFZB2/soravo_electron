@@ -1259,3 +1259,31 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 ## P2-EMAIL-01 webhook retry follow-up — 2026-11-03
 
 - Unmatched Resend message IDs now return retryable errors for five minutes from initial receipt to allow the outbox provider ID to be saved. Later deliveries are acknowledged if still unmatched; this also applies to Auth SMTP events. The worker test now checks claim and lease filters.
+
+## P2-EMAIL-01 production activation and verification - November 4, 2026
+
+- Documentation reconciliation branch: `docs/DOCS-PRODUCTION-STATE-2026-11-04`, based on `origin/main` commit `a9a5a8f193fab6924ce264dbe3435c3ed626e7f1`.
+- PR #44 remains merged at a9a5a8f and GitHub CI/Website CI/Database tests/Packaging all succeeded for `main`.
+
+### Live provider and infrastructure evidence
+- Supabase `Soravo_fresh` (`vfrhplskegqqdxbykyvx`, `us-east-1`) has migrations `010`, `011`, `012` and `013` applied.
+- Deployed Edge Functions:
+  - `resend-webhook`: ACTIVE v2, `verify_jwt=false`.
+  - `process-email-outbox`: ACTIVE v2, `verify_jwt=false`.
+- `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` are configured without exposure.
+- The Vault entry `email_worker_secret` exists and supports authenticated worker invocation.
+- Worker and retention pg_cron jobs are active.
+- Resend has delivered the real welcome email on November 4, 2026.
+- An outbox record for the welcome email is marked `sent` with a provider message ID and `delivered` delivery status.
+- Resend webhook events `email.sent` and `email.delivered` were received and processed on November 4, 2026 03:49 UTC.
+- The new website at `soravo.xyz` is live from the Cloudflare Pages project `soravo-web-preview`, latest deployment commit `a9a5a8f...`.
+
+### Website and deployment notes
+- Cloudflare production alias is `soravo.xyz`.
+- Historical Pages project `soravo` is retained as rollback only.
+- Zoho root-domain business email and Resend `notifications.soravo.xyz` records are separate.
+- No DNS records were changed during this documentation pass.
+
+### Remaining priorities
+- Run safe test-mode payment and lifecycle verification.
+- Continue release, legal/support review and owner go/no-go gates independently.

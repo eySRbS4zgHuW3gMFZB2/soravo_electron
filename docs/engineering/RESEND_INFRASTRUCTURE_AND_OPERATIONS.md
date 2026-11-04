@@ -2,7 +2,17 @@
 
 ## Status
 
-Implementation is in the repository (PR #44 continuation). Hosted Supabase migration application, Edge Function deployment, Resend webhook registration, SMTP configuration save, and production scheduling require owner/dashboard steps documented below.
+Updated **November 4, 2026** for current production state.
+
+- PR #44 (`a9a5a8f193fab6924ce264dbe3435c3ed626e7f1`) is merged into `main`.
+- Supabase migrations `010` through `013` are applied in the production `Soravo_fresh` project.
+- `resend-webhook` and `process-email-outbox` are deployed and ACTIVE (`verify_jwt=false`).
+- `EMAIL_WORKER_SECRET` and `RESEND_WEBHOOK_SECRET` are configured in Edge Function secrets.
+- The Vault entry `email_worker_secret` is present.
+- Both worker and retention pg_cron schedules are active.
+- A real welcome email was delivered successfully.
+- Resend delivery events `email.sent` and `email.delivered` have been processed for the welcome email.
+- Supabase Auth SMTP and the historical website production configuration remain unchanged except the new website is now live on `soravo.xyz`.
 
 ## Domain and DNS architecture
 
@@ -136,7 +146,7 @@ Requirements:
 - An unmatched message ID returns a retryable error for five minutes from first receipt; a later delivery is acknowledged after that window. Auth SMTP messages without outbox rows follow the same rule. A retry from Resend is required for processing after the window.
 - Delivery events never mutate payment, subscription or entitlement state.
 
-Current status: implemented in code; deployed/registered status remains implementation-complete-pending-deployment.
+Current status: implementation and production activation complete. `resend-webhook` v2 is ACTIVE, JWT verification is disabled intentionally, `RESEND_WEBHOOK_SECRET` is configured, the provider webhook is registered exactly once, and provider events `email.sent` and `email.delivered` have been processed as of November 4 2026 03:49 UTC.
 
 ## Separation of email systems
 
@@ -181,7 +191,7 @@ Outbox:
 ## Worker invocation and scheduling
 
 Worker function: `process-email-outbox`.
-Recommended invocation is authenticated internal HTTP POST with bounded batch size. Supabase scheduling/triggering can invoke it, but this task does not perform deployment or create schedules.
+Recommended invocation is authenticated internal HTTP POST with bounded batch size. Current production status: Supplemental manual provisioning was completed on November 4 2026. The production `process-email-outbox` function is ACTIVE v2, `EMAIL_WORKER_SECRET` is available through runtime Vault-backed scheduling, `EMAIL_WORKER_SECRET` configures worker authorization without exposing its value. `RESEND_WEBHOOK_SECRET` is documented separately in the webhook section and is used by `resend-webhook` for Svix verification. `pg_net` plus `soravo-process-email-outbox` run once per minute. An empty-queue invocation returned 200 with `claimed: 0, sent: 0, failed: 0, skipped: 0, batch_size: 25`; producer retrieval and template construction are part of the worker and use the existing retry/idempotency design.
 
 Provision `EMAIL_WORKER_SECRET` as an Edge Function secret (or use `CRON_SECRET` if `EMAIL_WORKER_SECRET` is unset). Configure the scheduler to send the same secret in `Authorization: Bearer <secret>` or `x-email-worker-secret: <secret>`; send only one credential. The handler checks a nonempty bearer token first, so a mismatching bearer token results in 401 even if `x-email-worker-secret` matches. The service-role key is accepted only as a fallback when neither worker secret is configured; keep it server-side and prefer a dedicated worker secret. Deploy with `website/supabase/config.toml` so the gateway forwards these requests to the handler for secret verification.
 
@@ -249,12 +259,20 @@ Retention cleanup:
 
 The older `AUTH_EMAIL_RESEND_SETUP.md` must not retain obsolete `mail.soravo.xyz` or `no-reply@mail.soravo.xyz` instructions. This document is authoritative for Resend infrastructure. If conflict remains, update it to a link-only supplement.
 
+## Current verified production state
+
+- Supabase migrations 010, 011, 012 and 013 are applied.
+- `resend-webhook` v2 and `process-email-outbox` v2 are `ACTIVE`, with `verify_jwt=false`.
+- `RESEND_API_KEY` remains configured and unmodified.
+- `RESEND_WEBHOOK_SECRET` is configured and the provider webhook has processed `email.sent` and `email.delivered`.
+- Vault contains `email_worker_secret`; worker authorization succeeded with a Vault-backed `Authorization: Bearer`.
+- Worker and retention pg_cron schedules are active.
+- A welcome email was delivered successfully on November 4 2026.
+- Email outbox contains one sent welcome record with a provider message ID and `delivered` delivery status.
+
 ## Current owner actions remaining
 
-- Verify Supabase SMTP saved and delivery tested.
-- Rotate any previously exposed Resend key if not confirmed revoked.
-- Apply migrations via repository process.
-- Deploy functions.
-- Register Resend webhook and capture `RESEND_WEBHOOK_SECRET`.
-- Schedule/cron retention and worker execution on approved infrastructure.
-- Run CodeRabbit and CI on the final PR before integration.
+- Run safe Razorpay test-mode lifecycle tests.
+- Monitor cron and webhook execution after production usage.
+- Run CodeRabbit and relevant CI on documentation changes.
+- Continue release, cutover and legal tasks separately.
