@@ -115,6 +115,18 @@ describe("email service", () => {
     expect(emailModule.redactEmail("alice@example.com")).toBe("al***@example.com");
   });
 
+  it("does not retry a Resend invalid idempotency payload conflict", async () => {
+    vi.stubGlobal("Deno", { env: { get: (key: string) => (key === "RESEND_API_KEY" ? "rk_test" : undefined) }, serve: () => {} });
+    (globalThis.fetch as any).mockResolvedValue(
+      new Response(JSON.stringify({ name: "invalid_idempotent_request" }), { status: 409 })
+    );
+    const result = await emailModule.sendEmail({ to: "a@example.com", subject: "s", html: "<p>x</p>", text: "x" });
+    expect(result.ok).toBe(false);
+    expect(result.retryable).toBe(false);
+    expect(result.statusCode).toBe(409);
+    expect(result.errorCode).toBe("invalid_idempotent_request");
+  });
+
   it("uses support as the transactional reply-to", () => {
     expect(emailModule.EMAIL_REPLY_TO).toBe("support@soravo.xyz");
     const rendered = emailModule.renderTemplate("welcome");

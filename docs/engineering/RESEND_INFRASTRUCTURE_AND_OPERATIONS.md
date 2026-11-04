@@ -192,6 +192,15 @@ Worker requirements:
 - Preserve claim-token fencing.
 - Store provider message IDs.
 - Use safe backoff and maximum attempts.
+- Never change the rendered payload or `reply_to` for an existing `idempotency_key` without a rollout gate, because Resend rejects the changed payload with `409 invalid_idempotent_request` within the key window. The intended rollout drain gate is:
+  1. Query `email_outbox` grouped by status and maximum `attempt_count`.
+  2. Proceed only if no row is `processing` and no row is `failed_retryable` with `attempt_count > 0`.
+  3. Let currently claimed rows finish.
+  4. Recheck the query before deployment.
+  5. Deploy `process-email-outbox`.
+  6. Verify the deployed worker reports `reply_to: support@soravo.xyz`.
+  7. Inspect the queue for duplicates, unexpected retries or permanent failures.
+- `EMAIL_REPLY_TO` is `support@soravo.xyz` and the base template footer is `Reply to support@soravo.xyz.` The transactional sender remains `Soravo <account@notifications.soravo.xyz>`.
 
 Retention cleanup:
 - Migration function `cleanup_email_outbox_retention`.
