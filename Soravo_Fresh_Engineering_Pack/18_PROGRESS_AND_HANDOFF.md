@@ -960,3 +960,17 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 
 - Reviewed PR head `1b1936e32e23277b2999ec257bb98fe46c653aed`. Unmatched Resend events now retry for five minutes from their stored receipt time rather than being acknowledged immediately; a subsequent delivery after that window is acknowledged. Auth SMTP events without an outbox row follow the same rule. Matching higher-ranked statuses remain unchanged.
 - Updated worker claim/lease test fixtures and checked the affected webhook and worker tests. Exact validation is in `workspace-context/validation-record.md`. No hosted state was changed.
+
+## November 4 2026 - Production activation and reconciliation
+
+- Base SHA: a9a5a8f193fab6924ce264dbe3435c3ed626e7f1
+- Main CI results verified as completed and successful: CI, Website CI, Database tests, Packaging, and preview Pages.
+- Supabase production is Soravo_fresh (frhplskegqqdxbykyvx).
+- Migrations  10 through  13 are applied.
+- Edge Functions are ACTIVE v2 with erify_jwt=false.
+- EMAIL_WORKER_SECRET, RESEND_WEBHOOK_SECRET, RESEND_API_KEY and Auth SMTP are configured; values are never documented.
+- Resend webhook has processed email.sent and email.delivered.
+- A welcome email was successfully delivered.
+- Worker and retention schedules are active.
+- Website is live from Cloudflare Pages commit a9a5a8f...
+- Remaining work: lifecycle/renewal/refund safe testing and release approval.

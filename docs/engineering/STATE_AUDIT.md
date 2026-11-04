@@ -115,3 +115,12 @@
 - Fix: final DB authorization SELECT immediately before Resend call matching row ID, claim token, status processing, valid lease; renders from fresh recipient/metadata. Failed final check is skipped without external send.
 - Limitation documented: read/request are not atomic; account deletion after final check and before provider acceptance remains narrow race; no broad locking redesign introduced.
 - Validation: website Vitest 6 files/138 tests passed; root typecheck passed.
+
+## Production transactional email reconciliation - November 4 2026
+
+- Main commit: a9a5a8f193fab6924ce264dbe3435c3ed626e7f1
+
+- Database and Edge Functions verified active.
+
+- Resend welcome delivery and webhook events verified.
+
