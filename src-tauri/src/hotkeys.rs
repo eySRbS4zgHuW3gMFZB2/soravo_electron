@@ -299,21 +299,16 @@ pub struct HookConfig {
     pub dictation: Option<Binding>,
     pub paste_last: Option<Binding>,
     pub copy_last: Option<Binding>,
-    /// When true, recording follows key-down/key-up (push-to-talk). When false the
-    /// dictation binding behaves as a press-to-toggle shortcut.
-    pub hold_to_talk: bool,
 }
 
 /// Callbacks the hook thread invokes. Plain `Fn` so they can be called from the
 /// blocking listener thread without pulling in an async runtime.
 #[derive(Clone)]
 pub struct HookHandles {
-    /// Push-to-talk: begin recording.
-    pub dictate_start: Arc<dyn Fn() + Send + Sync>,
-    /// Push-to-talk: finish recording and transcribe.
-    pub dictate_stop: Arc<dyn Fn() + Send + Sync>,
-    /// Toggle mode: start if idle, stop if recording.
-    pub dictate_toggle: Arc<dyn Fn() + Send + Sync>,
+    /// The dictation trigger went down.
+    pub dictate_press: Arc<dyn Fn() + Send + Sync>,
+    /// The dictation trigger went up.
+    pub dictate_release: Arc<dyn Fn() + Send + Sync>,
     pub paste_last: Arc<dyn Fn() + Send + Sync>,
     pub copy_last: Arc<dyn Fn() + Send + Sync>,
 }
@@ -437,26 +432,19 @@ pub fn spawn_hook(
 
         // Dictation trigger.
         //
-        // In push-to-talk we remember which trigger started the
-        // recording and stop on that trigger's release, ignoring the
-        // modifier state by then. Otherwise letting go of Ctrl before
-        // the trigger key would leave the recording running forever.
-        if cfg.hold_to_talk {
-            if pressed {
-                if matched(&cfg.dictation) {
-                    held = Some(trigger);
-                    (handles.dictate_start)();
-                    return;
-                }
-            } else if held == Some(trigger) {
-                held = None;
-                (handles.dictate_stop)();
+        // Both edges feed the shared interaction state machine. The release
+        // is matched on trigger identity alone (ignoring modifier state by
+        // then), so letting go of Ctrl before the trigger key still stops
+        // the recording.
+        if pressed {
+            if matched(&cfg.dictation) {
+                held = Some(trigger);
+                (handles.dictate_press)();
                 return;
             }
-        } else if pressed && matched(&cfg.dictation) {
-            // Toggle mode: every press flips the recorder, so tapping a
-            // second time stops it. Release is irrelevant here.
-            (handles.dictate_toggle)();
+        } else if held == Some(trigger) {
+            held = None;
+            (handles.dictate_release)();
             return;
         }
 

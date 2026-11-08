@@ -15,7 +15,7 @@
       {
         "label": "pill",
         "title": "Soravo",
-        "width": 210,
+        "width": 120,
         "height": 56,
         "resizable": false,
         "decorations": false,

@@ -2453,6 +2453,37 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
   justify-content: flex-start;
 }
 
+/* The overlay-position picker: a 3x3 grid of dock cells. */
+.anchor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 13px);
+  grid-auto-rows: 13px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.anchor-cell {
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid var(--soravo-mute);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.anchor-cell:hover {
+  border-color: var(--soravo-ink);
+}
+.anchor-cell:focus-visible {
+  outline: 2px solid var(--soravo-primary);
+  outline-offset: 1px;
+}
+.anchor-cell-on {
+  background: var(--soravo-ink);
+  border-color: var(--soravo-ink);
+}
+
 /* --- Hotkey capture -------------------------------------------------------- */
 
 .hotkey-capture {
