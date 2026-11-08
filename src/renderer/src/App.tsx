@@ -209,7 +209,7 @@ export default function App() {
               )}
               <canvas ref={canvasRef} className="pill-wave" aria-hidden="true" />
               {handsFree && (
-                <span className="pill-btn-wrap">
+                <span className="pill-btn-wrap pill-btn-wrap--end">
                   <button
                     type="button"
                     className="pill-btn pill-tick"

@@ -180,6 +180,12 @@ body,
   justify-content: center;
 }
 
+/* The right-hand (Finish) button sits at the end of a very narrow window;
+   shift its tooltip left enough that the whole text fits inside the viewport. */
+.pill-btn-wrap--end .pill-tooltip {
+  transform: translate(-87%, -6px);
+}
+
 .pill-tooltip {
   position: absolute;
   bottom: 100%;
