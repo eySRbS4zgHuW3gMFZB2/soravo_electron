@@ -160,6 +160,14 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Clear the hover whenever the controls are not on screen. `onMouseLeave`
+  // never fires when the buttons unmount (the cursor may still be over where
+  // they were), which left the "Cancel"/"Finish and paste" tooltip stuck up
+  // with no buttons rendered.
+  useEffect(() => {
+    if (!(state === 'recording' && handsFree)) setHover(null)
+  }, [state, handsFree])
+
   const mode =
     state === 'idle'
       ? 'idle'

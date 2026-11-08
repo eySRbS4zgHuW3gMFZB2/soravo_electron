@@ -960,3 +960,13 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 
 - Reviewed PR head `1b1936e32e23277b2999ec257bb98fe46c653aed`. Unmatched Resend events now retry for five minutes from their stored receipt time rather than being acknowledged immediately; a subsequent delivery after that window is acknowledged. Auth SMTP events without an outbox row follow the same rule. Matching higher-ranked statuses remain unchanged.
 - Updated worker claim/lease test fixtures and checked the affected webhook and worker tests. Exact validation is in `workspace-context/validation-record.md`. No hosted state was changed.
+
+## P9-01 PILL-OVERLAY-01 checkpoint - 2026-11-07
+
+- Branch/worktree: \eature/PILL-OVERLAY-01-pill-overlay\ at \.worktrees/PILL-OVERLAY-01-pill-overlay\ (base \9a5a8f\). CrispASR v0.8.43 unchanged.
+- Deliverables present: reference-specification.md, current-implementation-audit.md, interaction-state-machine.md, iteration-log.md, verification-report.md, continuation-status.md (docs/pill-overlay/).
+- Owner-accepted milestones preserved: double-tap hands-free activation and the black-capsule pill appearance (measured baseline recorded; capsule pixel-identical after this session's only code change).
+- This session: stale-hover tooltip defect fixed and verified live (tooltip no longer renders with no controls; hover/cancel/PTT cycle re-tested), placement window listed in capabilities, dev-server stale-transform root cause documented (desktop vite on 5173 must be restarted after renderer edits).
+- Tests: tsc clean; vitest 45/45; cargo test --lib 60/60. Not run: full cargo test; DPI 125/150% and multi-monitor verification (no hardware); spoken-waveform check (acoustic path absent on this machine).
+- Known open decision for owner: empty transcript routes to a red-dot error; normative interaction-state-machine.md specifies silent completion. Unchanged pending owner call.
+- Not merged; no push, no deployment, no production change.

@@ -1259,3 +1259,11 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 ## P2-EMAIL-01 webhook retry follow-up â€” 2026-11-03
 
 - Unmatched Resend message IDs now return retryable errors for five minutes from initial receipt to allow the outbox provider ID to be saved. Later deliveries are acknowledged if still unmatched; this also applies to Auth SMTP events. The worker test now checks claim and lease filters.
+
+## PILL-OVERLAY-01 checkpoint (2026-11-07)
+
+- Branch/worktree: feature/PILL-OVERLAY-01-pill-overlay at .worktrees/PILL-OVERLAY-01-pill-overlay (base a9a5a8f). CrispASR v0.8.43 untouched. Full state in docs/pill-overlay/continuation-status.md; narrative in iteration-log.md.
+- Owner-accepted milestones preserved: double-tap hands-free and the pill's appearance (PTT capsule x 924-995, y 994-1021; hands-free ~112px; bottom-centre anchor, 19px above work area).
+- New this session: stale-hover tooltip defect fixed (Cancel bubble rendered with no buttons; hover now cleared when hands-free controls unmount) and verified live (fix-06/07/08); placement window added to capabilities; pill-dev documentation set added.
+- Toolchain: ambient cargo (chocolatey 1.98.1) cannot build (E0463); pinned rustup 1.90.0 MSVC + 2017 BuildTools vcvars64, isolated target dir Z:\codex-build-cache\PILL-OVERLAY-01-msvc. Desktop vite on 5173 must be restarted after renderer edits (watcher does not fire on this folder) — stale transformed App.tsx was served to the webview until vite was restarted.
+- Tests: tsc clean; vitest 45/45; cargo test --lib 60/60. Open items: empty-transcript routing to error badge vs normative silent completion (owner decision), waveform speech check (mic/speaker coupling absent), DPI/multi-monitor verification, full cargo test.
