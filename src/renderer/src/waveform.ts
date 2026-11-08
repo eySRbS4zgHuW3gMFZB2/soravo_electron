@@ -67,7 +67,6 @@ export function frequencyLevels(
   const loLog = Math.log(1)
   const hiLog = Math.log(binCount)
   const step = (hiLog - loLog) / count
-  const floorLin = Math.pow(10, (minDb - maxDb) / 20) // linear value at noise floor
   for (let i = 0; i < count; i++) {
     const lo = Math.max(1, Math.floor(Math.exp(loLog + i * step)))
     const hi = Math.max(lo + 1, Math.floor(Math.exp(loLog + (i + 1) * step)))
