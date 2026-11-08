@@ -4,7 +4,7 @@
 //! the level math is unit-testable without a device. Everything here is
 //! deterministic: given the same sample buffer, the same levels come out.
 
-export const BAR_COUNT = 16
+export const BAR_COUNT = 12
 export const MIN_LEVEL = 0.055
 export const ATTACK = 0.5
 export const DECAY = 0.12
@@ -84,7 +84,7 @@ export function createWaveform(canvas: HTMLCanvasElement): WaveformController {
     ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx2d.clearRect(0, 0, w, h)
     const pitch = w / BAR_COUNT
-    const barW = Math.max(2, Math.min(3.2, pitch * 0.62))
+    const barW = Math.max(1.4, Math.min(3.2, pitch * 0.55))
     ctx2d.fillStyle = '#f2f2ec'
     for (let i = 0; i < BAR_COUNT; i++) {
       const level = levels[i]

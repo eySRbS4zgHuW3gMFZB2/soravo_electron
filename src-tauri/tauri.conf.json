@@ -28,6 +28,19 @@
         "focusable": false
       },
       {
+        "label": "placement",
+        "title": "Soravo",
+        "width": 800,
+        "height": 500,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "fullscreen": true
+      },
+      {
         "label": "hub",
         "title": "Soravo",
         "width": 1350,

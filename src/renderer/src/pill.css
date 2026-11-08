@@ -5,6 +5,15 @@
  * transparent pixels.
  */
 
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
 .pill-root {
   position: fixed;
   inset: 0;
@@ -50,7 +59,7 @@
 }
 .capsule[data-mode="handsfree"],
 .capsule[data-mode="processing"] {
-  width: 101px;
+  width: 112px;
 }
 .capsule[data-mode="error"] {
   width: 74px;
@@ -66,8 +75,8 @@
 }
 
 .pill-wave {
-  flex: 1 1 auto;
-  width: 100%;
+  flex: 1 1 0;
+  min-width: 0;
   height: 20px;
   display: block;
 }
