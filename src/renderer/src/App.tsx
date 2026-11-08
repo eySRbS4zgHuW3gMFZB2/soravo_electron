@@ -138,8 +138,13 @@ export default function App() {
       })
       .catch(() => {})
     const offState = window.soravo.onState((s) => {
+      if (s === 'error') {
+        // The pill never shows an error state — but a live recorder must not
+        // be stranded (the mic would stay open with the pill invisible).
+        void stopRecorder(false)
+        void soundsEnabled().then((on) => playBlip('error', on))
+      }
       setState(s)
-      if (s === 'error') void soundsEnabled().then((on) => playBlip('error', on))
     })
     const offSession = window.soravo.onSession(({ id, handsFree }) => {
       sessionRef.current = id
@@ -169,17 +174,15 @@ export default function App() {
   }, [state, handsFree])
 
   const mode =
-    state === 'idle'
+    state === 'idle' || state === 'error'
       ? 'idle'
-      : state === 'error'
-        ? 'error'
-        : state === 'transcribing'
-          ? 'processing'
-          : handsFree
-            ? 'handsfree'
-            : 'ptt'
+      : state === 'transcribing'
+        ? 'processing'
+        : handsFree
+          ? 'handsfree'
+          : 'ptt'
 
-  if (state === 'idle') return null
+  if (state === 'idle' || state === 'error') return null
 
   return (
     <div className="pill-root">
@@ -227,7 +230,6 @@ export default function App() {
               <span className="pill-spinner" aria-label="Transcribing" role="status" />
             </>
           )}
-          {state === 'error' && <span className="pill-err" role="alert" aria-label="Something went wrong" />}
         </div>
       </div>
     </div>

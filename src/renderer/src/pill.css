@@ -61,9 +61,6 @@ body,
 .capsule[data-mode="processing"] {
   width: 112px;
 }
-.capsule[data-mode="error"] {
-  width: 74px;
-}
 .capsule[data-mode="completing"] {
   width: 38px;
   height: 12px;
@@ -173,16 +170,6 @@ body,
   border-radius: 1px;
   background: #f5f4f0;
   opacity: 0.92;
-}
-
-/* Error */
-.pill-err {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-  background: #d03238;
-  margin: 0 auto;
 }
 
 /* Hover tooltip — only while hovering, never permanent */

@@ -970,3 +970,10 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - Tests: tsc clean; vitest 45/45; cargo test --locked PASS (60/60 lib, RUSTDOC pinned). Not run: DPI 125/150% and multi-monitor verification (no hardware); spoken-waveform check (acoustic path absent on this machine).
 - Known open decision for owner: empty transcript routes to a red-dot error; normative interaction-state-machine.md specifies silent completion. Unchanged pending owner call.
 - Not merged; no push, no deployment, no production change.
+
+## P9-01 PILL-OVERLAY-01 error state removal - 2026-11-08
+
+- Owner request: remove the pill's error state entirely. Shipped: no failure UI in the pill (no red dot, no .pill-err, no data-mode=error capsule); failures hide the pill as fast as a cancellation (ERROR_DISPLAY 4s -> 450ms); hub retains soravo:error (DictationPage status line shows the failure text). App.tsx discards recorder+waveform on error so the mic cannot be stranded invisibly. FSM Phase::Error retained as an invisible parking phase; FSM unit tests unchanged and green.
+- Verification: tsc clean; vitest 45/45; cargo test --locked PASS (60/60; RUSTDOC pinned to rustup MSVC). Live check: silence PTT hides the pill, hub shows 'Transcription came back empty'.
+- Flagged for owner: moonshine hallucinated 'Fuck.' on silence at least twice; pipeline pastes non-empty results unconditionally; at least one stray paste originated from session testing (target undeterminable). A VAD/confirmation guard is a product decision and was not built.
+- Not merged; no push, no deployment.

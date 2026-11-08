@@ -32,8 +32,9 @@ use std::time::Duration;
 /// recording immediately on release.
 pub const DOUBLE_PRESS_MS: i64 = 400;
 
-/// How long after an error the pill hides and the state resets to idle.
-pub const ERROR_DISPLAY: Duration = Duration::from_secs(4);
+/// After a failure the pill has nothing to show — it hides as abruptly as a
+/// cancellation does (the hub still receives `soravo:error`). No red dot.
+pub const ERROR_DISPLAY: Duration = Duration::from_millis(450);
 
 /// How long after completion/cancellation the pill hides.
 pub const TRANSIENT_DISPLAY: Duration = Duration::from_millis(450);
@@ -62,7 +63,8 @@ pub enum Phase {
     Completed,
     /// Recording was discarded. Transient; hides, then `Idle`.
     Cancelled,
-    /// Something failed. The pill persists briefly, then resets to `Idle`.
+    /// Something failed. The pill shows nothing (it hides immediately, like a
+    /// cancellation); the failure surfaces only through the hub's `soravo:error`.
     Error,
 }
 

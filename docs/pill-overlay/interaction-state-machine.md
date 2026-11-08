@@ -23,7 +23,7 @@ Forbidden: single-click persistent recording; any third mode; duplicate sessions
 | `Processing` | visible, dots + spinner | from recording states | submit OK → `Completed`; failure/timeout → `Error` |
 | `Completed` | collapse-to-outline ~250 ms → hide | submit OK | transient → `Idle` |
 | `Cancelled` | fade ~200 ms → hide | cancel in any recording state | transient → `Idle` |
-| `Error` | visible, error glyph; pill persists ≤ 4 s then hides | start/transcribe/timeout failure | timeout → `Idle`; `HotkeyPress` → new session (`PushToTalkPending`) |
+| `Error` | **invisible** — the pill renders nothing and hides as fast as a cancellation (450 ms); failure surfaces only via the hub `soravo:error` | start/transcribe/timeout failure | timeout → `Idle`; `HotkeyPress` → new session (`PushToTalkPending`) |
 
 In `HandsFreeRecording`, `HotkeyPress` = finish (✓ semantics, per reference tooltip "Press … to finish and paste"). Cancellation is only via ✕.
 
@@ -34,7 +34,7 @@ In `HandsFreeRecording`, `HotkeyPress` = finish (✓ semantics, per reference to
 - The frontend drops any `record-command` whose `session` ≠ its current session. Native side is authoritative regardless.
 - `submit_audio` is accepted **only** in `Processing` (`Transcribing`); otherwise it is dropped with a logged telemetry event (`soravo:error` is *not* emitted for stale drops — silent no-op + log). This kills the stuck-`Transcribing` and post-cancel-overwrite bugs.
 - Hide scheduling uses the existing generation ticket (`hide_gen`); a hide is only valid for the session that scheduled it.
-- The 15 s no-audio timeout now **resets `RecState` to `Error`** (and hides the pill) instead of emitting an error string into the void.
+- The 15 s no-audio timeout **resets `RecState` to `Error`** (pill hides per the transient rule above) instead of emitting an error string into the void.
 
 ## Input handling rules (all deterministic; no settling sleeps)
 
@@ -70,11 +70,11 @@ In `HandsFreeRecording`, `HotkeyPress` = finish (✓ semantics, per reference to
 
 | Failure | Transition | User-visible |
 |---|---|---|
-| `getUserMedia` denied/unplugged | `PushToTalkPending` → `Error` | error glyph, auto-hide 4 s |
+| `getUserMedia` denied/unplugged | `PushToTalkPending` → `Error` | pill hides; hub `soravo:error`; recorder torn down |
 | `MediaRecorder` error | → `Error` | same |
 | Decode/resample failure | → `Error` (submit gated path) | same |
-| crispasr non-zero exit | `Processing` → `Error` | error glyph |
-| Empty transcript | `Processing` → `Completed` (silent success; matches current empty-text behaviour of inserting nothing — actually current code inserts only non-empty; keep) | pill completes |
+| crispasr non-zero exit | `Processing` → `Error` | pill hides; hub `soravo:error` |
+| Empty transcript | `Processing` → `Error` (silent: pill hides exactly like a completion; `soravo:error` "Transcription came back empty" reaches the hub) | pill hides |
 | Paste (SendKeys) failure | `Processing` → `Completed` + `soravo:error` "text copied, paste failed"? | current behaviour: error emitted, stays Completed (text in clipboard) |
 | App quit mid-recording | session dropped; temp wav cleaned; no paste | n/a |
 

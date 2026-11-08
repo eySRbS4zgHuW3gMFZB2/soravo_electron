@@ -67,3 +67,14 @@ Reference target vs. actual: capsule height renders **28 px** vs 30 px target (a
 4. DPI 125%/150% and multi-monitor placement unverified (no scaled/multi display).
 5. `cargo test --locked` green â€” 60/60 lib (doctests require `RUSTDOC` pinned to the rustup MSVC toolchain; ambient chocolatey rustc has no MSVC std, E0463). Vitest 45/45 green; `tsc --noEmit` clean.
 6. `interaction-state-machine.md` names `cancel_recording` as both alias and command; observed deltas vs implementation: `finish_recording` exists (used by âœ“); doc's `soravo:audio-level` intentionally omitted (renderer-side AnalyserNode only) â€” as designed in the doc.
+
+### I9 — Pill error state removed entirely (2026-11-08, owner request)
+Owner: 'Can you remove the error state of the pill entirely?'
+
+- Pill no longer renders any failure state: no red dot, no \data-mode=\"error\"\ capsule, no \.pill-err\ CSS, no 4 s linger. On failure (mic loss, decode failure, crispasr failure, empty transcript, audio timeout) the pill now hides exactly like a cancellation (450 ms transient to \Idle\); the failure reaches the hub via \soravo:error\ and \RecState::Error\ (hub contract unchanged — DictationPage status line still shows it).
+- \App.tsx\: \onState('error')\ discards the recorder + waveform before hiding — previously the pill would persist invisibly while a silently recording MediaRecorder kept the mic open (red mic indicator for users who hit the 15 s no-audio timeout). Now the mic is stopped in every failure path.
+- Sound: the \error\ blip still plays on failure (deliberate — audible-only failure cue with no visual state). Can be removed on request.
+- FSM unchanged; \Phase::Error\ remains a valid parking phase (press recovers, submit gated). \ERROR_DISPLAY\ 4 s ? 450 ms. Rust unit tests unchanged, 60/60 green; tsc clean; vitest 45/45.
+- Verified live (err-01…04): silence PTT ? release ? pill hides within ~1.5 s, no red dot ever rendered (screenshot err-02/err-03). Mic torn down via the new discard path.
+- Normative doc updated (Error row = invisible transient; failure-path table; empty-transcript row). Owner-visible failure text unchanged.
+- Note: silence/tone PTTs made moonshine return \"Fuck.\" twice (23:32 and 23:58) and the app typed it into the focused window (DB rows); empty results never inject. This is inherent to unconfirmed dictation (CrispASR hallucinates on silence) and predates this change — flagged for an owner decision on VAD gating; not fixed here (would be a new feature).

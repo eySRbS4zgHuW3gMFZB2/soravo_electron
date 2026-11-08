@@ -28,7 +28,8 @@ Note: ambient `cargo` (chocolatey rustc 1.98.1) **cannot** build this workspace 
 | Single press never enters hands-free; auto-repeat never converts | **PASS** (FSM unit tests) | `double_press_*`, `autorepeat_never_converts`, `triple_press_finishes_once` |
 | Placement mode: zones, drag, click-select, persistence | **PASS** (owner manual, 11:09–11:13; not re-run to avoid churn) | `%TEMP%\opencode\pill-shots\56/57/58/65/66*.png`; `soravo-settings.json` shows `pillAnchor: bottom-center` after restore |
 | Place pill never covers taskbar; DPI-scaled margin | **PASS** by code inspection + 100% live measurement (19 px gap, work-area 1040 honoured) | `place_pill` `src-tauri/src/lib.rs`; `base-10` |
-| Empty transcription routes to error badge | **OBSERVED** (red dot, `base-02`) — behaviour contradicts normative doc (see §Discrepancies) | `base-02` |
+| Empty transcription routes to error badge | **RESOLVED** — pill's error state removed entirely (2026-11-08); failure now hides the pill silently exactly like a cancellation; `soravo:error` still reaches the hub | `err-01..04` |
+| Failure mid-recording (silent mic loss) | **Handled** — pill's `onState('error')` discards the recorder/waveform so the mic can't be left open with the pill invisible | code + typecheck |
 | Crash/compat with running background apps | None observed; whisper of background chat app rendering its own dotted bar behind the pill | `base-10` |
 | **Stale tooltip defect** | **FOUND + FIXED in this session** | see below |
 
@@ -38,13 +39,16 @@ Note: ambient `cargo` (chocolatey rustc 1.98.1) **cannot** build this workspace 
 - **Fix:** `src/renderer/src/App.tsx` — effect keyed on `[state, handsFree]` clears `hover` whenever the hands-free controls are not rendered. Zero visual change to the accepted capsule (re-measured after the fix: PTT capsule x 924–995 / y 994–1021, pixel-identical to baseline; `fix-08`).
 - **Verification (live, single monitor):** fresh PTT hold with cursor far outside the pill → **no tooltip** (`fix-06`); hands-free with cursor parked on ✕ → tooltip renders (`fix-07`); click ✕ to cancel → fresh PTT hold → **no tooltip** (`fix-08`). Note: the running Vite dev server on port 5173 must be **restarted after renderer edits** — its watcher does not invalidate modules on this machine's folder (stale transformed `App.tsx` was served at first; verified by fetching the module before/after restart). After the restart, the fix is live and the check passes end-to-end.
 
-## Discrepancies (documented, not changed without owner sign-off)
+## Resolved
 
-1. **Empty transcript → red-dot error** (`fail_current_session("Transcription came back empty")`) vs. normative `interaction-state-machine.md` (empty → `Completed`, silent). Owner decision needed.
-2. Capsule renders **28 px** tall vs 30 px reference target (owner-accepted current look).
-3. Waveform reacting to **real speech** unverified on this machine (speaker→mic coupling absent; consistent with reference-capture finding). Path: AnalyserNode on shared `MediaStream`, 12 bars, attack/decay smoothing; math unit-tested. Needs an owner spoken-word check or virtual loopback device.
-4. **125%/150% DPI and multi-monitor placement unverified** — no scaled/multi-monitor display attached. Code is physical-px + `scale_factor()` based; untested at runtime.
-5. Placement window was absent from `capabilities/default.json` windows list — added in this session (`"placement"`). It worked before; listing is correct hygiene, needs regression check that placement still opens.
+1. **Empty/failed transcription had a visible red-dot error badge** — REJECTED by owner; fix: pill's error state removed entirely (2026-11-08). Failure now = pill hides (450 ms transient), hub keeps `soravo:error`. This also closes the old normative-doc discrepancy and the mid-recording mic-leak hazard (recorder is discarded on `error`). The failure *sound* blip is kept deliberately (no visual state); say the word to remove it too.
+
+## Known issues / open items
+
+1. Capsule renders **28 px** tall vs 30 px reference target (owner-accepted current look).
+2. Waveform reacting to **real speech** unverified on this machine (speaker→mic coupling absent; consistent with reference-capture finding). Path: AnalyserNode on shared `MediaStream`, 12 bars, attack/decay smoothing; math unit-tested. Needs an owner spoken-word check or virtual loopback device.
+3. **125%/150% DPI and multi-monitor placement unverified** — no scaled/multi-monitor display attached. Code is physical-px + `scale_factor()` based; untested at runtime.
+4. Placement window was absent from `capabilities/default.json` windows list — added in this session (`"placement"`). It worked before; listing is correct hygiene, needs regression check that placement still opens.
 
 ## Regression protocol used
 
@@ -52,4 +56,4 @@ Baseline captured **before** any change this session (`base-00…base-06`, `base
 
 ## Sign-off
 
-Not signed off for release. Remaining: owner spoken-waveform check; DPI/multi-monitor check; empty-transcript decision. (Tooltip fix verified live; full `cargo test --locked` green.)
+Not signed off for release. Remaining: owner spoken-waveform check; DPI/multi-monitor check. (Tooltip fix and error-state removal verified live; full `cargo test --locked` green.)
