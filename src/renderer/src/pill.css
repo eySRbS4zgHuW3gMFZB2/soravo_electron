@@ -173,11 +173,18 @@ body,
 }
 
 /* Hover tooltip — only while hovering, never permanent */
+.pill-btn-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .pill-tooltip {
   position: absolute;
-  bottom: 37px;
+  bottom: 100%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -6px);
   padding: 4px 8px;
   border-radius: 6px;
   background: #111110;

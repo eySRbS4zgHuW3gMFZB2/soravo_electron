@@ -187,38 +187,43 @@ export default function App() {
   return (
     <div className="pill-root">
       <div className="capsule-wrap">
-        {(hover === 'cross' || hover === 'tick') && (
-          <div className="pill-tooltip" role="status">
-            {hover === 'cross' ? 'Cancel' : 'Finish and paste'}
-          </div>
-        )}
         <div className="capsule" data-mode={mode}>
           {state === 'recording' && (
             <>
               {handsFree && (
-                <button
-                  type="button"
-                  className="pill-btn pill-cross"
-                  aria-label="Cancel recording"
-                  onMouseEnter={() => setHover('cross')}
-                  onMouseLeave={() => setHover(null)}
-                  onClick={() => void window.soravo.cancel()}
-                >
-                  <CloseIcon />
-                </button>
+                <span className="pill-btn-wrap">
+                  <button
+                    type="button"
+                    className="pill-btn pill-cross"
+                    aria-label="Cancel recording"
+                    onMouseEnter={() => setHover('cross')}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => void window.soravo.cancel()}
+                  >
+                    <CloseIcon />
+                  </button>
+                  {hover === 'cross' && (
+                    <span className="pill-tooltip" role="status">Cancel</span>
+                  )}
+                </span>
               )}
               <canvas ref={canvasRef} className="pill-wave" aria-hidden="true" />
               {handsFree && (
-                <button
-                  type="button"
-                  className="pill-btn pill-tick"
-                  aria-label="Finish and paste"
-                  onMouseEnter={() => setHover('tick')}
-                  onMouseLeave={() => setHover(null)}
-                  onClick={() => void window.soravo.finishRecording()}
-                >
-                  <CheckIcon />
-                </button>
+                <span className="pill-btn-wrap">
+                  <button
+                    type="button"
+                    className="pill-btn pill-tick"
+                    aria-label="Finish and paste"
+                    onMouseEnter={() => setHover('tick')}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => void window.soravo.finishRecording()}
+                  >
+                    <CheckIcon />
+                  </button>
+                  {hover === 'tick' && (
+                    <span className="pill-tooltip" role="status">Finish and paste</span>
+                  )}
+                </span>
               )}
             </>
           )}
