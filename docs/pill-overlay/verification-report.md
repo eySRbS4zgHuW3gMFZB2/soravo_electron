@@ -11,10 +11,10 @@ Screenshots referenced by filename (`%TEMP%\opencode\pill-evidence\` unless note
 | `npm run typecheck` (`tsc --noEmit`) | **PASS** (clean) |
 | `npm test` (vitest, root) | **PASS** — 9 files / 45 tests |
 | `cargo test --lib --locked` (rustup 1.90.0 MSVC, vcvars64, isolated target dir) | **PASS** — 60 passed, 0 failed, incl. `dictation::tests::*` FSM suite |
-| Full `cargo test` (incl. engine/model-dependent) | **NOT RUN** — model present for the default tiny model; not re-run in this session. Record honestly as unverified. |
+| Full `cargo test --locked` (rustup 1.90.0 MSVC, vcvars64, isolated target dir, `RUSTDOC` pinned likewise) | **PASS** — 60 passed (lib), 0/0 bin + doc tests; engine-dependent tests self-skip when prerequisites are absent |
 | `git status` clean before this session's edits | **PASS** (tree was clean at recovery) |
 
-Note: ambient `cargo` (chocolatey rustc 1.98.1) **cannot** build this workspace (`E0463: can't find crate for core`, MSVC std absent). All Rust work used the pinned rustup 1.90.0 `-x86_64-pc-windows-msvc` toolchain + 2017 BuildTools `vcvars64.bat` + `CARGO_TARGET_DIR=Z:\codex-build-cache\PILL-OVERLAY-01-msvc`.
+Note: ambient `cargo` (chocolatey rustc 1.98.1) **cannot** build this workspace (`E0463: can't find crate for core`, MSVC std absent), and cargo's doctest run fails (`E0463: can't find crate for std`) unless `RUSTDOC` is pinned to the same toolchain. All Rust work used the pinned rustup 1.90.0 `-x86_64-pc-windows-msvc` toolchain + 2017 BuildTools `vcvars64.bat` + `RUSTDOC=%USERPROFILE%\.rustup\toolchains\1.90.0-x86_64-pc-windows-msvc\bin\rustdoc.exe` + `CARGO_TARGET_DIR=Z:\codex-build-cache\PILL-OVERLAY-01-msvc`.
 
 ## Runtime verification (single monitor, 100% DPI)
 
@@ -52,4 +52,4 @@ Baseline captured **before** any change this session (`base-00…base-06`, `base
 
 ## Sign-off
 
-Not signed off for release. Remaining: owner spoken-waveform check; DPI/multi-monitor check; empty-transcript decision; tooltip fix live confirmation; full `cargo test`.
+Not signed off for release. Remaining: owner spoken-waveform check; DPI/multi-monitor check; empty-transcript decision. (Tooltip fix verified live; full `cargo test --locked` green.)

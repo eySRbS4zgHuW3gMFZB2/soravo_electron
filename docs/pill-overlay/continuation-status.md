@@ -11,7 +11,7 @@
 
 ## Latest known good state
 
-Commits on branch (newest first): `d5a2e6e` (placement 9-zone window), `554abe5` (bar distinction, 112 px hands-free capsule), `70c467c` (FSM + waveform + capsule rebuild), `cd812f7` (task registration), plus this session's checkpoint commit (tooltip fix + placement capability + docs, `git log -1` on branch). Branch is local; nothing pushed.
+Commits on branch (newest first): `3865ea4` (tooltip fix + placement capability + docs), `d5a2e6e` (placement 9-zone window), `554abe5` (bar distinction, 112 px hands-free capsule), `70c467c` (FSM + waveform + capsule rebuild), `cd812f7` (task registration). Branch is local; nothing pushed. Runtime currently: app PID 8744 (fresh, post-fix webview); desktop vite PID 12020 on 5173 (manually supervised — NOT the tauri-dev supervisor; website vite on 5174 is down, same as before this session).
 
 Runtime protocol after editing renderer code: **restart the desktop vite** (`powershell -File %TEMP%\opencode\pill-vite.ps1`, or foreground `node node_modules/vite/bin/vite.js` in the worktree) — the old watcher serves stale transforms on this folder — then relaunch `Z:\codex-build-cache\PILL-OVERLAY-01-msvc\x86_64-pc-windows-msvc\debug\soravo.exe` for a fresh webview. Currently running app: PID 9556 (post-fix webview).
 

@@ -65,5 +65,5 @@ Reference target vs. actual: capsule height renders **28 px** vs 30 px target (a
 2. Capsule renders 28 px tall vs 30 px reference (owner-accepted).
 3. Waveform react-to-speech unverified at runtime (no acoustic path on this machine).
 4. DPI 125%/150% and multi-monitor placement unverified (no scaled/multi display).
-5. `cargo test --lib` green (60); full `cargo test` (incl. engine-dependent tests) not re-run — engine tests skip when model missing; last full run state unknown. Vitest 45/45 green; `tsc --noEmit` clean.
+5. `cargo test --locked` green — 60/60 lib (doctests require `RUSTDOC` pinned to the rustup MSVC toolchain; ambient chocolatey rustc has no MSVC std, E0463). Vitest 45/45 green; `tsc --noEmit` clean.
 6. `interaction-state-machine.md` names `cancel_recording` as both alias and command; observed deltas vs implementation: `finish_recording` exists (used by ✓); doc's `soravo:audio-level` intentionally omitted (renderer-side AnalyserNode only) — as designed in the doc.

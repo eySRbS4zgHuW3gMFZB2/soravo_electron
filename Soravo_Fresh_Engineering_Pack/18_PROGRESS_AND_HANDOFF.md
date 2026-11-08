@@ -967,6 +967,6 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - Deliverables present: reference-specification.md, current-implementation-audit.md, interaction-state-machine.md, iteration-log.md, verification-report.md, continuation-status.md (docs/pill-overlay/).
 - Owner-accepted milestones preserved: double-tap hands-free activation and the black-capsule pill appearance (measured baseline recorded; capsule pixel-identical after this session's only code change).
 - This session: stale-hover tooltip defect fixed and verified live (tooltip no longer renders with no controls; hover/cancel/PTT cycle re-tested), placement window listed in capabilities, dev-server stale-transform root cause documented (desktop vite on 5173 must be restarted after renderer edits).
-- Tests: tsc clean; vitest 45/45; cargo test --lib 60/60. Not run: full cargo test; DPI 125/150% and multi-monitor verification (no hardware); spoken-waveform check (acoustic path absent on this machine).
+- Tests: tsc clean; vitest 45/45; cargo test --locked PASS (60/60 lib, RUSTDOC pinned). Not run: DPI 125/150% and multi-monitor verification (no hardware); spoken-waveform check (acoustic path absent on this machine).
 - Known open decision for owner: empty transcript routes to a red-dot error; normative interaction-state-machine.md specifies silent completion. Unchanged pending owner call.
 - Not merged; no push, no deployment, no production change.
