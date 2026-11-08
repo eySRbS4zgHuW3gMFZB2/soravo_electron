@@ -2,7 +2,8 @@
 //!
 //! Pure functions are kept separate from the canvas/AudioContext plumbing so
 //! the level math is unit-testable without a device. Everything here is
-//! deterministic: given the same sample buffer, the same levels come out.
+//! deterministic: given the same sample/binner buffer, the same levels come
+//! out.
 
 export const BAR_COUNT = 12
 export const MIN_LEVEL = 0.055
@@ -30,6 +31,60 @@ export function segmentLevels(samples: Float32Array<ArrayBufferLike>, count: num
       if (v > peak) peak = v
     }
     const rms = Math.sqrt(sum / (end - start))
+    const blended = Math.min(1, (rms * 0.65 + peak * 0.35) * gain)
+    const shaped = Math.pow(blended, 0.72)
+    out[i] = Math.max(MIN_LEVEL, Math.min(1, shaped))
+  }
+  return out
+}
+
+/** Convert a frequency-bin buffer (AnalyserNode.getFloatFrequencyData output,
+ * in dB, range typically -100..0) into 0..1 levels for `count` bars.
+ *
+ * Bins are grouped logarithmically so each bar covers a comparable musical
+ * octave band instead of a linear range. This is what makes consecutive bars
+ * react to different parts of the speech spectrum (vowels energy low, mid-low
+ * formants, fricative hiss, ...) instead of all following the same amplitude
+ * envelope. Every bar is seeded from its own set of bins, so silence is a
+ * stable floor, a falling tone peeks at one or two bars, and a vowel lights
+ * up a contiguous cluster rather than the whole strip.
+ *
+ *   out[i] = max(MIN_LEVEL, gainBandAmplitude(linearised bins for bar i))
+ */
+export function frequencyLevels(
+  freqData: Float32Array<ArrayBufferLike>,
+  count: number,
+  minDb = -100,
+  maxDb = 0,
+  gain = 1,
+): number[] {
+  const out = new Array<number>(count).fill(MIN_LEVEL)
+  const binCount = freqData.length
+  if (binCount === 0 || count <= 0) return out
+
+  // Logarithmic band edges, from bin 1 (lowest usable) to binCount (Nyquist).
+  // Bar i owns bins in [lo_i, hi_i). Edges are computed in log-bin space.
+  const loLog = 0 // log(1)
+  const hiLog = Math.log(binCount)
+  const step = (hiLog - loLog) / count
+  for (let i = 0; i < count; i++) {
+    const lo = Math.floor(Math.exp(loLog + i * step))
+    const hi = Math.max(lo + 1, Math.floor(Math.exp(loLog + (i + 1) * step)))
+    let sum = 0
+    let peak = 0
+    let n = 0
+    for (let b = lo; b < Math.min(hi, binCount); b++) {
+      const db = freqData[b]
+      const lin = Math.pow(10, (db - maxDb) / 20) // 0..1 relative to maxDb
+      sum += lin * lin
+      if (lin > peak) peak = lin
+      n++
+    }
+    if (n === 0) {
+      out[i] = MIN_LEVEL
+      continue
+    }
+    const rms = Math.sqrt(sum / n)
     const blended = Math.min(1, (rms * 0.65 + peak * 0.35) * gain)
     const shaped = Math.pow(blended, 0.72)
     out[i] = Math.max(MIN_LEVEL, Math.min(1, shaped))
@@ -71,8 +126,8 @@ export function createWaveform(canvas: HTMLCanvasElement): WaveformController {
   const draw = () => {
     if (!ctx2d) return
     if (analyser && buffer) {
-      analyser.getFloatTimeDomainData(buffer)
-      levels = smoothLevels(levels, segmentLevels(buffer, BAR_COUNT))
+      analyser.getFloatFrequencyData(buffer as unknown as Float32Array<ArrayBuffer>)
+      levels = smoothLevels(levels, frequencyLevels(buffer as unknown as Float32Array<ArrayBufferLike>, BAR_COUNT, -95, -10, 1.4))
     } else {
       levels = smoothLevels(levels, new Array<number>(BAR_COUNT).fill(MIN_LEVEL))
     }
@@ -105,11 +160,16 @@ export function createWaveform(canvas: HTMLCanvasElement): WaveformController {
       if (!Ctor) return // canvas still draws the floor via the rAF loop
       audio = new Ctor()
       analyser = audio.createAnalyser()
-      analyser.fftSize = 1024
-      analyser.smoothingTimeConstant = 0.45
+      // 8192-bin FFT gives ~186ms of audio context per frame at 44100 Hz,
+      // enough time-envelope for bars to show genuine variation while keeping
+      // fresh data every rAF tick.
+      analyser.fftSize = 2048
+      // Low analyser smoothing so bars react to the live signal instead of
+      // averaging over many frames (which makes them all move in lockstep).
+      analyser.smoothingTimeConstant = 0.3
       source = audio.createMediaStreamSource(stream)
       source.connect(analyser)
-      buffer = new Float32Array(analyser.fftSize)
+      buffer = new Float32Array(analyser.frequencyBinCount)
       levels = new Array<number>(BAR_COUNT).fill(MIN_LEVEL)
     },
     stop() {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BAR_COUNT, MIN_LEVEL, segmentLevels, smoothLevels } from '../src/renderer/src/waveform'
+import { BAR_COUNT, MIN_LEVEL, frequencyLevels, segmentLevels, smoothLevels } from '../src/renderer/src/waveform'
 
 function sineSamples(freqHz: number, seconds: number, sampleRate = 16000, amplitude = 0.6): Float32Array<ArrayBuffer> {
   const n = Math.floor(seconds * sampleRate)
@@ -26,7 +26,6 @@ describe('segmentLevels', () => {
   })
 
   it('produces distinct bar heights when amplitude varies across the frame', () => {
-    // A linear amplitude ramp — the segments see increasing energy.
     const n = 1024
     const samples = new Float32Array(new ArrayBuffer(n * 4))
     for (let i = 0; i < n; i++) {
@@ -47,6 +46,87 @@ describe('segmentLevels', () => {
   })
 })
 
+describe('frequencyLevels', () => {
+  // Build an FFT-bin-like buffer where the value at bin j expresses dB
+  // level of frequency bin j (range roughly -100..0). This mirrors what
+  // AudioContext.analyser.getFloatFrequencyData produces.
+  function toneFreqData(fftSize: number, freqHz: number, sampleRate: number, amplitude: number): Float32Array<ArrayBuffer> {
+    // Synthesise a single sharp peak in frequency space to model a tone.
+    const bins = fftSize / 2
+    const out = new Float32Array(new ArrayBuffer(bins * 4))
+    for (let i = 0; i < bins; i++) out[i] = -100
+    const binFreq = sampleRate / fftSize
+    const peakBin = Math.max(1, Math.min(bins - 1, Math.round(freqHz / binFreq)))
+    const peakDb = amplitude > 0 ? 20 * Math.log10(amplitude) : -100
+    out[peakBin] = Math.max(-100, Math.min(0, peakDb))
+    // Spill a little energy into adjacent bins to model real analyser spread.
+    if (peakBin > 0) out[peakBin - 1] = Math.max(-100, peakDb - 18)
+    if (peakBin < bins - 1) out[peakBin + 1] = Math.max(-100, peakDb - 18)
+    return out as Float32Array<ArrayBuffer>
+  }
+
+  function silenceFreqData(fftSize: number): Float32Array<ArrayBuffer> {
+    const bins = fftSize / 2
+    const out = new Float32Array(new ArrayBuffer(bins * 4))
+    for (let i = 0; i < bins; i++) out[i] = -100
+    return out as Float32Array<ArrayBuffer>
+  }
+
+  it('returns BAR_COUNT levels, all within [MIN_LEVEL, 1]', () => {
+    const data = toneFreqData(2048, 440, 44100, 0.6)
+    const levels = frequencyLevels(data, BAR_COUNT, -100, 0, 1)
+    expect(levels).toHaveLength(BAR_COUNT)
+    for (const v of levels) {
+      expect(v).toBeGreaterThanOrEqual(MIN_LEVEL)
+      expect(v).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('silence stays at the floor', () => {
+    const data = silenceFreqData(2048)
+    const levels = frequencyLevels(data, BAR_COUNT, -100, 0, 1)
+    for (const v of levels) expect(v).toBe(MIN_LEVEL)
+  })
+
+  it('bars do not all receive identical values for a tonal input', () => {
+    const data = toneFreqData(2048, 440, 44100, 0.6)
+    const levels = frequencyLevels(data, BAR_COUNT, -100, 0, 1)
+    const distinct = new Set(levels.map((v) => v.toFixed(4))).size
+    expect(distinct).toBeGreaterThan(1)
+  })
+
+  it('a low tone and a high tone produce different bar-height patterns', () => {
+    const low = frequencyLevels(toneFreqData(2048, 250, 44100, 0.6), BAR_COUNT, -100, 0, 1)
+    const high = frequencyLevels(toneFreqData(2048, 4000, 44100, 0.6), BAR_COUNT, -100, 0, 1)
+    // At least some bars differ meaningfully
+    let diffCount = 0
+    for (let i = 0; i < BAR_COUNT; i++) {
+      if (Math.abs(low[i] - high[i]) > 0.05) diffCount++
+    }
+    expect(diffCount).toBeGreaterThan(0)
+  })
+
+  it('loud signals produce higher levels than quiet signals', () => {
+    const quiet = frequencyLevels(toneFreqData(2048, 440, 44100, 0.05), BAR_COUNT, -100, 0, 1)
+    const loud = frequencyLevels(toneFreqData(2048, 440, 44100, 0.9), BAR_COUNT, -100, 0, 1)
+    const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
+    expect(sum(loud)).toBeGreaterThan(sum(quiet))
+  })
+
+  it('different frequencies shift which bar is the peak', () => {
+    const lo = frequencyLevels(toneFreqData(2048, 300, 44100, 0.6), BAR_COUNT, -100, 0, 1)
+    const hi = frequencyLevels(toneFreqData(2048, 8000, 44100, 0.6), BAR_COUNT, -100, 0, 1)
+    const peakIndex = (levels: number[]) => levels.reduce((best, v, i, arr) => (v > arr[best] ? i : best), 0)
+    expect(peakIndex(lo)).toBeLessThan(peakIndex(hi))
+  })
+
+  it('empty/zero-bin buffer stays at the floor', () => {
+    const empty = new Float32Array(0) as Float32Array<ArrayBuffer>
+    const levels = frequencyLevels(empty, BAR_COUNT, -100, 0, 1)
+    for (const v of levels) expect(v).toBe(MIN_LEVEL)
+  })
+})
+
 describe('smoothLevels', () => {
   it('rises fast and falls slowly', () => {
     const from = new Array<number>(BAR_COUNT).fill(MIN_LEVEL)
@@ -62,5 +142,17 @@ describe('smoothLevels', () => {
   it('is idempotent at equilibrium', () => {
     const level = new Array<number>(BAR_COUNT).fill(0.5)
     expect(smoothLevels(level, level)).toEqual(level)
+  })
+})
+
+describe('frequencyLevels vs segmentLevels coherence', () => {
+  it('a single frequency energy column does not produce identical bars', () => {
+    // Sanity: the whole point of the fix is that bars differ.
+    const data = new Float32Array(1024)
+    for (let i = 0; i < 1024; i++) data[i] = -100
+    data[500] = 0 // strong tone in one bin only
+    const levels = frequencyLevels(data, BAR_COUNT, -100, 0, 1)
+    const set = new Set(levels.map((v) => v.toFixed(3)))
+    expect(set.size).toBeGreaterThan(1)
   })
 })
