@@ -637,21 +637,30 @@ function SettingsModal({
                       title="Overlay position"
                       description="Where the dictation pill sits while it is recording."
                       control={
-                        <div className="anchor-grid" role="radiogroup" aria-label="Overlay position">
-                          {PILL_ANCHORS.map((anchor) => (
-                            <button
-                              key={anchor}
-                              type="button"
-                              role="radio"
-                              aria-checked={pillAnchor === anchor}
-                              className={
-                                pillAnchor === anchor ? 'anchor-cell anchor-cell-on' : 'anchor-cell'
-                              }
-                              aria-label={anchor.replace('-', ' ')}
-                              title={anchor.replace('-', ' ')}
-                              onClick={() => setPillAnchor(anchor)}
-                            />
-                          ))}
+                        <div className="shortcut-item-keys">
+                          <div className="anchor-grid" role="radiogroup" aria-label="Overlay position">
+                            {PILL_ANCHORS.map((anchor) => (
+                              <button
+                                key={anchor}
+                                type="button"
+                                role="radio"
+                                aria-checked={pillAnchor === anchor}
+                                className={
+                                  pillAnchor === anchor ? 'anchor-cell anchor-cell-on' : 'anchor-cell'
+                                }
+                                aria-label={anchor.replace('-', ' ')}
+                                title={anchor.replace('-', ' ')}
+                                onClick={() => setPillAnchor(anchor)}
+                              />
+                            ))}
+                          </div>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void window.soravo.openPlacementMode()}
+                          >
+                            Reposition…
+                          </Button>
                         </div>
                       }
                     />

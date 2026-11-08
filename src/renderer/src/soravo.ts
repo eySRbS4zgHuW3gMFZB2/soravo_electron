@@ -134,6 +134,12 @@ export interface SoravoAPI {
   notifyError(message: string): Promise<void>
   setPillAnchor(anchor: PillAnchor): Promise<void>
   getPillAnchor(): Promise<PillAnchor>
+  /** Show the full-screen placement window. */
+  openPlacementMode(): Promise<void>
+  /** Hide the placement window. */
+  closePlacementMode(): Promise<void>
+  /** Flash the pill at the configured anchor as placement feedback. */
+  flashPillPreview(): Promise<void>
   onTranscript(cb: (text: string) => void): () => void
   onError(cb: (message: string) => void): () => void
   onDataChanged(cb: () => void): () => void
@@ -279,6 +285,9 @@ export const soravo: SoravoAPI = {
   notifyError: (message: string) => invoke('notify_error', { message }),
   setPillAnchor: (anchor) => invoke('set_pill_anchor', { anchor }),
   getPillAnchor: () => invoke<PillAnchor>('get_pill_anchor'),
+  openPlacementMode: () => invoke('open_placement_mode'),
+  closePlacementMode: () => invoke('close_placement_mode'),
+  flashPillPreview: () => invoke('flash_pill_preview'),
   onTranscript: (cb) => addListener('transcript', cb as Function),
   onError: (cb) => addListener('error', cb as Function),
   onDataChanged: (cb) => addListener('data-changed', cb as Function),

@@ -1,0 +1,137 @@
+/* Placement mode: pick where the dictation pill docks.
+ *
+ * Fullscreen scrim over the whole monitor. Nine zones are outlined; the
+ * user either clicks one, or drags the ghost capsule onto it. Esc cancels.
+ */
+
+.placement-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: rgba(8, 8, 7, 0.62);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.placement-head {
+  text-align: center;
+  pointer-events: none;
+}
+
+.placement-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #f0f3e6;
+}
+
+.placement-hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: rgba(240, 243, 230, 0.62);
+}
+
+.placement-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 18px;
+  width: min(72vw, 980px);
+  height: min(56vh, 560px);
+}
+
+.placement-zone {
+  position: relative;
+  border: 1.5px dashed rgba(240, 243, 230, 0.32);
+  border-radius: 20px;
+  background: rgba(240, 243, 230, 0.03);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+  padding: 0;
+}
+
+.placement-zone:hover,
+.placement-zone[data-hot="true"] {
+  border-color: #9fe870;
+  background: rgba(159, 232, 112, 0.1);
+  box-shadow: inset 0 0 0 1px #9fe870;
+}
+
+.placement-zone-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(240, 243, 230, 0.55);
+  pointer-events: none;
+}
+
+.placement-zone:hover .placement-zone-label,
+.placement-zone[data-hot="true"] .placement-zone-label {
+  color: #9fe870;
+}
+
+.placement-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.placement-cancel {
+  border: 1px solid rgba(240, 243, 230, 0.25);
+  background: transparent;
+  color: #f0f3e6;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  cursor: pointer;
+}
+.placement-cancel:hover {
+  border-color: rgba(240, 243, 230, 0.5);
+}
+.placement-cancel:focus-visible {
+  outline: 2px solid #9fe870;
+  outline-offset: 2px;
+}
+
+/* The ghost capsule the user drags around. Parked in the header row; while
+ * dragging it becomes position:fixed and follows the pointer. */
+.ghost-pill {
+  flex: none;
+  width: 112px;
+  height: 30px;
+  border-radius: 9999px;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: grab;
+  z-index: 10;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  touch-action: none;
+}
+.ghost-pill:active {
+  cursor: grabbing;
+}
+.ghost-pill i {
+  width: 3px;
+  height: 3px;
+  border-radius: 1px;
+  background: #f5f4f0;
+  display: block;
+}

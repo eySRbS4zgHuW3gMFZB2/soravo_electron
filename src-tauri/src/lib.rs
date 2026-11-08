@@ -1886,6 +1886,56 @@ async fn get_pill_anchor(app: tauri::AppHandle) -> Result<String, String> {
     Ok(load_settings(&app).pill_anchor)
 }
 
+/// Show the full-screen placement window used to choose the pill's dock.
+#[tauri::command]
+async fn open_placement_mode(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("placement") {
+        // Make sure it covers the monitor the hub is on.
+        if let Some(monitor) = win.current_monitor().ok().flatten() {
+            let wa = monitor.work_area();
+            win.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+                x: wa.position.x,
+                y: wa.position.y,
+            }))
+            .ok();
+        }
+        win.show().map_err(|e| e.to_string())?;
+        win.set_focus().ok();
+    }
+    Ok(())
+}
+
+/// Close the placement window without changing the anchor.
+#[tauri::command]
+async fn close_placement_mode(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("placement") {
+        win.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Show the pill briefly at the (new) anchor as placement feedback, then
+/// hide it again. Superseded like any other hide by a new session.
+#[tauri::command]
+async fn flash_pill_preview(app: tauri::AppHandle) -> Result<(), String> {
+    place_pill(&app);
+    if let Some(win) = app.get_webview_window("pill") {
+        win.show().ok();
+    }
+    let hide_gen = app.state::<AppState>().hide_gen.clone();
+    spawn_timer(&app, &hide_gen, std::time::Duration::from_millis(900), |app| {
+        // Only hide when nothing else is showing the pill (no active session).
+        let state = app.state::<AppState>();
+        let phase = state.fsm.lock().map(|fsm| fsm.phase()).unwrap_or(dictation::Phase::Idle);
+        if phase == dictation::Phase::Idle {
+            if let Some(win) = app.get_webview_window("pill") {
+                win.hide().ok();
+            }
+        }
+    });
+    Ok(())
+}
+
 #[tauri::command]
 async fn get_history(
     app: tauri::AppHandle,
@@ -2644,6 +2694,9 @@ pub fn run() {
             submit_audio,
             set_pill_anchor,
             get_pill_anchor,
+            open_placement_mode,
+            close_placement_mode,
+            flash_pill_preview,
             get_history,
             clear_history,
             delete_history,
