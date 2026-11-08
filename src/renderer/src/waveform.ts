@@ -54,52 +54,69 @@ export function segmentLevels(samples: Float32Array<ArrayBufferLike>, count: num
 export function frequencyLevels(
   freqData: Float32Array<ArrayBufferLike>,
   count: number,
-  minDb = -100,
-  maxDb = 0,
-  gain = 1,
+  minDb = -95,
+  maxDb = -8,
+  gain = 1.6,
 ): number[] {
   const out = new Array<number>(count).fill(MIN_LEVEL)
   const binCount = freqData.length
   if (binCount === 0 || count <= 0) return out
 
   // Logarithmic band edges, from bin 1 (lowest usable) to binCount (Nyquist).
-  // Bar i owns bins in [lo_i, hi_i). Edges are computed in log-bin space.
-  const loLog = 0 // log(1)
+  // Bar i owns bins in [lo_i, hi_i).
+  const loLog = Math.log(1)
   const hiLog = Math.log(binCount)
   const step = (hiLog - loLog) / count
+  const floorLin = Math.pow(10, (minDb - maxDb) / 20) // linear value at noise floor
   for (let i = 0; i < count; i++) {
-    const lo = Math.floor(Math.exp(loLog + i * step))
+    const lo = Math.max(1, Math.floor(Math.exp(loLog + i * step)))
     const hi = Math.max(lo + 1, Math.floor(Math.exp(loLog + (i + 1) * step)))
     let sum = 0
     let peak = 0
     let n = 0
     for (let b = lo; b < Math.min(hi, binCount); b++) {
       const db = freqData[b]
-      const lin = Math.pow(10, (db - maxDb) / 20) // 0..1 relative to maxDb
-      sum += lin * lin
-      if (lin > peak) peak = lin
+      // Map bin dB onto 0..1 relative to [minDb, maxDb].
+      const norm = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)))
+      sum += norm * norm
+      if (norm > peak) peak = norm
       n++
     }
     if (n === 0) {
       out[i] = MIN_LEVEL
       continue
     }
+    // Mild power curve toward 1; blended RMS+peak so hiss and plosives
+    // both register. Gain is applied after blending so it scales the
+    // merged band energy rather than inflating the floor.
     const rms = Math.sqrt(sum / n)
     const blended = Math.min(1, (rms * 0.65 + peak * 0.35) * gain)
-    const shaped = Math.pow(blended, 0.72)
+    const shaped = Math.pow(Math.max(0, blended), 0.62)
     out[i] = Math.max(MIN_LEVEL, Math.min(1, shaped))
   }
   return out
 }
 
 /** Smooth `next` toward the running `prev` levels with a fast attack and a
- * slow decay — the movement reads as speech energy rather than jitter. */
-export function smoothLevels(prev: number[], next: number[], attack = ATTACK, decay = DECAY): number[] {
+ * slow decay — the movement reads as speech energy rather than jitter.
+ *
+ * attack/decay may be arrays (one value per bar) to give each band its own
+ * smoothing time constant, so high-frequency bands are more reactive while
+ * low-frequency bands retain a smoother, slower envelope (independent
+ * attack/decay per bar). */
+export function smoothLevels(
+  prev: number[],
+  next: number[],
+  attack: number | number[] = ATTACK,
+  decay: number | number[] = DECAY,
+): number[] {
   const out = new Array<number>(next.length)
   for (let i = 0; i < next.length; i++) {
+    const a = typeof attack === 'number' ? attack : (attack[i] ?? ATTACK)
+    const d = typeof decay === 'number' ? decay : (decay[i] ?? DECAY)
     const p = prev[i] ?? MIN_LEVEL
     const n = next[i]
-    const rate = n >= p ? attack : decay
+    const rate = n >= p ? a : d
     out[i] = p + (n - p) * rate
   }
   return out
@@ -127,7 +144,11 @@ export function createWaveform(canvas: HTMLCanvasElement): WaveformController {
     if (!ctx2d) return
     if (analyser && buffer) {
       analyser.getFloatFrequencyData(buffer as unknown as Float32Array<ArrayBuffer>)
-      levels = smoothLevels(levels, frequencyLevels(buffer as unknown as Float32Array<ArrayBufferLike>, BAR_COUNT, -95, -10, 1.4))
+      // Per-bar attack/decay: higher index (treble) = faster, more
+      // responsive; lower index (bass) = slower, smoother envelope.
+      const attack = new Array<number>(BAR_COUNT).fill(0).map((_, i) => 0.35 + i * 0.04)
+      const decay = new Array<number>(BAR_COUNT).fill(0).map((_, i) => 0.06 + (BAR_COUNT - 1 - i) * 0.012)
+      levels = smoothLevels(levels, frequencyLevels(buffer as unknown as Float32Array<ArrayBufferLike>, BAR_COUNT), attack, decay)
     } else {
       levels = smoothLevels(levels, new Array<number>(BAR_COUNT).fill(MIN_LEVEL))
     }
@@ -166,7 +187,7 @@ export function createWaveform(canvas: HTMLCanvasElement): WaveformController {
       analyser.fftSize = 2048
       // Low analyser smoothing so bars react to the live signal instead of
       // averaging over many frames (which makes them all move in lockstep).
-      analyser.smoothingTimeConstant = 0.3
+      analyser.smoothingTimeConstant = 0.25
       source = audio.createMediaStreamSource(stream)
       source.connect(analyser)
       buffer = new Float32Array(analyser.frequencyBinCount)

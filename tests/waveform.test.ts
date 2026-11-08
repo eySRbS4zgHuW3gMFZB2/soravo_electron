@@ -156,3 +156,55 @@ describe('frequencyLevels vs segmentLevels coherence', () => {
     expect(set.size).toBeGreaterThan(1)
   })
 })
+
+describe('frequencyLevels realistic speech', () => {
+  function speechFreqData(fftSize: number, peakDb: number): Float32Array<ArrayBuffer> {
+    const bins = fftSize / 2
+    const out = new Float32Array(new ArrayBuffer(bins * 4))
+    // Speech-like spectrum: energy clustered across mid-low and mid bands,
+    // tailing off toward higher bands. Plus a modest noise floor at -92 dB.
+    for (let i = 0; i < bins; i++) {
+      const band = i / (bins - 1)
+      const tilt = 1 - band * 0.7
+      out[i] = -92 + tilt * ((peakDb + 92) * 0.4)
+    }
+    return out as Float32Array<ArrayBuffer>
+  }
+
+  it('normal conversational source level (-35 dB-ish active bins) produces clearly visible bars', () => {
+    const data = speechFreqData(2048, -30)
+    const levels = frequencyLevels(data, BAR_COUNT)
+    const avg = levels.reduce((a, b) => a + b, 0) / BAR_COUNT
+    // Avg should exceed MIN_LEVEL by a clear margin (visible centred motion).
+    expect(avg).toBeGreaterThan(MIN_LEVEL + 0.15)
+  })
+
+  it('quiet source gives restrained, non-zero bars', () => {
+    const data = speechFreqData(2048, -55)
+    const levels = frequencyLevels(data, BAR_COUNT)
+    const avg = levels.reduce((a, b) => a + b, 0) / BAR_COUNT
+    expect(avg).toBeGreaterThan(MIN_LEVEL)
+    expect(avg).toBeLessThan(0.7)
+  })
+
+  it('loud source gives significantly taller bars', () => {
+    const normal = speechFreqData(2048, -30)
+    const loud = speechFreqData(2048, -15)
+    const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
+    expect(sum(loud)).toBeGreaterThan(sum(normal) * 1.3)
+  })
+
+  it('silence keeps every bar at the floor (no jitter)', () => {
+    const data = new Float32Array(new ArrayBuffer((2048 / 2) * 4))
+    for (let i = 0; i < data.length; i++) data[i] = -100
+    const levels = frequencyLevels(data as Float32Array<ArrayBuffer>, BAR_COUNT)
+    for (const v of levels) expect(v).toBe(MIN_LEVEL)
+  })
+
+  it('per-bar levels are not all identical', () => {
+    const data = speechFreqData(2048, -30)
+    const levels = frequencyLevels(data, BAR_COUNT)
+    const distinct = new Set(levels.map((v) => v.toFixed(3))).size
+    expect(distinct).toBeGreaterThan(2)
+  })
+})
