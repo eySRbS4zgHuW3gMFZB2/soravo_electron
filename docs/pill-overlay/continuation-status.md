@@ -5,6 +5,7 @@
 ## Branch / worktree
 
 - Branch: `feature/PILL-OVERLAY-01-pill-overlay` (linear history, `main` is protected)
+- Pull request: **#47** — "PILL-OVERLAY-01 — Reconstruct the floating dictation pill" (open, base `main`, 14 commits at last update; body documents the issue, the fix, verification and open items; created by this session 2026-11-08 from the full branch scope)
 - Worktree: `C:\Users\kaya\Desktop\Hydra\soravo\.worktrees\PILL-OVERLAY-01-pill-overlay` (registered in `git worktree list`; base `a9a5a8f`)
 - Base: `a9a5a8f` (origin/main at branch creation)
 - CrispASR v0.8.43 — **untouched**
