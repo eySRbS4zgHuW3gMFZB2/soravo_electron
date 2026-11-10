@@ -1265,7 +1265,7 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 - Branch/worktree: feature/PILL-OVERLAY-01-pill-overlay at .worktrees/PILL-OVERLAY-01-pill-overlay (base a9a5a8f). CrispASR v0.8.43 untouched. Full state in docs/pill-overlay/continuation-status.md; narrative in iteration-log.md.
 - Owner-accepted milestones preserved: double-tap hands-free and the pill's appearance (PTT capsule x 924-995, y 994-1021; hands-free ~112px; bottom-centre anchor, 19px above work area).
 - New this session: stale-hover tooltip defect fixed (Cancel bubble rendered with no buttons; hover now cleared when hands-free controls unmount) and verified live (fix-06/07/08); placement window added to capabilities; pill-dev documentation set added.
-- Toolchain: ambient cargo (chocolatey 1.98.1) cannot build (E0463); pinned rustup 1.90.0 MSVC + 2017 BuildTools vcvars64, isolated target dir Z:\codex-build-cache\PILL-OVERLAY-01-msvc. Desktop vite on 5173 must be restarted after renderer edits (watcher does not fire on this folder) — stale transformed App.tsx was served to the webview until vite was restarted.
+- Toolchain: ambient cargo (chocolatey 1.98.1) cannot build (E0463); pinned rustup 1.90.0 MSVC + 2017 BuildTools vcvars64, isolated target dir Z:\codex-build-cache\PILL-OVERLAY-01-msvc. Desktop vite on 5173 must be restarted after renderer edits (watcher does not fire on this folder) ï¿½ stale transformed App.tsx was served to the webview until vite was restarted.
 - Tests: tsc clean; vitest 45/45; cargo test --locked PASS (60/60 lib; RUSTDOC pinned to rustup MSVC). Open items: empty-transcript routing to error badge vs normative silent completion (owner decision), waveform speech check (mic/speaker coupling absent), DPI/multi-monitor verification.
 
 ## PILL-OVERLAY-01 error state removal (2026-11-08)
@@ -1282,6 +1282,13 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 - Gates: npm run typecheck clean; vitest 58/58; cargo test --locked 60/60; npm run build ok.
 - Finding: the rdev low-level keyboard hook receives zero keyboard events on this machine (mouse hook works; keyboard events never logged even with the debug flag); keyboard hotkeys only work via the hub's webview forwarder when the hub is focused. Recorded in docs/pill-overlay/iteration-log.md; not a code defect; owner to decide.
 - rdev/cargo on this machine needs the pinned rustup 1.90.0 MSVC + VS2017 vcvars64.bat; ambient chocolatey cargo (rustc 1.98.1, E0463) cannot build.
+
+## PILL-OVERLAY-01 inset main content panel (2026-11-10)
+
+- Owner request: recreate Wispr Flow's two-layer shell â€” outer application background framing an inner rounded, subtly bordered panel.
+- Fix (hub.css, one block): `.hub-content` margin: 12px 12px 12px 0 (left kept 0 so the panel remains flush to the rail/content boundary) + border: 1px solid var(--border) (theme-aware token, #d3d8cd light / #3a4033 dark). 12 px frame on top/right/bottom measured by pixel scan; panel 25,28,21 inside frame 34,38,30; four corners keep the 24 px radius (I11). No layout/sidebar/card/palette/window changes.
+- Gates: npm run typecheck; vitest 58/58; cargo test --locked 60/60; npm run build ok.
+- Second-opinion review confirmed the margin-over-padding choice and the theme-aware border.
 
 ## PILL-OVERLAY-01 dashboard content corners (2026-11-10)
 

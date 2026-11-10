@@ -987,6 +987,13 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - Finding recorded (iteration-log + PR 47): the rdev low-level keyboard hook receives no keyboard events on this machine (mouse hook works); keyboard hotkeys travel the hub's webview forwarder only when the hub is focused. Not a code defect; owner to decide on a second keyboard hook mechanism.
 - Not merged; no push, no deployment.
 
+## P9-01 PILL-OVERLAY-01 inset panel - 2026-11-10
+
+- Owner request: recreate Wispr Flow's two-layer shell — outer application background framing an inner rounded, subtly bordered panel.
+- Fix (hub.css, one block): `.hub-content` margin: 12px 12px 12px 0 (left kept 0 so the panel remains flush to the rail/content boundary) + border: 1px solid var(--border) (theme-aware token, #d3d8cd light / #3a4033 dark). 12 px frame on top/right/bottom measured by pixel scan; panel 25,28,21 inside frame 34,38,30; four corners keep the 24 px radius (I11). No layout/sidebar/card/palette/window changes.
+- Gates: npm run typecheck; vitest 58/58; cargo test --locked 60/60; npm run build ok.
+- Second-opinion subagent review confirmed the margin-over-padding choice and the theme-aware border token.
+
 ## P9-01 PILL-OVERLAY-01 dashboard corners - 2026-11-10
 
 - Owner request: fix the main dashboard content container's three unrounded corners (top-right, bottom-left, bottom-right).

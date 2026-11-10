@@ -391,6 +391,12 @@ html[data-theme='dark'] {
   flex-direction: column;
   background: var(--soravo-canvas);
   border-radius: var(--hub-panel-radius);
+  /* Inset frame of the outer shell, so the panel reads as a distinct surface
+     inside the application background (Wispr-style two-layer shell) rather
+     than filling the window. The rail owns the left edge, so no left inset;
+     top/right/bottom show the outer background as a narrow consistent frame. */
+  margin: 12px 12px 12px 0;
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 

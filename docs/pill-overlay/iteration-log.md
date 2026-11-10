@@ -95,6 +95,14 @@ Children cannot square off the corners: `.hub-content` clips with `overflow: hid
 
 Verification: all four corners re-captured zoomed (`corner-tl2/tr2/bl2/br2-zoom.png`); every corner shows the same smooth 24 px curve; typecheck clean; vitest 58/58; vite build ok.
 
+### I12 — Inset main content panel (Wispr two-layer shell) (2026-11-10, owner request)
+
+Root cause: `.hub-content` filled the flex row full-bleed — no outer-shell frame, no panel border (I11 had just rounded the corners, but the surface still filled the row edge-to-edge).
+
+Fix (`hub.css`, one block): `.hub-content` gains `margin: 12px 12px 12px 0` (top/right/bottom frame of the outer `canvas-soft` background; left stays 0 so the panel's left edge stays aligned with the existing rail/content boundary) plus `border: 1px solid var(--border)` (existing theme-aware token: `#d3d8cd` light / `#3a4033` dark). All four corners retain the 24 px radius; `overflow: hidden` keeps children clipped to the rounded panel at every scroll/navigation state.
+
+Verification: 12 px frame and 1 px border measured by pixel scan (panel `25,28,21` inside frame `34,38,30`); 12 px on all three framed sides (left = boundary, kept as required); 1 px border subtle in both themes (token-driven `--border`); window geometry unchanged (285,95 1350x850); `npm run typecheck` clean; `vitest` 58/58; `npm run build` ok. Second-opinion subagent review confirmed the margin-vs-padding approach and the theme-aware border choice.
+
 ## Known discrepancies / open items
 
 1. ~~Empty transcript → `Error` red dot~~ — resolved 2026-11-08 (pill's error state removed; see I9).
