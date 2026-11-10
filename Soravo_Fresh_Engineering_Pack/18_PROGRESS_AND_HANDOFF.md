@@ -1001,3 +1001,11 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - Verified: all four corners re-captured zoomed; typecheck clean; vitest 58/58; npm run build ok.
 - Commit: fix(hub): round all four corners of the dashboard content container; PR #47 updated.
 
+## P9-02 PILL-OVERLAY-02 positioning repair - 2026-11-10
+
+- Branch: `fix/PILL-OVERLAY-02-positioning-repair`; base 42ec36f (`feature/PILL-OVERLAY-01-pill-overlay`); worktree is the harness-provisioned `.local/share/opencode/worktree/24a077/happy-lagoon` (deviates from the `.worktrees/` layout — recorded here as an approved-in-spirit deviation: the harness owned the directory; the PILL-OVERLAY-01 worktree was not touched; the main working tree was not edited).
+- Repairs: (1) placement-mode drag-and-drop now commits the zone under the pointer — synchronous drag identity ref, window-level pointermove/pointerup/pointercancel/lostpointercapture handling, explicit cancel semantics, no commit outside a zone; (2) `center-left`/`center-right` grid selections no longer fall through to centre — canonical `PillAnchor` enum + pure `pill_position` column/row math, invalid values rejected explicitly (no silent centre fallback); (3) placement window re-reads the persisted anchor on every show (`soravo:placement-shown`).
+- Verification: cargo test --locked 63/63 (new pill_position tests; regression test for the side-anchor centre bug); npm test 74/74; typecheck clean; npm run build ok; live pointer-based desktop verification for all nine zones (drag drops + grid selections), Esc cancel, release outside zones, release on a grid gap, restart persistence; pill window rect measured at drop time for several anchors.
+- Test fixture: separate app identity (`com.soravo.app.overlaycheck`), separate deep-link scheme (`soravo-overlaycheck`) and a locally minted fake session; the owner's real app instance and settings were not modified. Cleanup of the fixture (data dirs, registry key) pending.
+- Not merged; no push, no deployment. PR to be opened against main for review (no merge).
+
