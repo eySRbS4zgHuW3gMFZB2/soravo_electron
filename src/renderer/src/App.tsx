@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import type { RecState } from './soravo'
 import { blobToWav16k } from './audio'
 import { playBlip } from './sounds'
-import { Button } from '@/components/ui/button'
-import { CheckIcon, CloseIcon, MicIcon } from '@/components/icons'
+import { CheckIcon, CloseIcon } from '@/components/icons'
+import { createWaveform, type WaveformController } from './waveform'
+import './pill.css'
 
 interface Recorder {
   mr: MediaRecorder
@@ -11,8 +12,6 @@ interface Recorder {
   stream: MediaStream
   startedAt: number
 }
-
-
 
 async function soundsEnabled(): Promise<boolean> {
   try {
@@ -30,7 +29,7 @@ async function openMic(microphoneId: string): Promise<MediaStream> {
   }
   try {
     return await navigator.mediaDevices.getUserMedia({
-      audio: { ...base, deviceId: { exact: microphoneId } }
+      audio: { ...base, deviceId: { exact: microphoneId } },
     })
   } catch {
     // Selected device vanished (unplugged); fall back to auto-detect.
@@ -40,7 +39,13 @@ async function openMic(microphoneId: string): Promise<MediaStream> {
 
 export default function App() {
   const [state, setState] = useState<RecState>('idle')
+  const [handsFree, setHandsFree] = useState(false)
+  const [hover, setHover] = useState<'cross' | 'tick' | null>(null)
   const recRef = useRef<Recorder | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const waveRef = useRef<WaveformController | null>(null)
+  const rafRef = useRef(0)
+  const sessionRef = useRef(0)
 
   const startRecorder = async () => {
     playBlip('start', await soundsEnabled())
@@ -61,18 +66,35 @@ export default function App() {
         if (e.data.size > 0) chunks.push(e.data)
       }
       recRef.current = { mr, chunks, stream, startedAt: Date.now() }
+
+      // Attach the waveform to the SAME stream the recorder uses.
+      if (canvasRef.current) {
+        const wave = createWaveform(canvasRef.current)
+        waveRef.current = wave
+        wave.start(stream)
+      }
       mr.start(250)
+      window.soravo.getState().catch(() => {})
     } catch {
       playBlip('error', await soundsEnabled())
-      await window.soravo.submitAudio(new ArrayBuffer(0), 0)
+      await window.soravo.notifyError('Could not open the microphone').catch(() => {})
     }
   }
 
+  const stopWaveform = () => {
+    cancelAnimationFrame(rafRef.current)
+    rafRef.current = 0
+    waveRef.current?.stop()
+    waveRef.current = null
+  }
+
   const stopRecorder = async (submit: boolean) => {
+    stopWaveform()
     const rec = recRef.current
     recRef.current = null
     if (!rec) {
-      if (submit) await window.soravo.submitAudio(new ArrayBuffer(0), 0)
+      // Nothing was captured (e.g. cancel before the mic opened). Discard.
+      if (submit) await window.soravo.notifyError('Recording produced no audio').catch(() => {})
       return
     }
     playBlip('stop', await soundsEnabled())
@@ -90,82 +112,131 @@ export default function App() {
       playBlip('success', await soundsEnabled())
     } catch {
       playBlip('error', await soundsEnabled())
-      await window.soravo.submitAudio(new ArrayBuffer(0), 0)
+      await window.soravo.notifyError('Could not decode the recording').catch(() => {})
     }
   }
 
+  // Draw loop for the waveform canvas. Runs only while a recorder is live.
+  useEffect(() => {
+    if (state !== 'recording') return
+    const tick = () => {
+      waveRef.current?.draw()
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
+
   useEffect(() => {
     window.soravo.getState().then(setState).catch(() => {})
+    window.soravo
+      .getHandsFree()
+      .then((s) => {
+        sessionRef.current = s.id
+        setHandsFree(s.handsFree)
+      })
+      .catch(() => {})
     const offState = window.soravo.onState((s) => {
+      if (s === 'error') {
+        // The pill never shows an error state — but a live recorder must not
+        // be stranded (the mic would stay open with the pill invisible).
+        void stopRecorder(false)
+        void soundsEnabled().then((on) => playBlip('error', on))
+      }
       setState(s)
-      if (s === 'error') void soundsEnabled().then((on) => playBlip('error', on))
     })
-    const offCmd = window.soravo.onRecordCommand((cmd) => {
-      if (cmd === 'start') void startRecorder()
-      else if (cmd === 'stop') void stopRecorder(true)
+    const offSession = window.soravo.onSession(({ id, handsFree }) => {
+      sessionRef.current = id
+      setHandsFree(handsFree)
+    })
+    const offCmd = window.soravo.onRecordCommand(({ command, session }) => {
+      if (session !== sessionRef.current) return // stale event from an older session
+      if (command === 'start') void startRecorder()
+      else if (command === 'stop') void stopRecorder(true)
       else void stopRecorder(false)
     })
     return () => {
       offState()
+      offSession()
       offCmd()
+      stopWaveform()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Stop recording on keyup when pill is focused (for scratchpad textarea case)
+  // Clear the hover whenever the controls are not on screen. `onMouseLeave`
+  // never fires when the buttons unmount (the cursor may still be over where
+  // they were), which left the "Cancel"/"Finish and paste" tooltip stuck up
+  // with no buttons rendered.
   useEffect(() => {
-    const keyUpHandler = () => {
-      // Only stop recording if the textarea was focused (i.e., recording
-      // was initiated from the scratchpad and global hook is disabled).
-      // Check via the textarea_focused flag is not directly accessible here,
-      // so we just check state and stop if recording. The global hook
-      // (when enabled) handles its own keyup in hold_to_talk mode.
-      window.soravo.getState().then((state) => {
-        if (state === 'recording') {
-          window.soravo.toggle().catch(() => {})
-        }
-      }).catch(() => {})
-    }
-    window.addEventListener('keyup', keyUpHandler)
-    return () => window.removeEventListener('keyup', keyUpHandler)
-  }, [])
+    if (!(state === 'recording' && handsFree)) setHover(null)
+  }, [state, handsFree])
+
+  const mode =
+    state === 'idle' || state === 'error'
+      ? 'idle'
+      : state === 'transcribing'
+        ? 'processing'
+        : handsFree
+          ? 'handsfree'
+          : 'ptt'
+
+  if (state === 'idle' || state === 'error') return null
 
   return (
-    <div className="soravo-mini">
-      <Button variant="ghost" size="icon" className="mini-x" title="Cancel" onClick={() => void window.soravo.cancel()}>
-        <CloseIcon />
-      </Button>
-      <div className="mini-status">
-        {state === 'recording' && (
-          <span className="live-bars" title="Recording">
-            <i />
-            <i />
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
-        )}
-        {state === 'transcribing' && <span className="mini-spinner" title="Transcribing" />}
-        {state === 'error' && <span className="mini-errdot" title="Error" />}
-        {state === 'idle' && <span className="mini-hint">Soravo</span>}
+    <div className="pill-root">
+      <div className="capsule-wrap">
+        <div className="capsule" data-mode={mode}>
+          {state === 'recording' && (
+            <>
+              {handsFree && (
+                <span className="pill-btn-wrap">
+                  <button
+                    type="button"
+                    className="pill-btn pill-cross"
+                    aria-label="Cancel recording"
+                    onMouseEnter={() => setHover('cross')}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => void window.soravo.cancel()}
+                  >
+                    <CloseIcon />
+                  </button>
+                  {hover === 'cross' && (
+                    <span className="pill-tooltip" role="status">Cancel</span>
+                  )}
+                </span>
+              )}
+              <canvas ref={canvasRef} className="pill-wave" aria-hidden="true" />
+              {handsFree && (
+                <span className="pill-btn-wrap pill-btn-wrap--end">
+                  <button
+                    type="button"
+                    className="pill-btn pill-tick"
+                    aria-label="Finish and paste"
+                    onMouseEnter={() => setHover('tick')}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => void window.soravo.finishRecording()}
+                  >
+                    <CheckIcon />
+                  </button>
+                  {hover === 'tick' && (
+                    <span className="pill-tooltip" role="status">Finish and paste</span>
+                  )}
+                </span>
+              )}
+            </>
+          )}
+          {state === 'transcribing' && (
+            <>
+              <span className="pill-dots" aria-hidden="true">
+                <i /><i /><i /><i /><i /><i /><i /><i /><i /><i />
+              </span>
+              <span className="pill-spinner" aria-label="Transcribing" role="status" />
+            </>
+          )}
+        </div>
       </div>
-      {state === 'idle' ? (
-        <Button variant="ghost" size="icon" className="mini-ok" title="Dictate" onClick={() => void window.soravo.toggle()}>
-          <MicIcon />
-        </Button>
-      ) : (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="mini-ok"
-          title="Finish"
-          disabled={state !== 'recording'}
-          onClick={() => void window.soravo.toggle()}
-        >
-          <CheckIcon />
-        </Button>
-      )}
     </div>
   )
 }

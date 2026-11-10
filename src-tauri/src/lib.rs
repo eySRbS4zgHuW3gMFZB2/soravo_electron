@@ -5,17 +5,18 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Emitter, Manager, State};
 
+mod dictation;
 mod hotkeys;
 mod secure_store;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum RecState {
-    Idle,
-    Recording,
-    Transcribing,
-    Error,
-}
+pub use dictation::RecState;
+
+/// The anchors the pill can dock to, in reading order.
+const ANCHORS: &[&str] = &[
+    "top-left", "top-center", "top-right",
+    "center-left", "center-center", "center-right",
+    "bottom-left", "bottom-center", "bottom-right",
+];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -80,8 +81,12 @@ pub struct SoravoSettings {
     pub paste_hotkey: String,
     pub copy_hotkey: String,
     /// Hold the dictation hotkey to record; release to transcribe.
-    /// When false the binding behaves as a press-to-toggle shortcut.
+    /// Deprecated: the interaction model is now uniformly push-to-talk
+    /// (hold) plus hands-free (double-press). Preserved for compatibility.
     pub hold_to_talk: bool,
+    /// Where the pill docks, one of the nine anchors. The pill snaps to this
+    /// after placement drags and on every show.
+    pub pill_anchor: String,
     /// Active model id (e.g. "tiny.en", "base.en"). Empty means no model.
     pub model: String,
     pub language: String,
@@ -130,6 +135,7 @@ impl Default for SoravoSettings {
             paste_hotkey: "CommandOrControl+Alt+V".to_string(),
             copy_hotkey: "CommandOrControl+Alt+C".to_string(),
             hold_to_talk: false,
+            pill_anchor: "bottom-center".to_string(),
             model: "base.en".to_string(),
             language: "en".to_string(),
             microphone_id: "".to_string(),
@@ -148,15 +154,18 @@ impl Default for SoravoSettings {
 }
 
 pub struct AppState {
-    pub state: Mutex<RecState>,
+    /// The dictation interaction state machine. The single source of truth
+    /// for what the recorder may do next; `RecState` is derived from it for
+    /// IPC compatibility.
+    pub fsm: Mutex<dictation::Dictation>,
     pub db: Mutex<Option<rusqlite::Connection>>,
-    pub last_toggle_at: Mutex<i64>,
-    /// Generation counters for the pending pill-hide and audio timeouts. Timers
-    /// are plain threads (the input hook thread has no async runtime), so a
-    /// timer detects that it was superseded by comparing tickets instead of
-    /// being aborted.
+    /// Generation counters for the pill-hide, audio-timeout and double-press
+    /// watchdog timers. Timers are plain threads (the input hook thread has
+    /// no async runtime), so a timer detects that it was superseded by
+    /// comparing tickets instead of being aborted.
     pub hide_gen: Arc<AtomicU64>,
     pub audio_gen: Arc<AtomicU64>,
+    pub tap_gen: Arc<AtomicU64>,
     /// Live bindings for the global input hook. Replaced when settings change so
     /// the running hook picks up new shortcuts without a restart.
     pub hook_config: Arc<RwLock<hotkeys::HookConfig>>,
@@ -166,30 +175,15 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            state: Mutex::new(RecState::Idle),
+            fsm: Mutex::new(dictation::Dictation::new()),
             db: Mutex::new(None),
-            last_toggle_at: Mutex::new(0),
             hide_gen: Arc::new(AtomicU64::new(0)),
             audio_gen: Arc::new(AtomicU64::new(0)),
+            tap_gen: Arc::new(AtomicU64::new(0)),
             hook_config: Arc::new(RwLock::new(hotkeys::HookConfig::default())),
             textarea_focused: Arc::new(AtomicBool::new(false)),
         }
     }
-}
-
-/// Hide the pill after `delay_ms`, unless a newer hide or a new recording
-/// supersedes it.
-fn schedule_pill_hide(app: &tauri::AppHandle, state: &AppState, delay_ms: u64) {
-    spawn_timer(
-        app,
-        &state.hide_gen,
-        std::time::Duration::from_millis(delay_ms),
-        |app| {
-            if let Some(win) = app.get_webview_window("pill") {
-                win.hide().ok();
-            }
-        },
-    );
 }
 
 /// Run `action` after `delay` unless a newer timer of the same kind started.
@@ -219,10 +213,8 @@ fn hook_config_from_settings(settings: &SoravoSettings) -> hotkeys::HookConfig {
         dictation: hotkeys::parse_binding(&settings.hotkey),
         paste_last: hotkeys::parse_binding(&settings.paste_hotkey),
         copy_last: hotkeys::parse_binding(&settings.copy_hotkey),
-        hold_to_talk: settings.hold_to_talk,
     }
 }
-
 // Database helpers
 fn open_db(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
     let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
@@ -826,6 +818,11 @@ fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
                 settings.hold_to_talk = b;
             }
         }
+        if let Some(v) = s.get("pillAnchor") {
+            if let Some(s) = v.as_str() {
+                settings.pill_anchor = s.to_string();
+            }
+        }
         if let Some(v) = s.get("model") {
             if let Some(s) = v.as_str() {
                 settings.model = s.to_string();
@@ -910,6 +907,7 @@ fn save_settings(app: &tauri::AppHandle, settings: &SoravoSettings) -> Result<()
     store.set("pasteHotkey", serde_json::json!(settings.paste_hotkey));
     store.set("copyHotkey", serde_json::json!(settings.copy_hotkey));
     store.set("holdToTalk", serde_json::json!(settings.hold_to_talk));
+    store.set("pillAnchor", serde_json::json!(settings.pill_anchor));
     store.set("model", serde_json::json!(settings.model));
     store.set("language", serde_json::json!(settings.language));
     store.set("microphoneId", serde_json::json!(settings.microphone_id));
@@ -1349,110 +1347,390 @@ fn copy_last(app: &tauri::AppHandle) -> Result<(), String> {
 }
 
 // Tauri commands
-#[tauri::command]
-async fn get_state(state: State<'_, AppState>) -> Result<RecState, String> {
-    Ok(*state.state.lock().map_err(|e| e.to_string())?)
+
+/// Millisecond clock for the state machine (any epoch).
+fn now_ms() -> i64 {
+    chrono::Utc::now().timestamp_millis()
 }
 
-#[tauri::command]
-async fn toggle(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    toggle_recording(&app, &state)
-}
-
-/// Start a dictation from the window that has the focus.
+/// Position the pill window for the configured anchor.
 ///
-/// The global hook cannot see a key press that the app's own webview takes
-/// first, so the hub window drives the recorder itself while it is focused.
-/// Both paths call the same function, and it is a no-op unless the recorder is
-/// idle, so a key press that both paths see does not start twice.
-#[tauri::command]
-async fn start_record(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    start_recording(&app, &state)
-}
+/// All math is done in physical pixels on the monitor the pill is on (or the
+/// primary monitor if the pill's monitor cannot be determined). The pill
+/// never covers the taskbar: the bottom anchor respects the work area, not
+/// the full screen bounds.
+fn place_pill(app: &tauri::AppHandle) {
+    let Some(win) = app.get_webview_window("pill") else {
+        return;
+    };
+    let settings = load_settings(app);
+    let anchor = settings.pill_anchor.clone();
+    let Ok(size) = win.outer_size() else {
+        return;
+    };
+    let monitor = win
+        .current_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| app.primary_monitor().ok().flatten());
+    let Some(monitor) = monitor else {
+        return;
+    };
+    let wa = monitor.work_area();
+    let scale = monitor.scale_factor();
+    let margin = (17.0 * scale).round() as i32;
 
-/// End a dictation and transcribe it. A no-op unless a recording is running.
-#[tauri::command]
-async fn stop_record(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    stop_recording(&app, &state)
-}
-
-/// Toggle mode: start when idle, stop when recording.
-///
-/// Push-to-talk deliberately does not use this — it drives `start_recording`
-/// and `stop_recording` from the press and release edges instead.
-fn toggle_recording(app: &tauri::AppHandle, state: &AppState) -> Result<(), String> {
-    // Filter auto-repeat and double-fire. Kept short so a deliberate second
-    // tap still stops the recording; the OS repeat delay is ~500ms.
-    const DEBOUNCE_MS: i64 = 300;
-    let now = chrono::Utc::now().timestamp_millis();
-    {
-        let mut last = state.last_toggle_at.lock().map_err(|e| e.to_string())?;
-        if now - *last < DEBOUNCE_MS {
-            return Ok(());
+    let x = match anchor.as_str() {
+        "top-left" | "bottom-left" => wa.position.x + margin,
+        "top-right" | "bottom-right" => {
+            wa.position.x + wa.size.width as i32 - size.width as i32 - margin
         }
-        *last = now;
-    }
+        _ => wa.position.x + (wa.size.width as i32 - size.width as i32) / 2,
+    };
+    let y = match anchor.as_str() {
+        "top-left" | "top-center" | "top-right" => wa.position.y + margin,
+        "center-left" | "center-center" | "center-right" => {
+            wa.position.y + (wa.size.height as i32 - size.height as i32) / 2
+        }
+        _ => wa.position.y + wa.size.height as i32 - size.height as i32 - margin,
+    };
+    win.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }))
+        .ok();
+}
 
-    let current = *state.state.lock().map_err(|e| e.to_string())?;
-    match current {
-        RecState::Idle | RecState::Error => start_recording(app, state),
-        RecState::Recording => stop_recording(app, state),
-        // Transcribing: ignore extra presses.
-        RecState::Transcribing => Ok(()),
+/// Show the pill, apply the configured placement, and emit the state/session
+/// events for a freshly begun session.
+fn begin_session_effects(app: &tauri::AppHandle, state: &AppState, session: u64, hands_free: bool) {
+    state.hide_gen.fetch_add(1, Ordering::SeqCst);
+    state.tap_gen.fetch_add(1, Ordering::SeqCst);
+    if let Err(err) = app.emit("soravo:state", RecState::Recording) {
+        log::error!("[soravo] emit state: {err}");
+    }
+    if let Err(err) = app.emit(
+        "soravo:session",
+        serde_json::json!({ "id": session, "handsFree": hands_free }),
+    ) {
+        log::error!("[soravo] emit session: {err}");
+    }
+    if let Some(win) = app.get_webview_window("pill") {
+        win.show().ok();
+    }
+    place_pill(app);
+    if let Err(err) = app.emit(
+        "soravo:record-command",
+        serde_json::json!({ "command": "start", "session": session }),
+    ) {
+        log::error!("[soravo] emit record-command: {err}");
     }
 }
 
-/// Begin a dictation. No-op unless we are idle (or recovering from an error).
-fn start_recording(app: &tauri::AppHandle, state: &AppState) -> Result<(), String> {
-    let current = *state.state.lock().map_err(|e| e.to_string())?;
-    match current {
-        RecState::Idle | RecState::Error => {
-            // Supersede any pill-hide that was still pending.
-            state.hide_gen.fetch_add(1, Ordering::SeqCst);
-            *state.state.lock().unwrap() = RecState::Recording;
-            app.emit("soravo:state", RecState::Recording).ok();
-            if let Some(win) = app.get_webview_window("pill") {
-                win.show().ok();
+/// Enter hands-free: tell the pill to grow its control row.
+fn hands_free_effects(app: &tauri::AppHandle, session: u64) {
+    state_emit_session(app, session, true);
+}
+
+fn state_emit_session(app: &tauri::AppHandle, session: u64, hands_free: bool) {
+    if let Err(err) = app.emit(
+        "soravo:session",
+        serde_json::json!({ "id": session, "handsFree": hands_free }),
+    ) {
+        log::error!("[soravo] emit session: {err}");
+    }
+}
+
+/// Recording stopped; pipeline is now transcribing.
+fn begin_processing_effects(app: &tauri::AppHandle, state: &AppState, session: u64) {
+    state.tap_gen.fetch_add(1, Ordering::SeqCst); // supersede any double-press watchdog
+    if let Err(err) = app.emit("soravo:state", RecState::Transcribing) {
+        log::error!("[soravo] emit state: {err}");
+    }
+    if let Err(err) = app.emit(
+        "soravo:record-command",
+        serde_json::json!({ "command": "stop", "session": session }),
+    ) {
+        log::error!("[soravo] emit record-command: {err}");
+    }
+    // If the recorder never hands us audio, reset rather than wedge.
+    spawn_timer(
+        app,
+        &state.audio_gen,
+        std::time::Duration::from_secs(15),
+        move |app| {
+            let state = app.state::<AppState>();
+            let action = state
+                .fsm
+                .lock()
+                .map(|mut fsm| fsm.audio_timeout(session))
+                .unwrap_or(dictation::Action::Ignore);
+            match action {
+                dictation::Action::AudioTimeout { .. } => {
+                    if let Err(err) = app.emit("soravo:error", "No audio arrived from the recorder") {
+                        log::error!("[soravo] emit error: {err}");
+                    }
+                    state_emit(app, RecState::Error);
+                    arm_error_reset(app, session);
+                }
+                _ => {}
             }
-            app.emit("soravo:record-command", "start").ok();
-            Ok(())
-        }
-        _ => Ok(()),
+        },
+    );
+}
+
+fn state_emit(app: &tauri::AppHandle, state: RecState) {
+    if let Err(err) = app.emit("soravo:state", state) {
+        log::error!("[soravo] emit state: {err}");
     }
 }
 
-/// End a dictation and kick off transcription.
-fn stop_recording(app: &tauri::AppHandle, state: &AppState) -> Result<(), String> {
-    let current = *state.state.lock().map_err(|e| e.to_string())?;
-    match current {
-        RecState::Recording => {
-            *state.state.lock().unwrap() = RecState::Transcribing;
-            app.emit("soravo:state", RecState::Transcribing).ok();
-            app.emit("soravo:record-command", "stop").ok();
-            // Bail out if the recorder never hands us any audio.
+/// Arm the watchdog that resets an error back to idle after the display
+/// period. Supersedes any pending hide.
+fn arm_error_reset(app: &tauri::AppHandle, session: u64) {
+    let hide_gen = app.state::<AppState>().hide_gen.clone();
+    spawn_timer(app, &hide_gen, dictation::ERROR_DISPLAY, move |app| {
+        let state = app.state::<AppState>();
+        let action = state
+            .fsm
+            .lock()
+            .map(|mut fsm| fsm.hide_and_reset(session))
+            .unwrap_or(dictation::Action::Ignore);
+        if let dictation::Action::HideAndReset { .. } = action {
+            if let Some(win) = app.get_webview_window("pill") {
+                win.hide().ok();
+            }
+            state_emit(app, RecState::Idle);
+        }
+    });
+}
+
+/// Arm the watchdog that hides a transient (completed/cancelled) pill.
+fn arm_transient_hide(app: &tauri::AppHandle, session: u64) {
+    let hide_gen = app.state::<AppState>().hide_gen.clone();
+    spawn_timer(app, &hide_gen, dictation::TRANSIENT_DISPLAY, move |app| {
+        let state = app.state::<AppState>();
+        let action = state
+            .fsm
+            .lock()
+            .map(|mut fsm| fsm.hide_and_reset(session))
+            .unwrap_or(dictation::Action::Ignore);
+        if let dictation::Action::HideAndReset { .. } = action {
+            if let Some(win) = app.get_webview_window("pill") {
+                win.hide().ok();
+            }
+            state_emit(app, RecState::Idle);
+        }
+    });
+}
+
+/// Execute the effects of a state-machine action.
+fn apply_action(app: &tauri::AppHandle, action: dictation::Action) {
+    match action {
+        dictation::Action::BeginSession { session, hands_free } => {
+            let state = app.state::<AppState>();
+            begin_session_effects(app, &state, session, hands_free);
+        }
+        dictation::Action::EnterHandsFree { session } => {
+            hands_free_effects(app, session);
+        }
+        dictation::Action::WatchForDoublePress { session, until_ms } => {
+            let state = app.state::<AppState>();
+            let delay = (until_ms - now_ms()).max(0) as u64;
             spawn_timer(
                 app,
-                &state.audio_gen,
-                std::time::Duration::from_secs(15),
-                |app| {
-                    app.emit("soravo:error", "No audio arrived from the recorder")
-                        .ok();
+                &state.tap_gen,
+                std::time::Duration::from_millis(delay),
+                move |app| {
+                    let state = app.state::<AppState>();
+                    let action = state
+                        .fsm
+                        .lock()
+                        .map(|mut fsm| fsm.tap_window_elapsed(session))
+                        .unwrap_or(dictation::Action::Ignore);
+                    if let dictation::Action::BeginProcessing { session } = action {
+                        let state = app.state::<AppState>();
+                        begin_processing_effects(app, &state, session);
+                    }
                 },
             );
-            Ok(())
         }
-        _ => Ok(()),
+        dictation::Action::BeginProcessing { session } => {
+            let state = app.state::<AppState>();
+            begin_processing_effects(app, &state, session);
+        }
+        dictation::Action::CancelSession { session } => {
+            let state = app.state::<AppState>();
+            state.audio_gen.fetch_add(1, Ordering::SeqCst);
+            state.tap_gen.fetch_add(1, Ordering::SeqCst);
+            if let Err(err) = app.emit(
+                "soravo:record-command",
+                serde_json::json!({ "command": "cancel", "session": session }),
+            ) {
+                log::error!("[soravo] emit record-command: {err}");
+            }
+            state_emit(app, RecState::Idle);
+            arm_transient_hide(app, session);
+        }
+        dictation::Action::FailSession { session, message }
+        | dictation::Action::TranscribeFailed { session, message } => {
+            if let Err(err) = app.emit("soravo:error", &message) {
+                log::error!("[soravo] emit error: {err}");
+            }
+            state_emit(app, RecState::Error);
+            arm_error_reset(app, session);
+        }
+        dictation::Action::CompleteSession { session } => {
+            state_emit(app, RecState::Idle);
+            arm_transient_hide(app, session);
+        }
+        dictation::Action::AudioStarted { .. }
+        | dictation::Action::HideAndReset { .. }
+        | dictation::Action::AudioTimeout { .. }
+        | dictation::Action::Ignore => {}
     }
 }
 
+/// Feed one input edge into the state machine and execute the result.
+fn fsm_input(app: &tauri::AppHandle, input: dictation::Input) {
+    let action = {
+        let state = app.state::<AppState>();
+        let guard = state.fsm.lock();
+        match guard {
+            Ok(mut fsm) => fsm.input(input, now_ms()),
+            Err(_) => dictation::Action::Ignore,
+        }
+    };
+    apply_action(app, action);
+}
+
+fn fsm_finish(app: &tauri::AppHandle) {
+    let action = {
+        let state = app.state::<AppState>();
+        let guard = state.fsm.lock();
+        match guard {
+            Ok(mut fsm) => fsm.finish(),
+            Err(_) => dictation::Action::Ignore,
+        }
+    };
+    apply_action(app, action);
+}
+
+fn fsm_cancel(app: &tauri::AppHandle) {
+    let action = {
+        let state = app.state::<AppState>();
+        let guard = state.fsm.lock();
+        match guard {
+            Ok(mut fsm) => fsm.cancel(),
+            Err(_) => dictation::Action::Ignore,
+        }
+    };
+    apply_action(app, action);
+}
+
+fn fsm_fail(app: &tauri::AppHandle, message: String) {
+    let action = {
+        let state = app.state::<AppState>();
+        let guard = state.fsm.lock();
+        match guard {
+            Ok(mut fsm) => fsm.fail(message),
+            Err(_) => dictation::Action::Ignore,
+        }
+    };
+    apply_action(app, action);
+}
+
+/// Fail the in-flight session and report to the user.
+fn fail_current_session(app: &tauri::AppHandle, message: String) -> Result<(), String> {
+    fsm_fail(app, message);
+    Ok(())
+}
+
 #[tauri::command]
-async fn cancel(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    // Cancel the pending audio timeout.
-    state.audio_gen.fetch_add(1, Ordering::SeqCst);
-    app.emit("soravo:record-command", "cancel").ok();
-    *state.state.lock().unwrap() = RecState::Idle;
-    app.emit("soravo:state", RecState::Idle).ok();
-    schedule_pill_hide(&app, &state, 2500);
+async fn get_state(state: State<'_, AppState>) -> Result<RecState, String> {
+    Ok(state.fsm.lock().map_err(|e| e.to_string())?.rec_state())
+}
+
+/// Hands-free state for the pill's initial subscription sync.
+#[tauri::command]
+async fn get_hands_free(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    let fsm = state.fsm.lock().map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "handsFree": fsm.hands_free(),
+        "session": fsm.session(),
+    }))
+}
+
+/// The raw dictation hotkey went down. Called by both the global input hook
+/// and the hub window's own listener; the state machine decides what that
+/// means in the current phase.
+#[tauri::command]
+async fn hotkey_press(app: tauri::AppHandle) -> Result<(), String> {
+    fsm_input(&app, dictation::Input::Press);
+    Ok(())
+}
+
+/// The raw dictation hotkey went up.
+#[tauri::command]
+async fn hotkey_release(app: tauri::AppHandle) -> Result<(), String> {
+    fsm_input(&app, dictation::Input::Release);
+    Ok(())
+}
+
+/// Explicit UI request to toggle a persistent, hands-free dictation
+/// (the "Dictate now" button).
+#[tauri::command]
+async fn hands_free_toggle(app: tauri::AppHandle) -> Result<(), String> {
+    let action = {
+        let state = app.state::<AppState>();
+        let guard = state.fsm.lock();
+        match guard {
+            Ok(mut fsm) => fsm.hands_free_toggle(now_ms()),
+            Err(_) => dictation::Action::Ignore,
+        }
+    };
+    apply_action(&app, action);
+    Ok(())
+}
+
+/// Renderer-side failure (mic open failed, decode failed, …).
+#[tauri::command]
+async fn notify_error(app: tauri::AppHandle, message: String) -> Result<(), String> {
+    fsm_fail(&app, message);
+    Ok(())
+}
+
+/// Legacy toggle command. Maps to a single hotkey press so older callers
+/// keep working against the two-mode interaction model.
+#[tauri::command]
+async fn toggle(app: tauri::AppHandle) -> Result<(), String> {
+    fsm_input(&app, dictation::Input::Press);
+    Ok(())
+}
+
+/// Start a dictation. No-op unless idle or recovering from an error.
+#[tauri::command]
+async fn start_record(app: tauri::AppHandle) -> Result<(), String> {
+    fsm_input(&app, dictation::Input::Press);
+    Ok(())
+}
+
+/// End a push-to-talk dictation. A no-op in hands-free, where releasing the
+/// hotkey must not stop the recording.
+#[tauri::command]
+async fn stop_record(app: tauri::AppHandle) -> Result<(), String> {
+    fsm_input(&app, dictation::Input::Release);
+    Ok(())
+}
+
+/// Finish the recording (tick). Begins transcription.
+#[tauri::command]
+async fn finish_recording(app: tauri::AppHandle) -> Result<(), String> {
+    fsm_finish(&app);
+    Ok(())
+}
+
+/// Cancel the recording (cross). Discards the audio; nothing is pasted.
+#[tauri::command]
+async fn cancel(app: tauri::AppHandle) -> Result<(), String> {
+    fsm_cancel(&app);
     Ok(())
 }
 
@@ -1466,11 +1744,15 @@ async fn submit_audio(
     // Audio arrived in time; cancel the timeout.
     state.audio_gen.fetch_add(1, Ordering::SeqCst);
 
-    if wav.is_empty() {
-        app.emit("soravo:error", "Recording produced no audio").ok();
-        *state.state.lock().unwrap() = RecState::Error;
-        app.emit("soravo:state", RecState::Error).ok();
+    // Only a processing session may submit audio. Anything else is stale and
+    // is dropped without side effects.
+    if !state.fsm.lock().map_err(|e| e.to_string())?.submit() {
+        log::warn!("[soravo] dropping audio submission outside the processing state");
         return Ok(());
+    }
+
+    if wav.is_empty() {
+        return fail_current_session(&app, "Recording produced no audio".to_string());
     }
 
     // Write temp WAV file
@@ -1518,10 +1800,7 @@ async fn submit_audio(
         Ok(raw) => {
             let raw = raw.trim().to_string();
             if raw.is_empty() {
-                app.emit("soravo:error", "Transcription came back empty")
-                    .ok();
-                *state.state.lock().unwrap() = RecState::Error;
-                app.emit("soravo:state", RecState::Error).ok();
+                fail_current_session(&app, "Transcription came back empty".to_string())?;
                 return Ok(());
             }
 
@@ -1541,10 +1820,7 @@ async fn submit_audio(
 
             let text = text.trim().to_string();
             if text.is_empty() {
-                app.emit("soravo:error", "Transcription came back empty")
-                    .ok();
-                *state.state.lock().unwrap() = RecState::Error;
-                app.emit("soravo:state", RecState::Error).ok();
+                fail_current_session(&app, "Transcription came back empty".to_string())?;
                 return Ok(());
             }
 
@@ -1570,53 +1846,93 @@ async fn submit_audio(
 
             app.emit("soravo:transcript", &text).ok();
 
-            schedule_pill_hide(&app, &state, 2500);
-
-            *state.state.lock().unwrap() = RecState::Idle;
-            app.emit("soravo:state", RecState::Idle).ok();
+            let action = state
+                .fsm
+                .lock()
+                .map(|mut fsm| fsm.complete())
+                .unwrap_or(dictation::Action::Ignore);
+            apply_action(&app, action);
         }
         Err(e) => {
-            app.emit("soravo:error", &e).ok();
-            *state.state.lock().unwrap() = RecState::Error;
-            app.emit("soravo:state", RecState::Error).ok();
-            // Show the error briefly, then hide the pill and go back to idle.
-            spawn_timer(
-                &app,
-                &state.hide_gen,
-                std::time::Duration::from_secs(4),
-                |app| {
-                    if let Some(win) = app.get_webview_window("pill") {
-                        win.hide().ok();
-                    }
-                    app.emit("soravo:state", RecState::Idle).ok();
-                },
-            );
+            let action = state
+                .fsm
+                .lock()
+                .map(|mut fsm| fsm.transcribe_failed(e))
+                .unwrap_or(dictation::Action::Ignore);
+            apply_action(&app, action);
         }
     }
 
     Ok(())
 }
 
+/// Set the pill's dock anchor. Validated against the nine anchors; takes
+/// effect immediately via `place_pill`.
 #[tauri::command]
-async fn set_height(app: tauri::AppHandle, px: i32) -> Result<(), String> {
-    let height = px.clamp(84, 520);
-    if let Some(win) = app.get_webview_window("pill") {
-        let size = win.outer_size().map_err(|e| e.to_string())?;
-        let monitor = win.current_monitor().map_err(|e| e.to_string())?;
-        if let Some(m) = monitor {
-            let work_area = m.work_area();
-            win.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-                width: size.width,
-                height: height as u32,
-            }))
-            .ok();
+async fn set_pill_anchor(app: tauri::AppHandle, anchor: String) -> Result<(), String> {
+    if !ANCHORS.contains(&anchor.as_str()) {
+        return Err(format!("unknown anchor: {anchor}"));
+    }
+    let mut settings = load_settings(&app);
+    settings.pill_anchor = anchor.clone();
+    save_settings(&app, &settings)?;
+    place_pill(&app);
+    Ok(())
+}
+
+/// Return the pill's current dock anchor.
+#[tauri::command]
+async fn get_pill_anchor(app: tauri::AppHandle) -> Result<String, String> {
+    Ok(load_settings(&app).pill_anchor)
+}
+
+/// Show the full-screen placement window used to choose the pill's dock.
+#[tauri::command]
+async fn open_placement_mode(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("placement") {
+        // Make sure it covers the monitor the hub is on.
+        if let Some(monitor) = win.current_monitor().ok().flatten() {
+            let wa = monitor.work_area();
             win.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
-                x: work_area.position.x + (work_area.size.width as i32 - size.width as i32) / 2,
-                y: work_area.position.y + work_area.size.height as i32 - height - 28,
+                x: wa.position.x,
+                y: wa.position.y,
             }))
             .ok();
         }
+        win.show().map_err(|e| e.to_string())?;
+        win.set_focus().ok();
     }
+    Ok(())
+}
+
+/// Close the placement window without changing the anchor.
+#[tauri::command]
+async fn close_placement_mode(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("placement") {
+        win.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Show the pill briefly at the (new) anchor as placement feedback, then
+/// hide it again. Superseded like any other hide by a new session.
+#[tauri::command]
+async fn flash_pill_preview(app: tauri::AppHandle) -> Result<(), String> {
+    place_pill(&app);
+    if let Some(win) = app.get_webview_window("pill") {
+        win.show().ok();
+    }
+    let hide_gen = app.state::<AppState>().hide_gen.clone();
+    spawn_timer(&app, &hide_gen, std::time::Duration::from_millis(900), |app| {
+        // Only hide when nothing else is showing the pill (no active session).
+        let state = app.state::<AppState>();
+        let phase = state.fsm.lock().map(|fsm| fsm.phase()).unwrap_or(dictation::Phase::Idle);
+        if phase == dictation::Phase::Idle {
+            if let Some(win) = app.get_webview_window("pill") {
+                win.hide().ok();
+            }
+        }
+    });
     Ok(())
 }
 
@@ -1920,6 +2236,11 @@ async fn set_settings(
     }
     if let Some(v) = patch.get("holdToTalk").and_then(|v| v.as_bool()) {
         settings.hold_to_talk = v;
+    }
+    if let Some(v) = patch.get("pillAnchor").and_then(|v| v.as_str()) {
+        if ANCHORS.contains(&v) {
+            settings.pill_anchor = v.to_string();
+        }
     }
     if let Some(v) = patch.get("model").and_then(|v| v.as_str()) {
         settings.model = v.to_string();
@@ -2307,31 +2628,16 @@ pub fn run() {
 
             let app_handle = app.handle().clone();
             let handles = hotkeys::HookHandles {
-                dictate_start: {
+                dictate_press: {
                     let app = app_handle.clone();
                     Arc::new(move || {
-                        let state = app.state::<AppState>();
-                        if let Err(err) = start_recording(&app, &state) {
-                            log::error!("[soravo] start_recording: {err}");
-                        }
+                        fsm_input(&app, dictation::Input::Press);
                     })
                 },
-                dictate_stop: {
+                dictate_release: {
                     let app = app_handle.clone();
                     Arc::new(move || {
-                        let state = app.state::<AppState>();
-                        if let Err(err) = stop_recording(&app, &state) {
-                            log::error!("[soravo] stop_recording: {err}");
-                        }
-                    })
-                },
-                dictate_toggle: {
-                    let app = app_handle.clone();
-                    Arc::new(move || {
-                        let state = app.state::<AppState>();
-                        if let Err(err) = toggle_recording(&app, &state) {
-                            log::error!("[soravo] toggle_recording: {err}");
-                        }
+                        fsm_input(&app, dictation::Input::Release);
                     })
                 },
                 paste_last: {
@@ -2375,12 +2681,22 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_state,
+            get_hands_free,
             toggle,
             start_record,
             stop_record,
+            hotkey_press,
+            hotkey_release,
+            finish_recording,
+            hands_free_toggle,
             cancel,
+            notify_error,
             submit_audio,
-            set_height,
+            set_pill_anchor,
+            get_pill_anchor,
+            open_placement_mode,
+            close_placement_mode,
+            flash_pill_preview,
             get_history,
             clear_history,
             delete_history,

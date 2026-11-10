@@ -390,7 +390,13 @@ html[data-theme='dark'] {
   display: flex;
   flex-direction: column;
   background: var(--soravo-canvas);
-  border-radius: var(--hub-panel-radius) 0 0 0;
+  border-radius: var(--hub-panel-radius);
+  /* Inset frame of the outer shell, so the panel reads as a distinct surface
+     inside the application background (Wispr-style two-layer shell) rather
+     than filling the window. The rail owns the left edge, so no left inset;
+     top/right/bottom show the outer background as a narrow consistent frame. */
+  margin: 12px 12px 12px 0;
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 
@@ -2451,6 +2457,37 @@ html[data-theme='dark'] .page-hero[data-media='scratchpad'] {
 .shortcut-item-keys .hotkey-field {
   width: 200px;
   justify-content: flex-start;
+}
+
+/* The overlay-position picker: a 3x3 grid of dock cells. */
+.anchor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 13px);
+  grid-auto-rows: 13px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.anchor-cell {
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid var(--soravo-mute);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.anchor-cell:hover {
+  border-color: var(--soravo-ink);
+}
+.anchor-cell:focus-visible {
+  outline: 2px solid var(--soravo-primary);
+  outline-offset: 1px;
+}
+.anchor-cell-on {
+  background: var(--soravo-ink);
+  border-color: var(--soravo-ink);
 }
 
 /* --- Hotkey capture -------------------------------------------------------- */

@@ -1,0 +1,210 @@
+/* Soravo pill overlay (floating dictation capsule).
+ *
+ * The window itself is frameless, transparent, always-on-top and never takes
+ * keyboard focus. The capsule is the only painted thing; everything else is
+ * transparent pixels.
+ */
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.pill-root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: visible;
+  background: transparent;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.capsule-wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100%;
+  padding-bottom: 0;
+}
+
+.capsule {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 30px;
+  padding: 0 7px;
+  border-radius: 9999px;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition:
+    width 0.16s ease,
+    opacity 0.16s ease,
+    height 0.16s ease;
+  overflow: visible;
+}
+
+.capsule[data-mode="ptt"] {
+  width: 74px;
+}
+.capsule[data-mode="handsfree"],
+.capsule[data-mode="processing"] {
+  width: 100px;
+}
+.capsule[data-mode="completing"] {
+  width: 38px;
+  height: 12px;
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.capsule[data-mode="completing"] * {
+  opacity: 0;
+}
+
+.pill-wave {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 20px;
+  display: block;
+}
+
+/* Hands-free control buttons */
+.pill-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.pill-btn:focus-visible {
+  outline: 2px solid #9fe870;
+  outline-offset: 1px;
+}
+.pill-btn svg {
+  width: 11px;
+  height: 11px;
+}
+
+.pill-cross {
+  background: rgb(87, 84, 78);
+  color: #f5f4f0;
+}
+.pill-cross:hover {
+  background: rgb(105, 102, 95);
+}
+
+.pill-tick {
+  background: #ffffff;
+  color: #000;
+}
+.pill-tick:hover {
+  background: #e8e8e4;
+}
+
+/* Processing spinner — 8-spoke asterisk, lavender white */
+.pill-spinner {
+  position: relative;
+  flex: none;
+  width: 13px;
+  height: 13px;
+  animation: pill-spin 0.9s linear infinite;
+}
+.pill-spinner::before,
+.pill-spinner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(226, 222, 255, 0.15) 0deg 30deg,
+    rgba(240, 238, 255, 0.95) 30deg 60deg,
+    rgba(226, 222, 255, 0.15) 60deg 90deg,
+    rgba(240, 238, 255, 0.95) 90deg 120deg,
+    rgba(226, 222, 255, 0.15) 120deg 150deg,
+    rgba(240, 238, 255, 0.95) 150deg 180deg,
+    rgba(226, 222, 255, 0.15) 180deg 210deg,
+    rgba(240, 238, 255, 0.95) 210deg 240deg,
+    rgba(226, 222, 255, 0.15) 240deg 270deg,
+    rgba(240, 238, 255, 0.95) 270deg 300deg,
+    rgba(226, 222, 255, 0.15) 300deg 330deg,
+    rgba(240, 238, 255, 0.95) 330deg 360deg
+  );
+  -webkit-mask: radial-gradient(circle, transparent 42%, #000 46%);
+  mask: radial-gradient(circle, transparent 42%, #000 46%);
+}
+
+@keyframes pill-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Static silence dots shown while transcribing (matches the reference's
+ * persistent dots beside the spinner). */
+.pill-dots {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  height: 20px;
+  padding-left: 2px;
+}
+.pill-dots i {
+  width: 2.4px;
+  height: 2.4px;
+  border-radius: 1px;
+  background: #f5f4f0;
+  opacity: 0.8;
+}
+
+/* Hover tooltip — only while hovering, never permanent */
+.pill-btn-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The right-hand (Finish) button sits at the end of a very narrow window;
+   shift its tooltip left enough that the whole text fits inside the viewport. */
+.pill-btn-wrap--end .pill-tooltip {
+  transform: translate(-87%, -6px);
+}
+
+.pill-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translate(-50%, -6px);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #111110;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ececea;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capsule { transition: none; }
+  .pill-spinner { animation-duration: 2.4s; }
+}

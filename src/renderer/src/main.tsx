@@ -2,6 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import App from './App'
+import PlacementApp from './PlacementApp'
 import { AuthProvider } from './auth/authContext'
 import { DesktopAuth } from './auth/DesktopAuth'
 import { initializeDesktopAuthDeepLinks } from './auth/desktopAuthDeepLinks'
@@ -18,11 +19,14 @@ installAppShortcuts()
 
 async function main() {
   let isHub = false
+  let isPlacement = false
   try {
     const win = getCurrentWindow()
     isHub = win.label === 'hub'
+    isPlacement = win.label === 'placement'
   } catch {
     isHub = window.location.hash === '#/hub'
+    isPlacement = window.location.hash === '#/placement'
   }
 
   if (isHub) {
@@ -37,6 +41,8 @@ async function main() {
     <React.StrictMode>
       {isHub ? (
         <AuthProvider><DesktopAuth /></AuthProvider>
+      ) : isPlacement ? (
+        <PlacementApp />
       ) : (
         <App />
       )}

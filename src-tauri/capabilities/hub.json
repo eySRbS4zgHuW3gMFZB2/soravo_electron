@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability",
+  "identifier": "hub",
+  "description": "Hub window: auth flow, settings, and the pages. Needs dialog open (folder picker) and deep-link receive for the browser sign-in round trip; everything else goes through app commands.",
+  "windows": ["hub"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:event:default",
+    "core:event:allow-listen",
+    "deep-link:default",
+    "dialog:allow-open"
+  ]
+}

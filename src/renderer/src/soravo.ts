@@ -3,6 +3,22 @@ import { listen } from '@tauri-apps/api/event'
 
 export type RecState = 'idle' | 'recording' | 'transcribing' | 'error'
 
+export interface SessionInfo {
+  id: number
+  handsFree: boolean
+}
+
+export type PillAnchor =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'center-left' | 'center-center' | 'center-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right'
+
+export const PILL_ANCHORS: PillAnchor[] = [
+  'top-left', 'top-center', 'top-right',
+  'center-left', 'center-center', 'center-right',
+  'bottom-left', 'bottom-center', 'bottom-right',
+]
+
 export interface ScratchpadNote {
   id: number
   text: string
@@ -51,6 +67,8 @@ export interface SoravoSettings {
   sidebarOpen: boolean
   /** Where the transcription models are downloaded. Empty means the default. */
   modelsDir: string
+  /** Where the pill docks on screen. */
+  pillAnchor: PillAnchor
 }
 
 export interface ModelInfo {
@@ -88,18 +106,40 @@ export interface InsightsData {
 }
 
 export interface SoravoAPI {
+  /** Map to a single hotkey press. Kept for compatibility. */
   toggle(): Promise<void>
-  /** Start a dictation. No-op unless the recorder is idle. */
+  /** Map to a single hotkey press. Kept for compatibility. */
   startRecording(): Promise<void>
-  /** End a dictation and transcribe it. */
+  /** Map to a hotkey release. Kept for compatibility. */
   stopRecording(): Promise<void>
   quit(): Promise<void>
   getState(): Promise<RecState>
+  /** Hands-free state for initial sync after mount. */
+  getHandsFree(): Promise<SessionInfo>
   onState(cb: (s: RecState) => void): () => void
-  onRecordCommand(cb: (cmd: 'start' | 'stop' | 'cancel') => void): () => void
+  /** Emitted on every session begin and on PTT→hands-free conversion. */
+  onSession(cb: (s: SessionInfo) => void): () => void
+  onRecordCommand(cb: (cmd: { command: 'start' | 'stop' | 'cancel'; session: number }) => void): () => void
+  /** The hotkey went down. Both the rdev hook and webviews call this. */
+  hotkeyPress(): Promise<void>
+  /** The hotkey went up. */
+  hotkeyRelease(): Promise<void>
   submitAudio(wav: ArrayBuffer, durationMs: number): Promise<void>
   cancel(): Promise<void>
-  setHeight(px: number): Promise<void>
+  /** Finish recording and transcribe (tick). */
+  finishRecording(): Promise<void>
+  /** Toggle a persistent, hands-free dictation ("Dictate now" button). */
+  handsFreeToggle(): Promise<void>
+  /** Report a renderer-side failure (mic could not be opened, …). */
+  notifyError(message: string): Promise<void>
+  setPillAnchor(anchor: PillAnchor): Promise<void>
+  getPillAnchor(): Promise<PillAnchor>
+  /** Show the full-screen placement window. */
+  openPlacementMode(): Promise<void>
+  /** Hide the placement window. */
+  closePlacementMode(): Promise<void>
+  /** Flash the pill at the configured anchor as placement feedback. */
+  flashPillPreview(): Promise<void>
   onTranscript(cb: (text: string) => void): () => void
   onError(cb: (message: string) => void): () => void
   onDataChanged(cb: () => void): () => void
@@ -150,28 +190,6 @@ export interface SoravoAPI {
   bindingHelp(): Promise<Record<string, string[]>>
 }
 
-// Map camelCase settings to the Tauri command format
-function settingsToTauri(s: SoravoSettings): Record<string, unknown> {
-  return {
-    hotkey: s.hotkey,
-    pasteHotkey: s.pasteHotkey,
-    copyHotkey: s.copyHotkey,
-    model: s.model,
-    language: s.language,
-    microphoneId: s.microphoneId,
-    sounds: s.sounds,
-    smartCleanup: s.smartCleanup,
-    addPunctuation: s.addPunctuation,
-    vocabulary: s.vocabulary,
-    launchAtLogin: s.launchAtLogin,
-    theme: s.theme,
-    retention: s.retention,
-    scratchpadHotkey: s.scratchpadHotkey,
-    sidebarOpen: s.sidebarOpen,
-    modelsDir: s.modelsDir,
-  }
-}
-
 function settingsFromTauri(s: any): SoravoSettings {
   return {
     hotkey: s.hotkey ?? s.hotKey ?? 'CommandOrControl+Alt+Space',
@@ -191,6 +209,7 @@ function settingsFromTauri(s: any): SoravoSettings {
     scratchpadHotkey: s.scratchpadHotkey ?? s.scratchpad_hotkey ?? '',
     sidebarOpen: s.sidebarOpen ?? s.sidebar_open ?? true,
     modelsDir: s.modelsDir ?? s.models_dir ?? '',
+    pillAnchor: s.pillAnchor ?? s.pill_anchor ?? 'bottom-center',
   }
 }
 
@@ -204,6 +223,10 @@ async function setupEventListeners() {
   })
   await listen('soravo:record-command', (event) => {
     const cbs = listeners['record-command']
+    if (cbs) cbs.forEach((cb) => cb(event.payload))
+  })
+  await listen('soravo:session', (event) => {
+    const cbs = listeners['session']
     if (cbs) cbs.forEach((cb) => cb(event.payload))
   })
   await listen('soravo:transcript', (event) => {
@@ -230,10 +253,6 @@ async function setupEventListeners() {
     const cbs = listeners['scratchpad-changed']
     if (cbs) cbs.forEach((cb) => cb())
   })
-  // Listen for hotkey toggle events from the Rust backend
-  await listen('soravo:toggle-hotkey', () => {
-    soravo.toggle().catch(console.error)
-  })
 }
 
 setupEventListeners().catch(console.error)
@@ -250,14 +269,25 @@ export const soravo: SoravoAPI = {
   stopRecording: () => invoke('stop_record'),
   quit: () => invoke('quit'),
   getState: () => invoke<RecState>('get_state'),
+  getHandsFree: () => invoke<SessionInfo>('get_hands_free'),
   onState: (cb) => addListener('state', cb as Function),
+  onSession: (cb) => addListener('session', cb as Function),
   onRecordCommand: (cb) => addListener('record-command', cb as Function),
+  hotkeyPress: () => invoke('hotkey_press'),
+  hotkeyRelease: () => invoke('hotkey_release'),
   submitAudio: async (wav, durationMs) => {
     const arr = new Uint8Array(wav)
     await invoke('submit_audio', { wav: Array.from(arr), durationMs })
   },
   cancel: () => invoke('cancel'),
-  setHeight: (px) => invoke('set_height', { px }),
+  finishRecording: () => invoke('finish_recording'),
+  handsFreeToggle: () => invoke('hands_free_toggle'),
+  notifyError: (message: string) => invoke('notify_error', { message }),
+  setPillAnchor: (anchor) => invoke('set_pill_anchor', { anchor }),
+  getPillAnchor: () => invoke<PillAnchor>('get_pill_anchor'),
+  openPlacementMode: () => invoke('open_placement_mode'),
+  closePlacementMode: () => invoke('close_placement_mode'),
+  flashPillPreview: () => invoke('flash_pill_preview'),
   onTranscript: (cb) => addListener('transcript', cb as Function),
   onError: (cb) => addListener('error', cb as Function),
   onDataChanged: (cb) => addListener('data-changed', cb as Function),
@@ -300,6 +330,7 @@ export const soravo: SoravoAPI = {
     if (patch.pasteHotkey !== undefined) tauriPatch.pasteHotkey = patch.pasteHotkey
     if (patch.copyHotkey !== undefined) tauriPatch.copyHotkey = patch.copyHotkey
     if (patch.holdToTalk !== undefined) tauriPatch.holdToTalk = patch.holdToTalk
+    if (patch.pillAnchor !== undefined) tauriPatch.pillAnchor = patch.pillAnchor
     if (patch.model !== undefined) tauriPatch.model = patch.model
     if (patch.language !== undefined) tauriPatch.language = patch.language
     if (patch.microphoneId !== undefined) tauriPatch.microphoneId = patch.microphoneId

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability",
+  "identifier": "pill",
+  "description": "Pill overlay: listens for state/session/record-command events only. All actions go through app commands; no window, dialog, shell, clipboard or store permissions.",
+  "windows": ["pill"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:event:default",
+    "core:event:allow-listen"
+  ]
+}

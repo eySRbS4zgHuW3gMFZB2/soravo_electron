@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability",
+  "identifier": "placement",
+  "description": "Placement-mode overlay: React UI only, invokes app commands. No events, dialogs, shell, clipboard or window plugins.",
+  "windows": ["placement"],
+  "permissions": [
+    "core:default",
+    "core:window:default"
+  ]
+}

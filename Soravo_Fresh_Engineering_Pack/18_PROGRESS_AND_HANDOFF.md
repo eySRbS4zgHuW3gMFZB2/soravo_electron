@@ -960,3 +960,44 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 
 - Reviewed PR head `1b1936e32e23277b2999ec257bb98fe46c653aed`. Unmatched Resend events now retry for five minutes from their stored receipt time rather than being acknowledged immediately; a subsequent delivery after that window is acknowledged. Auth SMTP events without an outbox row follow the same rule. Matching higher-ranked statuses remain unchanged.
 - Updated worker claim/lease test fixtures and checked the affected webhook and worker tests. Exact validation is in `workspace-context/validation-record.md`. No hosted state was changed.
+
+## P9-01 PILL-OVERLAY-01 checkpoint - 2026-11-07
+
+- Branch/worktree: \eature/PILL-OVERLAY-01-pill-overlay\ at \.worktrees/PILL-OVERLAY-01-pill-overlay\ (base \9a5a8f\). CrispASR v0.8.43 unchanged.
+- Deliverables present: reference-specification.md, current-implementation-audit.md, interaction-state-machine.md, iteration-log.md, verification-report.md, continuation-status.md (docs/pill-overlay/).
+- Owner-accepted milestones preserved: double-tap hands-free activation and the black-capsule pill appearance (measured baseline recorded; capsule pixel-identical after this session's only code change).
+- This session: stale-hover tooltip defect fixed and verified live (tooltip no longer renders with no controls; hover/cancel/PTT cycle re-tested), placement window listed in capabilities, dev-server stale-transform root cause documented (desktop vite on 5173 must be restarted after renderer edits).
+- Tests: tsc clean; vitest 45/45; cargo test --locked PASS (60/60 lib, RUSTDOC pinned). Not run: DPI 125/150% and multi-monitor verification (no hardware); spoken-waveform check (acoustic path absent on this machine).
+- Known open decision for owner: empty transcript routes to a red-dot error; normative interaction-state-machine.md specifies silent completion. Unchanged pending owner call.
+- Not merged; no push, no deployment, no production change.
+
+## P9-01 PILL-OVERLAY-01 error state removal - 2026-11-08
+
+- Owner request: remove the pill's error state entirely. Shipped: no failure UI in the pill (no red dot, no .pill-err, no data-mode=error capsule); failures hide the pill as fast as a cancellation (ERROR_DISPLAY 4s -> 450ms); hub retains soravo:error (DictationPage status line shows the failure text). App.tsx discards recorder+waveform on error so the mic cannot be stranded invisibly. FSM Phase::Error retained as an invisible parking phase; FSM unit tests unchanged and green.
+- Verification: tsc clean; vitest 45/45; cargo test --locked PASS (60/60; RUSTDOC pinned to rustup MSVC). Live check: silence PTT hides the pill, hub shows 'Transcription came back empty'.
+- Flagged for owner: moonshine hallucinated 'Fuck.' on silence at least twice; pipeline pastes non-empty results unconditionally; at least one stray paste originated from session testing (target undeterminable). A VAD/confirmation guard is a product decision and was not built.
+- Not merged; no push, no deployment.
+
+## P9-01 PILL-OVERLAY-01 visual refinement - 2026-11-10
+
+- Owner request: final visual parity pass vs Wispr Flow (compact + hands-free states). Only pill.css + waveform.ts changed; no position, anchor, window, hotkey, FSM, recording, transcription or audio changes.
+- Hands-free capsule 112 -> 100 px; 1px border alpha 0.14 -> 0.18; padding 0 10 -> 0 7; item gap 9 -> 6; silence dots opacity 0.92 -> 0.80; waveform bars #f2f2ec -> rgba(242,242,236,0.82).
+- Verified live (fresh app PID 872): compact and hands-free re-measured; capsule center 960, bottom gap 19 px; 100 px hands-free width matches the reference target; tooltip hover (Cancel / Finish and paste) works; cross-click discards the session and hides the pill; overlay transparency confirmed; tooltips confirmed both states.
+- Gates: npm run typecheck; vitest 58/58; cargo test --locked 60/60; npm run build ok.
+- Finding recorded (iteration-log + PR 47): the rdev low-level keyboard hook receives no keyboard events on this machine (mouse hook works); keyboard hotkeys travel the hub's webview forwarder only when the hub is focused. Not a code defect; owner to decide on a second keyboard hook mechanism.
+- Not merged; no push, no deployment.
+
+## P9-01 PILL-OVERLAY-01 inset panel - 2026-11-10
+
+- Owner request: recreate Wispr Flow's two-layer shell — outer application background framing an inner rounded, subtly bordered panel.
+- Fix (hub.css, one block): `.hub-content` margin: 12px 12px 12px 0 (left kept 0 so the panel remains flush to the rail/content boundary) + border: 1px solid var(--border) (theme-aware token, #d3d8cd light / #3a4033 dark). 12 px frame on top/right/bottom measured by pixel scan; panel 25,28,21 inside frame 34,38,30; four corners keep the 24 px radius (I11). No layout/sidebar/card/palette/window changes.
+- Gates: npm run typecheck; vitest 58/58; cargo test --locked 60/60; npm run build ok.
+- Second-opinion subagent review confirmed the margin-over-padding choice and the theme-aware border token.
+
+## P9-01 PILL-OVERLAY-01 dashboard corners - 2026-11-10
+
+- Owner request: fix the main dashboard content container's three unrounded corners (top-right, bottom-left, bottom-right).
+- Root cause: .hub-content in hub.css declared border-radius: var(--hub-panel-radius) 0 0 0. Fix: var(--hub-panel-radius) (24 px) on all four corners; one-line change. No layout, sidebar, card, palette or window changes. Children cannot square off corners (overflow: hidden on hub-content; .page/.page-scroll carry no background).
+- Verified: all four corners re-captured zoomed; typecheck clean; vitest 58/58; npm run build ok.
+- Commit: fix(hub): round all four corners of the dashboard content container; PR #47 updated.
+

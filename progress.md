@@ -1259,3 +1259,41 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 ## P2-EMAIL-01 webhook retry follow-up — 2026-11-03
 
 - Unmatched Resend message IDs now return retryable errors for five minutes from initial receipt to allow the outbox provider ID to be saved. Later deliveries are acknowledged if still unmatched; this also applies to Auth SMTP events. The worker test now checks claim and lease filters.
+
+## PILL-OVERLAY-01 checkpoint (2026-11-07)
+
+- Branch/worktree: feature/PILL-OVERLAY-01-pill-overlay at .worktrees/PILL-OVERLAY-01-pill-overlay (base a9a5a8f). CrispASR v0.8.43 untouched. Full state in docs/pill-overlay/continuation-status.md; narrative in iteration-log.md.
+- Owner-accepted milestones preserved: double-tap hands-free and the pill's appearance (PTT capsule x 924-995, y 994-1021; hands-free ~112px; bottom-centre anchor, 19px above work area).
+- New this session: stale-hover tooltip defect fixed (Cancel bubble rendered with no buttons; hover now cleared when hands-free controls unmount) and verified live (fix-06/07/08); placement window added to capabilities; pill-dev documentation set added.
+- Toolchain: ambient cargo (chocolatey 1.98.1) cannot build (E0463); pinned rustup 1.90.0 MSVC + 2017 BuildTools vcvars64, isolated target dir Z:\codex-build-cache\PILL-OVERLAY-01-msvc. Desktop vite on 5173 must be restarted after renderer edits (watcher does not fire on this folder) � stale transformed App.tsx was served to the webview until vite was restarted.
+- Tests: tsc clean; vitest 45/45; cargo test --locked PASS (60/60 lib; RUSTDOC pinned to rustup MSVC). Open items: empty-transcript routing to error badge vs normative silent completion (owner decision), waveform speech check (mic/speaker coupling absent), DPI/multi-monitor verification.
+
+## PILL-OVERLAY-01 error state removal (2026-11-08)
+
+- Owner request: remove the pill's error state entirely. Done: pill renders no failure UI (no red dot, no .pill-err, no data-mode=error capsule, no 4s linger); on failure the pill hides as fast as a cancellation (ERROR_DISPLAY now 450ms). Hub keeps soravo:error (DictationPage status line shows e.g. 'Transcription came back empty'). App.tsx discards recorder+waveform on error so the mic can't be stranded with the pill invisible. FSM Phase::Error retained as an invisible parking phase (press recovers; submit gated); FSM unit tests unchanged (60/60). tsc clean; vitest 45/45; cargo test --locked PASS.
+- Verified live: silence PTT hides the pill with no red dot; hub status line shows the failure text.
+- Flagged for owner: moonshine hallucinated 'Fuck.' on silence at least twice today and the pipeline pastes unconditionally; at least one stray paste originated from session testing (target undeterminable). VAD/confirmation guard would be a product decision; not built.
+
+## PILL-OVERLAY-01 visual refinement (2026-11-10)
+
+- Owner request: final visual parity pass vs Wispr Flow. Only pill.css and waveform.ts changed.
+- Hands-free capsule 112 -> 100 px (matches reference); 1px border alpha 0.14 -> 0.18; horizontal padding 0 10 -> 0 7; item gap 9 -> 6; silence dots opacity 0.92 -> 0.80; waveform bars #f2f2ec -> rgba(242,242,236,0.82).
+- Measured after (app PID 872): compact x 924-995 y 994-1021; hands-free x 911-1008 y 994-1021; centre 960; gap 19 px; cross at (927,1007); tick at (993,1007); both tools confirm tooltips work, cross cancels, pill hides; overlay transparent.
+- Gates: npm run typecheck clean; vitest 58/58; cargo test --locked 60/60; npm run build ok.
+- Finding: the rdev low-level keyboard hook receives zero keyboard events on this machine (mouse hook works; keyboard events never logged even with the debug flag); keyboard hotkeys only work via the hub's webview forwarder when the hub is focused. Recorded in docs/pill-overlay/iteration-log.md; not a code defect; owner to decide.
+- rdev/cargo on this machine needs the pinned rustup 1.90.0 MSVC + VS2017 vcvars64.bat; ambient chocolatey cargo (rustc 1.98.1, E0463) cannot build.
+
+## PILL-OVERLAY-01 inset main content panel (2026-11-10)
+
+- Owner request: recreate Wispr Flow's two-layer shell — outer application background framing an inner rounded, subtly bordered panel.
+- Fix (hub.css, one block): `.hub-content` margin: 12px 12px 12px 0 (left kept 0 so the panel remains flush to the rail/content boundary) + border: 1px solid var(--border) (theme-aware token, #d3d8cd light / #3a4033 dark). 12 px frame on top/right/bottom measured by pixel scan; panel 25,28,21 inside frame 34,38,30; four corners keep the 24 px radius (I11). No layout/sidebar/card/palette/window changes.
+- Gates: npm run typecheck; vitest 58/58; cargo test --locked 60/60; npm run build ok.
+- Second-opinion review confirmed the margin-over-padding choice and the theme-aware border.
+
+## PILL-OVERLAY-01 dashboard content corners (2026-11-10)
+
+- Owner request: fix main dashboard content container so all four corners are rounded like the upper-left.
+- Root cause: .hub-content in src/renderer/src/hub.css had border-radius: var(--hub-panel-radius) 0 0 0. Fix: border-radius: var(--hub-panel-radius) (24px) for all four corners. One-line change; no layout/sidebar/card/palette/window changes. Children cannot square off corners (hub-content clips with overflow: hidden; .page/.page-scroll carry no background; cards keep their own radii).
+- Verified: all four corners re-captured zoomed (10-02-fullscreen + corner-*-zoom.png); matching 24 px curve on every corner; typecheck clean; vitest 58/58; npm run build ok.
+- Commit: fix(hub): round all four corners of the dashboard content container; PR #47 updated.
+

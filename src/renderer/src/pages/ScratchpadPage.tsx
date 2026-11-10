@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import HotkeyCapture from '../HotkeyCapture'
-import { prettyHotkey } from '../hotkeys'
+import { matchesHotkey, prettyHotkey } from '../hotkeys'
 import {
   CloseIcon,
   CopyIcon,
@@ -102,22 +102,6 @@ export default function ScratchpadPage() {
     }
   }
 
-  const isHotkeyMatch = (e: { key: string; ctrlKey: boolean; altKey: boolean; shiftKey: boolean; metaKey: boolean }) => {
-    const parts = hotkey.toLowerCase().split('+')
-    const needsCtrl = parts.includes('commandorcontrol') || parts.includes('ctrl') || parts.includes('control')
-    const needsAlt = parts.includes('alt')
-    const needsShift = parts.includes('shift')
-    const triggerKey = parts.filter((p) => !['commandorcontrol', 'ctrl', 'control', 'alt', 'shift', 'meta', 'super'].includes(p))[0]
-
-    return (
-      (needsCtrl === (e.ctrlKey || e.metaKey)) &&
-      (needsAlt === e.altKey) &&
-      (needsShift === e.shiftKey) &&
-      !!triggerKey &&
-      e.key.toLowerCase() === triggerKey
-    )
-  }
-
   useEffect(() => {
     loadNotes()
     soravo.getSettings().then((s) => {
@@ -163,20 +147,35 @@ export default function ScratchpadPage() {
     return () => window.removeEventListener('blur', handleWindowBlur)
   }, [])
 
-  // keydown: start recording (only when textarea focused, global hook disabled)
+  // The dictation hotkey while the textarea is focused, pushing raw edges to
+  // the native state machine (the global hook stands down here).
   useEffect(() => {
+    let held = ''
     const keyDownHandler = (e: KeyboardEvent) => {
       if (!textareaFocused) return
       if (e.repeat) return
-      if (!isHotkeyMatch(e)) return
+      if (!matchesHotkey(e, hotkey)) return
       e.preventDefault()
       e.stopPropagation()
-      recordingFromScratchpad.current = true
-      recordingCounter.current += 1
-      soravo.toggle().catch(console.error)
+      held = e.code
+      if (!recordingFromScratchpad.current) {
+        recordingFromScratchpad.current = true
+        recordingCounter.current += 1
+      }
+      soravo.hotkeyPress().catch(console.error)
+    }
+    const keyUpHandler = (e: KeyboardEvent) => {
+      if (!held) return
+      if (e.code !== held) return
+      held = ''
+      soravo.hotkeyRelease().catch(console.error)
     }
     window.addEventListener('keydown', keyDownHandler)
-    return () => window.removeEventListener('keydown', keyDownHandler)
+    window.addEventListener('keyup', keyUpHandler)
+    return () => {
+      window.removeEventListener('keydown', keyDownHandler)
+      window.removeEventListener('keyup', keyUpHandler)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textareaFocused, hotkey])
 

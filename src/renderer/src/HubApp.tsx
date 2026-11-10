@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from './auth/authContext'
-import type { InsightsData, RecState, SoravoSettings, Theme, TranscriptEntry } from './soravo'
+import type { InsightsData, PillAnchor, RecState, SoravoSettings, Theme, TranscriptEntry } from './soravo'
+import { PILL_ANCHORS } from './soravo'
 import HotkeyCapture from './HotkeyCapture'
 import ShortcutRow from './components/pages/ShortcutRow'
 import { TrashIcon } from './components/pages/icons'
@@ -36,7 +37,7 @@ import InsightsPage from './pages/InsightsPage'
 import ModelsPage from './pages/ModelsPage'
 import DictionaryPage from './pages/DictionaryPage'
 import StylePage from './pages/StylePage'
-import { matchesHotkey } from './hotkeys'
+import { codeToName, matchesHotkey } from './hotkeys'
 import { setAppChords } from './appShortcuts'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -298,7 +299,7 @@ function SettingsModal({
   const [pasteHotkey, setPasteHotkey] = useState(settings.pasteHotkey)
   const [copyHotkey, setCopyHotkey] = useState(settings.copyHotkey)
   const [scratchpadHotkey, setScratchpadHotkey] = useState(settings.scratchpadHotkey ?? '')
-  const [holdToTalk, setHoldToTalk] = useState(settings.holdToTalk)
+  const [pillAnchor, setPillAnchor] = useState<PillAnchor>(settings.pillAnchor ?? 'bottom-center')
   const [language, setLanguage] = useState(settings.language)
   const [microphoneId, setMicrophoneId] = useState(settings.microphoneId)
   const [sounds, setSounds] = useState(settings.sounds)
@@ -365,7 +366,7 @@ function SettingsModal({
     setPasteHotkey(settings.pasteHotkey)
     setCopyHotkey(settings.copyHotkey)
     setScratchpadHotkey(settings.scratchpadHotkey ?? '')
-    setHoldToTalk(settings.holdToTalk)
+    setPillAnchor(settings.pillAnchor ?? 'bottom-center')
     setLanguage(settings.language)
     setMicrophoneId(settings.microphoneId)
     setSounds(settings.sounds)
@@ -433,7 +434,8 @@ function SettingsModal({
       pasteHotkey: pasteHotkey.trim(),
       copyHotkey: copyHotkey.trim(),
       scratchpadHotkey: scratchpadHotkey.trim(),
-      holdToTalk,
+      holdToTalk: settings.holdToTalk, // Preserved, deprecated: interaction is uniformly hold-to-talk + double-press hands-free.
+      pillAnchor,
       language: language.trim() || 'en',
       microphoneId,
       sounds,
@@ -618,31 +620,47 @@ function SettingsModal({
                     </>
                   }
                 >
-                  {/* The list follows Wispr Flow's shortcut section: a stack of
+                  {/* The list follows the Wispr Flow shortcut section: a stack of
                       cards, each with the label on the left and the control on
                       the right. */}
                   <div className="shortcut-items">
                     <ShortcutRow
-                      title="Push to talk"
-                      description="Hold to say something short"
-                      control={
-                        <Switch
-                          checked={holdToTalk}
-                          onCheckedChange={(c) => setHoldToTalk(c === true)}
-                          aria-label="Push to talk"
-                        />
-                      }
-                    />
-                    <ShortcutRow
-                      title="Dictate"
-                      description={
-                        holdToTalk
-                          ? 'Hold the shortcut to record, release to transcribe'
-                          : 'Press the shortcut to start, press again to stop'
-                      }
+                      title="Dictation"
+                      description="Hold the shortcut to dictate; release to transcribe and paste. Double-press it for hands-free — then press it again, or use the tick, to finish and paste."
                       control={
                         <div className="shortcut-item-keys">
                           <HotkeyCapture value={hotkey} onCommit={setHotkey} />
+                        </div>
+                      }
+                    />
+                    <ShortcutRow
+                      title="Overlay position"
+                      description="Where the dictation pill sits while it is recording."
+                      control={
+                        <div className="shortcut-item-keys">
+                          <div className="anchor-grid" role="radiogroup" aria-label="Overlay position">
+                            {PILL_ANCHORS.map((anchor) => (
+                              <button
+                                key={anchor}
+                                type="button"
+                                role="radio"
+                                aria-checked={pillAnchor === anchor}
+                                className={
+                                  pillAnchor === anchor ? 'anchor-cell anchor-cell-on' : 'anchor-cell'
+                                }
+                                aria-label={anchor.replace('-', ' ')}
+                                title={anchor.replace('-', ' ')}
+                                onClick={() => setPillAnchor(anchor)}
+                              />
+                            ))}
+                          </div>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void window.soravo.openPlacementMode()}
+                          >
+                            Reposition…
+                          </Button>
                         </div>
                       }
                     />
@@ -1169,15 +1187,12 @@ export default function HubApp({ onSignOut }: { onSignOut: () => void }) {
   //
   // The global hook watches the whole system, but the app's own webview takes
   // a key press first, so while the hub is focused the hook never sees it.
-  // The window therefore drives the recorder itself. The native side is
-  // idempotent - starting when a recording is already running does nothing -
-  // so a press that both paths see still starts one recording.
+  // The window therefore forwards the press and release edges to the same
+  // native state machine the global hook feeds — one interaction model, one
+  // place to be correct.
   useEffect(() => {
     const hotkey = settings?.hotkey
     if (!hotkey) return
-    const holdToTalk = settings?.holdToTalk ?? false
-    // The key that started the recording, so the release ends it even if the
-    // modifier was let go first.
     let held = ''
     const heldKey = (target: EventTarget | null) => {
       const el = target as HTMLElement | null
@@ -1194,20 +1209,15 @@ export default function HubApp({ onSignOut }: { onSignOut: () => void }) {
       if (e.repeat || heldKey(e.target)) return
       if (!matchesHotkey(e, hotkey)) return
       e.preventDefault()
-      if (holdToTalk) {
-        held = e.code
-        window.soravo.startRecording().catch(() => {})
-      } else {
-        window.soravo.toggle().catch(() => {})
-      }
+      held = e.code
+      window.soravo.hotkeyPress().catch(() => {})
     }
     const onKeyUp = (e: KeyboardEvent) => {
-      if (!holdToTalk || !held) return
       // The modifier may already be up, so the release is matched on the
       // trigger key alone.
       if (e.code !== held) return
       held = ''
-      window.soravo.stopRecording().catch(() => {})
+      window.soravo.hotkeyRelease().catch(() => {})
     }
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
@@ -1215,7 +1225,7 @@ export default function HubApp({ onSignOut }: { onSignOut: () => void }) {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
-  }, [settings?.hotkey, settings?.holdToTalk])
+  }, [settings?.hotkey])
 
   const refreshHistory = () => {
     window.soravo.getHistory(200).then(setHistory).catch(() => {})
@@ -1278,13 +1288,17 @@ export default function HubApp({ onSignOut }: { onSignOut: () => void }) {
       (p) => !['commandorcontrol', 'ctrl', 'control', 'alt', 'shift', 'meta', 'super'].includes(p)
     )[0]
     if (!trigger) return
+    const strigger = trigger.trim()
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return
       if (needsCtrl !== (e.ctrlKey || e.metaKey)) return
       if (needsAlt !== e.altKey) return
       if (needsShift !== e.shiftKey) return
-      if (e.key.toLowerCase() !== trigger) return
+      // Match against the accelerator's own naming, not the browser's
+      // KeyboardEvent.key, so Space and punctuation bindings work.
+      const pressed = codeToName(e.code, e.key)?.toLowerCase()
+      if (!pressed || pressed !== strigger) return
       e.preventDefault()
       setPage('scratchpad')
     }
@@ -1354,7 +1368,7 @@ export default function HubApp({ onSignOut }: { onSignOut: () => void }) {
                 copiedId={copiedId}
                 onCopy={copyEntry}
                 onDelete={deleteEntry}
-                onToggle={() => void window.soravo.toggle()}
+                onToggle={() => void window.soravo.handsFreeToggle()}
                 onOpenStyle={() => setPage('style')}
                 onOpenDictionary={() => setPage('dictionary')}
               />

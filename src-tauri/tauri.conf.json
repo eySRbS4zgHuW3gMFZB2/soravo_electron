@@ -15,7 +15,7 @@
       {
         "label": "pill",
         "title": "Soravo",
-        "width": 210,
+        "width": 120,
         "height": 56,
         "resizable": false,
         "decorations": false,
@@ -26,6 +26,19 @@
         "visible": false,
         "center": false,
         "focusable": false
+      },
+      {
+        "label": "placement",
+        "title": "Soravo",
+        "width": 800,
+        "height": 500,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "fullscreen": true
       },
       {
         "label": "hub",
