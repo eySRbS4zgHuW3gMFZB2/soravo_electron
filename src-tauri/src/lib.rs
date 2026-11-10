@@ -11,12 +11,118 @@ mod secure_store;
 
 pub use dictation::RecState;
 
-/// The anchors the pill can dock to, in reading order.
-const ANCHORS: &[&str] = &[
-    "top-left", "top-center", "top-right",
-    "center-left", "center-center", "center-right",
-    "bottom-left", "bottom-center", "bottom-right",
-];
+/// The nine anchors the pill can dock to. This enum is the single canonical
+/// representation of a pill position: the settings string is parsed into it
+/// once at the boundaries, and every coordinate calculation derives from the
+/// column/row, so the nine positions are distinct by construction.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PillAnchor {
+    TopLeft,
+    TopCenter,
+    TopRight,
+    CenterLeft,
+    CenterCenter,
+    CenterRight,
+    BottomLeft,
+    BottomCenter,
+    BottomRight,
+}
+
+impl PillAnchor {
+    /// The nine anchors in reading order (top row, then centre, then bottom).
+    pub const ALL: [PillAnchor; 9] = [
+        PillAnchor::TopLeft,
+        PillAnchor::TopCenter,
+        PillAnchor::TopRight,
+        PillAnchor::CenterLeft,
+        PillAnchor::CenterCenter,
+        PillAnchor::CenterRight,
+        PillAnchor::BottomLeft,
+        PillAnchor::BottomCenter,
+        PillAnchor::BottomRight,
+    ];
+
+    /// Parse the serialized anchor. Unknown values are rejected, never
+    /// silently mapped onto another position.
+    pub fn parse(s: &str) -> Option<PillAnchor> {
+        match s {
+            "top-left" => Some(PillAnchor::TopLeft),
+            "top-center" => Some(PillAnchor::TopCenter),
+            "top-right" => Some(PillAnchor::TopRight),
+            "center-left" => Some(PillAnchor::CenterLeft),
+            "center-center" => Some(PillAnchor::CenterCenter),
+            "center-right" => Some(PillAnchor::CenterRight),
+            "bottom-left" => Some(PillAnchor::BottomLeft),
+            "bottom-center" => Some(PillAnchor::BottomCenter),
+            "bottom-right" => Some(PillAnchor::BottomRight),
+            _ => None,
+        }
+    }
+
+    /// The serialized anchor string (kebab-case), as stored in settings and
+    /// passed over IPC.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            PillAnchor::TopLeft => "top-left",
+            PillAnchor::TopCenter => "top-center",
+            PillAnchor::TopRight => "top-right",
+            PillAnchor::CenterLeft => "center-left",
+            PillAnchor::CenterCenter => "center-center",
+            PillAnchor::CenterRight => "center-right",
+            PillAnchor::BottomLeft => "bottom-left",
+            PillAnchor::BottomCenter => "bottom-center",
+            PillAnchor::BottomRight => "bottom-right",
+        }
+    }
+
+    /// 0 = left column, 1 = centre column, 2 = right column.
+    fn column(self) -> i32 {
+        match self {
+            PillAnchor::TopLeft | PillAnchor::CenterLeft | PillAnchor::BottomLeft => 0,
+            PillAnchor::TopCenter | PillAnchor::CenterCenter | PillAnchor::BottomCenter => 1,
+            PillAnchor::TopRight | PillAnchor::CenterRight | PillAnchor::BottomRight => 2,
+        }
+    }
+
+    /// 0 = top row, 1 = centre row, 2 = bottom row.
+    fn row(self) -> i32 {
+        match self {
+            PillAnchor::TopLeft | PillAnchor::TopCenter | PillAnchor::TopRight => 0,
+            PillAnchor::CenterLeft | PillAnchor::CenterCenter | PillAnchor::CenterRight => 1,
+            PillAnchor::BottomLeft | PillAnchor::BottomCenter | PillAnchor::BottomRight => 2,
+        }
+    }
+}
+
+/// Compute the pill window's physical-pixel top-left corner for `anchor`,
+/// given the monitor's work-area rectangle and the pill's outer size.
+///
+/// Pure: no window handles, no settings, no monitor queries. The bottom row
+/// respects the work area, not the full screen bounds, so the pill never
+/// covers the taskbar.
+#[allow(clippy::too_many_arguments)]
+fn pill_position(
+    anchor: PillAnchor,
+    wa_x: i32,
+    wa_y: i32,
+    wa_w: i32,
+    wa_h: i32,
+    pill_w: i32,
+    pill_h: i32,
+    margin: i32,
+) -> (i32, i32) {
+    let x = match anchor.column() {
+        0 => wa_x + margin,
+        2 => wa_x + wa_w - pill_w - margin,
+        _ => wa_x + (wa_w - pill_w) / 2,
+    };
+    let y = match anchor.row() {
+        0 => wa_y + margin,
+        1 => wa_y + (wa_h - pill_h) / 2,
+        _ => wa_y + wa_h - pill_h - margin,
+    };
+    (x, y)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -820,7 +926,13 @@ fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
         }
         if let Some(v) = s.get("pillAnchor") {
             if let Some(s) = v.as_str() {
-                settings.pill_anchor = s.to_string();
+                if PillAnchor::parse(s).is_some() {
+                    settings.pill_anchor = s.to_string();
+                } else {
+                    // Reject rather than carry an unknown position forward;
+                    // the default (bottom-center) is kept instead.
+                    log::warn!("[soravo] ignoring unknown pillAnchor in settings store: {s:?}");
+                }
             }
         }
         if let Some(v) = s.get("model") {
@@ -1364,7 +1476,15 @@ fn place_pill(app: &tauri::AppHandle) {
         return;
     };
     let settings = load_settings(app);
-    let anchor = settings.pill_anchor.clone();
+    let Some(anchor) = PillAnchor::parse(&settings.pill_anchor) else {
+        // An invalid persisted value must not silently reposition the pill
+        // (and must never fall back to centre). Leave it where it is.
+        log::error!(
+            "[soravo] ignoring unknown pill anchor in settings: {:?}",
+            settings.pill_anchor
+        );
+        return;
+    };
     let Ok(size) = win.outer_size() else {
         return;
     };
@@ -1380,20 +1500,16 @@ fn place_pill(app: &tauri::AppHandle) {
     let scale = monitor.scale_factor();
     let margin = (17.0 * scale).round() as i32;
 
-    let x = match anchor.as_str() {
-        "top-left" | "bottom-left" => wa.position.x + margin,
-        "top-right" | "bottom-right" => {
-            wa.position.x + wa.size.width as i32 - size.width as i32 - margin
-        }
-        _ => wa.position.x + (wa.size.width as i32 - size.width as i32) / 2,
-    };
-    let y = match anchor.as_str() {
-        "top-left" | "top-center" | "top-right" => wa.position.y + margin,
-        "center-left" | "center-center" | "center-right" => {
-            wa.position.y + (wa.size.height as i32 - size.height as i32) / 2
-        }
-        _ => wa.position.y + wa.size.height as i32 - size.height as i32 - margin,
-    };
+    let (x, y) = pill_position(
+        anchor,
+        wa.position.x,
+        wa.position.y,
+        wa.size.width as i32,
+        wa.size.height as i32,
+        size.width as i32,
+        size.height as i32,
+        margin,
+    );
     win.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }))
         .ok();
 }
@@ -1870,11 +1986,11 @@ async fn submit_audio(
 /// effect immediately via `place_pill`.
 #[tauri::command]
 async fn set_pill_anchor(app: tauri::AppHandle, anchor: String) -> Result<(), String> {
-    if !ANCHORS.contains(&anchor.as_str()) {
+    let Some(anchor) = PillAnchor::parse(&anchor) else {
         return Err(format!("unknown anchor: {anchor}"));
-    }
+    };
     let mut settings = load_settings(&app);
-    settings.pill_anchor = anchor.clone();
+    settings.pill_anchor = anchor.as_str().to_string();
     save_settings(&app, &settings)?;
     place_pill(&app);
     Ok(())
@@ -1901,6 +2017,8 @@ async fn open_placement_mode(app: tauri::AppHandle) -> Result<(), String> {
         }
         win.show().map_err(|e| e.to_string())?;
         win.set_focus().ok();
+        // Tell any open placement webview to re-read the persisted anchor.
+        app.emit("soravo:placement-shown", ()).ok();
     }
     Ok(())
 }
@@ -2238,8 +2356,10 @@ async fn set_settings(
         settings.hold_to_talk = v;
     }
     if let Some(v) = patch.get("pillAnchor").and_then(|v| v.as_str()) {
-        if ANCHORS.contains(&v) {
-            settings.pill_anchor = v.to_string();
+        if let Some(anchor) = PillAnchor::parse(v) {
+            settings.pill_anchor = anchor.as_str().to_string();
+        } else {
+            log::warn!("[soravo] ignoring unknown pillAnchor in settings patch: {v:?}");
         }
     }
     if let Some(v) = patch.get("model").and_then(|v| v.as_str()) {
@@ -2741,6 +2861,56 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pill_position_maps_all_nine_anchors_distinctly() {
+        // Work area with an offset origin (a second monitor) and a 56-px
+        // pill, 120 px wide, 17-px margin — the shipped pill geometry.
+        let (wa_x, wa_y, wa_w, wa_h) = (100, 40, 1920, 1040);
+        let (pw, ph, margin) = (120, 56, 17);
+        let expected = [
+            (PillAnchor::TopLeft, (117, 57)),
+            (PillAnchor::TopCenter, (100 + (1920 - 120) / 2, 57)),
+            (PillAnchor::TopRight, (100 + 1920 - 120 - 17, 57)),
+            (PillAnchor::CenterLeft, (117, 40 + (1040 - 56) / 2)),
+            (PillAnchor::CenterCenter, (100 + (1920 - 120) / 2, 40 + (1040 - 56) / 2)),
+            (PillAnchor::CenterRight, (100 + 1920 - 120 - 17, 40 + (1040 - 56) / 2)),
+            (PillAnchor::BottomLeft, (117, 40 + 1040 - 56 - 17)),
+            (PillAnchor::BottomCenter, (100 + (1920 - 120) / 2, 40 + 1040 - 56 - 17)),
+            (PillAnchor::BottomRight, (100 + 1920 - 120 - 17, 40 + 1040 - 56 - 17)),
+        ];
+        let mut seen = std::collections::HashSet::new();
+        for (anchor, expected_xy) in expected {
+            let got = pill_position(anchor, wa_x, wa_y, wa_w, wa_h, pw, ph, margin);
+            assert_eq!(got, expected_xy, "{anchor:?} landed on the wrong corner");
+            assert!(seen.insert(got), "{anchor:?} shares a position with another anchor");
+        }
+        assert_eq!(seen.len(), 9);
+    }
+
+    #[test]
+    fn pill_position_side_anchors_are_not_centred() {
+        // Regression: center-left and center-right used to fall through to
+        // the horizontal centre column.
+        let (wa_x, wa_w, pw, margin) = (0, 1920, 120, 17);
+        let centre = wa_x + (wa_w - pw) / 2;
+        let left = pill_position(PillAnchor::CenterLeft, 0, 0, wa_w, 1040, pw, 56, margin).0;
+        let right = pill_position(PillAnchor::CenterRight, 0, 0, wa_w, 1040, pw, 56, margin).0;
+        assert_eq!(left, margin);
+        assert_eq!(right, wa_w - pw - margin);
+        assert_ne!(left, centre);
+        assert_ne!(right, centre);
+    }
+
+    #[test]
+    fn pill_anchor_parse_round_trips_for_all_nine() {
+        for anchor in PillAnchor::ALL {
+            assert_eq!(PillAnchor::parse(anchor.as_str()), Some(anchor));
+        }
+        assert_eq!(PillAnchor::parse("middle-left"), None);
+        assert_eq!(PillAnchor::parse(""), None);
+        assert_eq!(PillAnchor::parse("CENTER-LEFT"), None);
+    }
 
     #[test]
     fn snippet_and_note_serialise_with_camel_case_keys() {

@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { PILL_ANCHORS, type PillAnchor } from './pillAnchors'
 
 export type RecState = 'idle' | 'recording' | 'transcribing' | 'error'
 
@@ -8,16 +9,8 @@ export interface SessionInfo {
   handsFree: boolean
 }
 
-export type PillAnchor =
-  | 'top-left' | 'top-center' | 'top-right'
-  | 'center-left' | 'center-center' | 'center-right'
-  | 'bottom-left' | 'bottom-center' | 'bottom-right'
-
-export const PILL_ANCHORS: PillAnchor[] = [
-  'top-left', 'top-center', 'top-right',
-  'center-left', 'center-center', 'center-right',
-  'bottom-left', 'bottom-center', 'bottom-right',
-]
+export { PILL_ANCHORS }
+export type { PillAnchor }
 
 export interface ScratchpadNote {
   id: number
@@ -162,6 +155,8 @@ export interface SoravoAPI {
   deleteScratchpadNote(id: number): Promise<void>
   updateScratchpadNote(id: number, patch: { text?: string; pinned?: boolean }): Promise<void>
   onScratchpadChanged(cb: () => void): () => void
+  /** Fires every time placement mode is shown, so the window can re-read the anchor. */
+  onPlacementShown(cb: () => void): () => void
   openScratchpadWindow(): Promise<void>
   setTextareaFocus(focused: boolean): Promise<void>
   getSnippets(): Promise<Snippet[]>
@@ -253,6 +248,10 @@ async function setupEventListeners() {
     const cbs = listeners['scratchpad-changed']
     if (cbs) cbs.forEach((cb) => cb())
   })
+  await listen('soravo:placement-shown', () => {
+    const cbs = listeners['placement-shown']
+    if (cbs) cbs.forEach((cb) => cb())
+  })
 }
 
 setupEventListeners().catch(console.error)
@@ -319,6 +318,7 @@ export const soravo: SoravoAPI = {
   deleteScratchpadNote: (id) => invoke('delete_scratchpad_note', { id }),
   updateScratchpadNote: (id, patch) => invoke('update_scratchpad_note', { id, patch }),
   onScratchpadChanged: (cb) => addListener('scratchpad-changed', cb as Function),
+  onPlacementShown: (cb) => addListener('placement-shown', cb as Function),
   openScratchpadWindow: () => invoke('open_scratchpad_window'),
   getSettings: async () => {
     const raw = await invoke<any>('get_settings')
