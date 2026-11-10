@@ -85,6 +85,16 @@ Verification (fresh app PID 872): compact and hands-free states re-captured; too
 ### I10b — Dev-server namespace note (not a code change)
 `npm run tauri:dev` under `scripts/tauri-dev.mjs` runs the full stack (website Vite 5174 + desktop Vite 5173 + cargo app). Killing `soravo.exe` exits the supervisor and stops both Vites — dev verification rounds that relaunch the app must restart the supervisor, not just the binary. `Cargo` on PATH (chocolatey rustc 1.98.1) cannot build this workspace (E0463); use rustup 1.90.0 `-x86_64-pc-windows-msvc` + 2017 BuildTools `vcvars64.bat`, `CARGO_BUILD_TARGET=x86_64-pc-windows-msvc`, `CARGO_TARGET_DIR=Z:\codex-build-cache\PILL-OVERLAY-01-msvc`. Note the persistence quirk: after several restarts the UNC incremental cache degrades (`hard linking failed. copying files instead` + stale `.working` directories) — a clean isolated target dir or patience is the remedy.
 
+### I11 — Dashboard content container: consistent rounded corners (2026-11-10, owner request)
+
+Root cause: `.hub-content` (the large dark dashboard surface, `<main className="hub-content">` in `HubApp.tsx`) in `src/renderer/src/hub.css` had `border-radius: var(--hub-panel-radius) 0 0 0` — only the upper-left was rounded; the other three were explicitly `0`.
+
+Fix (one declaration): `border-radius: var(--hub-panel-radius) 0 0 0` → `border-radius: var(--hub-panel-radius)` (all four corners, `--hub-panel-radius: 24 px`, matching the existing upper-left). No layout, spacing, sidebar, card, palette, typography, shadow, or window size/behaviour changes.
+
+Children cannot square off the corners: `.hub-content` clips with `overflow: hidden`; direct children (`.page`, `.page-scroll`) carry no backgrounds; cards keep their own radii.
+
+Verification: all four corners re-captured zoomed (`corner-tl2/tr2/bl2/br2-zoom.png`); every corner shows the same smooth 24 px curve; typecheck clean; vitest 58/58; vite build ok.
+
 ## Known discrepancies / open items
 
 1. ~~Empty transcript → `Error` red dot~~ — resolved 2026-11-08 (pill's error state removed; see I9).

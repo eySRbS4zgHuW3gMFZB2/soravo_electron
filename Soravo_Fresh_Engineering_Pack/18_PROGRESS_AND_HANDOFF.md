@@ -986,3 +986,11 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - Gates: npm run typecheck; vitest 58/58; cargo test --locked 60/60; npm run build ok.
 - Finding recorded (iteration-log + PR 47): the rdev low-level keyboard hook receives no keyboard events on this machine (mouse hook works); keyboard hotkeys travel the hub's webview forwarder only when the hub is focused. Not a code defect; owner to decide on a second keyboard hook mechanism.
 - Not merged; no push, no deployment.
+
+## P9-01 PILL-OVERLAY-01 dashboard corners - 2026-11-10
+
+- Owner request: fix the main dashboard content container's three unrounded corners (top-right, bottom-left, bottom-right).
+- Root cause: .hub-content in hub.css declared border-radius: var(--hub-panel-radius) 0 0 0. Fix: var(--hub-panel-radius) (24 px) on all four corners; one-line change. No layout, sidebar, card, palette or window changes. Children cannot square off corners (overflow: hidden on hub-content; .page/.page-scroll carry no background).
+- Verified: all four corners re-captured zoomed; typecheck clean; vitest 58/58; npm run build ok.
+- Commit: fix(hub): round all four corners of the dashboard content container; PR #47 updated.
+

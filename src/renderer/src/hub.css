@@ -390,7 +390,7 @@ html[data-theme='dark'] {
   display: flex;
   flex-direction: column;
   background: var(--soravo-canvas);
-  border-radius: var(--hub-panel-radius) 0 0 0;
+  border-radius: var(--hub-panel-radius);
   overflow: hidden;
 }
 

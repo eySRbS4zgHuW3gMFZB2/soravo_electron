@@ -1282,3 +1282,11 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 - Gates: npm run typecheck clean; vitest 58/58; cargo test --locked 60/60; npm run build ok.
 - Finding: the rdev low-level keyboard hook receives zero keyboard events on this machine (mouse hook works; keyboard events never logged even with the debug flag); keyboard hotkeys only work via the hub's webview forwarder when the hub is focused. Recorded in docs/pill-overlay/iteration-log.md; not a code defect; owner to decide.
 - rdev/cargo on this machine needs the pinned rustup 1.90.0 MSVC + VS2017 vcvars64.bat; ambient chocolatey cargo (rustc 1.98.1, E0463) cannot build.
+
+## PILL-OVERLAY-01 dashboard content corners (2026-11-10)
+
+- Owner request: fix main dashboard content container so all four corners are rounded like the upper-left.
+- Root cause: .hub-content in src/renderer/src/hub.css had border-radius: var(--hub-panel-radius) 0 0 0. Fix: border-radius: var(--hub-panel-radius) (24px) for all four corners. One-line change; no layout/sidebar/card/palette/window changes. Children cannot square off corners (hub-content clips with overflow: hidden; .page/.page-scroll carry no background; cards keep their own radii).
+- Verified: all four corners re-captured zoomed (10-02-fullscreen + corner-*-zoom.png); matching 24 px curve on every corner; typecheck clean; vitest 58/58; npm run build ok.
+- Commit: fix(hub): round all four corners of the dashboard content container; PR #47 updated.
+
