@@ -94,6 +94,14 @@ impl PillAnchor {
     }
 }
 
+const PHYSICAL_MARGIN_PX: f64 = 17.0;
+
+/// The placement margin in physical pixels for a monitor with `scale`
+/// scale factor. Kept pure so the DPI math is unit-tested.
+fn scaled_margin(scale: f64) -> i32 {
+    (PHYSICAL_MARGIN_PX * scale).round() as i32
+}
+
 /// Compute the pill window's physical-pixel top-left corner for `anchor`,
 /// given the monitor's work-area rectangle and the pill's outer size.
 ///
@@ -930,7 +938,9 @@ fn load_settings(app: &tauri::AppHandle) -> SoravoSettings {
                     settings.pill_anchor = s.to_string();
                 } else {
                     // Reject rather than carry an unknown position forward;
-                    // the default (bottom-center) is kept instead.
+                    // the default (bottom-center) is kept instead. The store
+                    // is deliberately not rewritten here — load is on the
+                    // hot path and must not write.
                     log::warn!("[soravo] ignoring unknown pillAnchor in settings store: {s:?}");
                 }
             }
@@ -1498,7 +1508,7 @@ fn place_pill(app: &tauri::AppHandle) {
     };
     let wa = monitor.work_area();
     let scale = monitor.scale_factor();
-    let margin = (17.0 * scale).round() as i32;
+    let margin = scaled_margin(scale);
 
     let (x, y) = pill_position(
         anchor,
@@ -2900,6 +2910,14 @@ mod tests {
         assert_eq!(right, wa_w - pw - margin);
         assert_ne!(left, centre);
         assert_ne!(right, centre);
+    }
+
+    #[test]
+    fn scaled_margin_tracks_dpi() {
+        assert_eq!(scaled_margin(1.0), 17);
+        assert_eq!(scaled_margin(1.25), 21);
+        assert_eq!(scaled_margin(1.5), 26);
+        assert_eq!(scaled_margin(2.0), 34);
     }
 
     #[test]

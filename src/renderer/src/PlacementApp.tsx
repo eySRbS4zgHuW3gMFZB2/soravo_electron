@@ -108,7 +108,7 @@ export default function PlacementApp() {
       if (e.pointerId !== dragPointerId.current) return
       finishDrag(0, 0, false)
     }
-    const onBlur = () => finishDrag(0, 0, false)
+    const onBlur = () => finishDrag(0, 0, false) // window lost focus mid-drag: discard (no commit)
     window.addEventListener('pointermove', onMove, { passive: false })
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onCancel)
@@ -125,6 +125,9 @@ export default function PlacementApp() {
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return
+    // One pointer at a time: a second finger/mouse down mid-drag is ignored
+    // rather than silently stealing the drag.
+    if (dragPointerId.current !== null) return
     e.preventDefault()
     dragPointerId.current = e.pointerId
     setDragging(true)
