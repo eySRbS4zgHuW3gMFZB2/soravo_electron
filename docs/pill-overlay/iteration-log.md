@@ -62,14 +62,37 @@ Reference target vs. actual: capsule height renders **28 px** vs 30 px target (a
 ### I9b — Review pass + capability split (2026-11-08, see PR #47)
 Security/code review of the full branch diff (`origin/main...HEAD`): capability split into minimal hub/pill/placement files (was one shared grant with dialog/shell/clipboard/store/window perms on every window); dead variable removed from `waveform.ts`. No dangerous sinks found (constant process args, parameterized SQL, React auto-escape). CodeRabbit CLI review failed pre-analysis ("Git provider access could not be authenticated", both attempts) — review deferred to PR #47; manual review + security-review applied instead. All gates green after changes (tsc, vitest 58/58, cargo test --locked 60/60, npm build ok, live smoke incl. hands-free round trip).
 
+### I10 — Final visual parity refinement vs Wispr Flow (2026-11-10, owner request)
+Narrowly-scoped visual pass; no position, anchor, monitor, window, hotkey, FSM, recording, transcription, paste or waveform-analysis changes.
+
+Measured before (1920x1080 @100% DPI, single monitor, work area bottom = 1040; app PID 8512/872): PTT capsule x 924-995 (72 px), y 994-1021 (28 px fill + 1 px border), centre 960, bottom gap 19 px; hands-free capsule x 905-1014 (~110 px), same y/geometry; border 14% white; ✕/✓ Ø 18 px (warm-grey ✕ on #57544e, white ✓ on #ffffff); silence dots near-white at 0.92 opacity; waveform bars #f2f2ec at 100%; processing capsule 112 px.
+
+Reference (machine-measured, `reference-specification.md`): PTT 73x30; hands-free ~100x30; 1 px ~18-19% white hairline; muted grey-ish off-white dots; no shadow; buttons Ø 18-19 px.
+
+Changes applied:
+- Hands-free + processing capsule 112 -> **100 px** (matches the reference exactly).
+- Capsule border 1 px 14% -> 18% white (matches the reference hairline; subtle, no new shadow).
+- Horizontal padding 0 10 px -> 0 7 px; inter-item gap 9 px -> 6 px. The 100 px hands-free capsule keeps the same 38 px waveform canvas as before (pitch ~3.17 px, barW ~1.74 px) so dot density is unchanged.
+- Silence dots (`.pill-dots`) opacity 0.92 -> 0.80 (muted grey).
+- Waveform bars (waveform.ts): fillStyle `#f2f2ec` -> `rgba(242,242,236,0.82)`.
+
+Measured after (app PID 872, 2026-11-10):
+- Compact: x 924-995 (72 px), y 994-1021; centre 960; gap 19 px; dots muted.
+- Hands-free: fill rows 994-1021; max outer width x 911-1008 (~98 px effective = 100 px CSS class, matching the reference); centre 960; gap 19 px; ✕ Ø ~18 px at (927, 1007); ✓ Ø ~18 px at (993, 1007); dots centred between the buttons.
+
+Verification (fresh app PID 872): compact and hands-free states re-captured; tooltips still render on hover ("Cancel" over ✕, "Finish and paste" over ✓); cross-click discards the session and hides the pill; the overlay is genuinely transparent (background shows through; no rectangular surface). `npm run typecheck` clean; `vitest` 58/58; `cargo test --locked` 60/60; `npm run build` ok. Files changed: `pill.css`, `waveform.ts` only.
+
+### I10b — Dev-server namespace note (not a code change)
+`npm run tauri:dev` under `scripts/tauri-dev.mjs` runs the full stack (website Vite 5174 + desktop Vite 5173 + cargo app). Killing `soravo.exe` exits the supervisor and stops both Vites — dev verification rounds that relaunch the app must restart the supervisor, not just the binary. `Cargo` on PATH (chocolatey rustc 1.98.1) cannot build this workspace (E0463); use rustup 1.90.0 `-x86_64-pc-windows-msvc` + 2017 BuildTools `vcvars64.bat`, `CARGO_BUILD_TARGET=x86_64-pc-windows-msvc`, `CARGO_TARGET_DIR=Z:\codex-build-cache\PILL-OVERLAY-01-msvc`. Note the persistence quirk: after several restarts the UNC incremental cache degrades (`hard linking failed. copying files instead` + stale `.working` directories) — a clean isolated target dir or patience is the remedy.
+
 ## Known discrepancies / open items
 
-1. Empty transcript → `Error` (red dot) vs normative doc's `Completed`. Owner decision pending. (`I5`)
+1. ~~Empty transcript → `Error` red dot~~ — resolved 2026-11-08 (pill's error state removed; see I9).
 2. Capsule renders 28 px tall vs 30 px reference (owner-accepted).
 3. Waveform react-to-speech unverified at runtime (no acoustic path on this machine).
 4. DPI 125%/150% and multi-monitor placement unverified (no scaled/multi display).
-5. `cargo test --locked` green — 60/60 lib (doctests require `RUSTDOC` pinned to the rustup MSVC toolchain; ambient chocolatey rustc has no MSVC std, E0463). Vitest 45/45 green; `tsc --noEmit` clean.
-6. `interaction-state-machine.md` names `cancel_recording` as both alias and command; observed deltas vs implementation: `finish_recording` exists (used by ✓); doc's `soravo:audio-level` intentionally omitted (renderer-side AnalyserNode only) — as designed in the doc.
+5. `cargo test --locked` green — 60/60 lib (doctests require `RUSTDOC` pinned to the rustup MSVC toolchain). Vitest 58/58 green; `tsc --noEmit` clean.
+6. `rdev` keyboard hook receives **no keyboard events on this machine** (mouse hook works) — likely why manual testing with Mouse4/Mouse5 passes but Ctrl+2 keyboard hotkey tests appeared flaky/absent. Not a code defect; recorded for the owner to check the machine's keyboard input chain (or to flip the app's keyboard hook to a redundant path).
 
 ### I9 � Pill error state removed entirely (2026-11-08, owner request)
 Owner: 'Can you remove the error state of the pill entirely?'

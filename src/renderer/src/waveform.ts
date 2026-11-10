@@ -160,7 +160,7 @@ export function createWaveform(canvas: HTMLCanvasElement): WaveformController {
     ctx2d.clearRect(0, 0, w, h)
     const pitch = w / BAR_COUNT
     const barW = Math.max(1.4, Math.min(3.2, pitch * 0.55))
-    ctx2d.fillStyle = '#f2f2ec'
+    ctx2d.fillStyle = 'rgba(242, 242, 236, 0.82)'
     for (let i = 0; i < BAR_COUNT; i++) {
       const level = levels[i]
       const bh = Math.max(2.4, level * h)

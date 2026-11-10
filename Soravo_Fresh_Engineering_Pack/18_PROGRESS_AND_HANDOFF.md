@@ -977,3 +977,12 @@ Status: owner completed the full sign-in round trip successfully from the same-w
 - Verification: tsc clean; vitest 45/45; cargo test --locked PASS (60/60; RUSTDOC pinned to rustup MSVC). Live check: silence PTT hides the pill, hub shows 'Transcription came back empty'.
 - Flagged for owner: moonshine hallucinated 'Fuck.' on silence at least twice; pipeline pastes non-empty results unconditionally; at least one stray paste originated from session testing (target undeterminable). A VAD/confirmation guard is a product decision and was not built.
 - Not merged; no push, no deployment.
+
+## P9-01 PILL-OVERLAY-01 visual refinement - 2026-11-10
+
+- Owner request: final visual parity pass vs Wispr Flow (compact + hands-free states). Only pill.css + waveform.ts changed; no position, anchor, window, hotkey, FSM, recording, transcription or audio changes.
+- Hands-free capsule 112 -> 100 px; 1px border alpha 0.14 -> 0.18; padding 0 10 -> 0 7; item gap 9 -> 6; silence dots opacity 0.92 -> 0.80; waveform bars #f2f2ec -> rgba(242,242,236,0.82).
+- Verified live (fresh app PID 872): compact and hands-free re-measured; capsule center 960, bottom gap 19 px; 100 px hands-free width matches the reference target; tooltip hover (Cancel / Finish and paste) works; cross-click discards the session and hides the pill; overlay transparency confirmed; tooltips confirmed both states.
+- Gates: npm run typecheck; vitest 58/58; cargo test --locked 60/60; npm run build ok.
+- Finding recorded (iteration-log + PR 47): the rdev low-level keyboard hook receives no keyboard events on this machine (mouse hook works); keyboard hotkeys travel the hub's webview forwarder only when the hub is focused. Not a code defect; owner to decide on a second keyboard hook mechanism.
+- Not merged; no push, no deployment.

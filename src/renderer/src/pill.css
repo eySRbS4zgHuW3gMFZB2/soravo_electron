@@ -40,13 +40,13 @@ body,
   position: relative;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 6px;
   box-sizing: border-box;
   height: 30px;
-  padding: 0 10px;
+  padding: 0 7px;
   border-radius: 9999px;
   background: #000;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   transition:
     width 0.16s ease,
     opacity 0.16s ease,
@@ -59,7 +59,7 @@ body,
 }
 .capsule[data-mode="handsfree"],
 .capsule[data-mode="processing"] {
-  width: 112px;
+  width: 100px;
 }
 .capsule[data-mode="completing"] {
   width: 38px;
@@ -169,7 +169,7 @@ body,
   height: 2.4px;
   border-radius: 1px;
   background: #f5f4f0;
-  opacity: 0.92;
+  opacity: 0.8;
 }
 
 /* Hover tooltip — only while hovering, never permanent */

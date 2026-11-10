@@ -1273,3 +1273,12 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 - Owner request: remove the pill's error state entirely. Done: pill renders no failure UI (no red dot, no .pill-err, no data-mode=error capsule, no 4s linger); on failure the pill hides as fast as a cancellation (ERROR_DISPLAY now 450ms). Hub keeps soravo:error (DictationPage status line shows e.g. 'Transcription came back empty'). App.tsx discards recorder+waveform on error so the mic can't be stranded with the pill invisible. FSM Phase::Error retained as an invisible parking phase (press recovers; submit gated); FSM unit tests unchanged (60/60). tsc clean; vitest 45/45; cargo test --locked PASS.
 - Verified live: silence PTT hides the pill with no red dot; hub status line shows the failure text.
 - Flagged for owner: moonshine hallucinated 'Fuck.' on silence at least twice today and the pipeline pastes unconditionally; at least one stray paste originated from session testing (target undeterminable). VAD/confirmation guard would be a product decision; not built.
+
+## PILL-OVERLAY-01 visual refinement (2026-11-10)
+
+- Owner request: final visual parity pass vs Wispr Flow. Only pill.css and waveform.ts changed.
+- Hands-free capsule 112 -> 100 px (matches reference); 1px border alpha 0.14 -> 0.18; horizontal padding 0 10 -> 0 7; item gap 9 -> 6; silence dots opacity 0.92 -> 0.80; waveform bars #f2f2ec -> rgba(242,242,236,0.82).
+- Measured after (app PID 872): compact x 924-995 y 994-1021; hands-free x 911-1008 y 994-1021; centre 960; gap 19 px; cross at (927,1007); tick at (993,1007); both tools confirm tooltips work, cross cancels, pill hides; overlay transparent.
+- Gates: npm run typecheck clean; vitest 58/58; cargo test --locked 60/60; npm run build ok.
+- Finding: the rdev low-level keyboard hook receives zero keyboard events on this machine (mouse hook works; keyboard events never logged even with the debug flag); keyboard hotkeys only work via the hub's webview forwarder when the hub is focused. Recorded in docs/pill-overlay/iteration-log.md; not a code defect; owner to decide.
+- rdev/cargo on this machine needs the pinned rustup 1.90.0 MSVC + VS2017 vcvars64.bat; ambient chocolatey cargo (rustc 1.98.1, E0463) cannot build.
