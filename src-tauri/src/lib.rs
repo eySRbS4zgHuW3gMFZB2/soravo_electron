@@ -2003,6 +2003,8 @@ async fn set_pill_anchor(app: tauri::AppHandle, anchor: String) -> Result<(), St
     settings.pill_anchor = anchor.as_str().to_string();
     save_settings(&app, &settings)?;
     place_pill(&app);
+    // Let the hub know the anchor moved so its 3×3 indicator can update.
+    app.emit("soravo:pill-anchor-changed", serde_json::json!({ "anchor": anchor.as_str() })).ok();
     Ok(())
 }
 
