@@ -107,8 +107,16 @@
   outline-offset: 2px;
 }
 
-/* The ghost capsule the user drags around. Parked in the header row; while
- * dragging it becomes position:fixed and follows the pointer. */
+/* The ghost capsule the user drags around. Parked in a fixed-height slot so
+ * the grid does not re-centre when the ghost becomes position:fixed; while
+ * dragging it follows the pointer. */
+.ghost-slot {
+  flex: none;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .ghost-pill {
   flex: none;
   width: 112px;

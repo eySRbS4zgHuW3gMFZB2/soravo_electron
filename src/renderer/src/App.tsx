@@ -41,6 +41,9 @@ export default function App() {
   const [state, setState] = useState<RecState>('idle')
   const [handsFree, setHandsFree] = useState(false)
   const [hover, setHover] = useState<'cross' | 'tick' | null>(null)
+  // Briefly shown after a placement commit so the user can see where the
+  // capsule landed; the pill is hidden at rest otherwise.
+  const [flash, setFlash] = useState(false)
   const recRef = useRef<Recorder | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const waveRef = useRef<WaveformController | null>(null)
@@ -156,10 +159,15 @@ export default function App() {
       else if (command === 'stop') void stopRecorder(true)
       else void stopRecorder(false)
     })
+    const offFlash = window.soravo.onPillFlash(() => {
+      setFlash(true)
+      window.setTimeout(() => setFlash(false), 1000)
+    })
     return () => {
       offState()
       offSession()
       offCmd()
+      offFlash()
       stopWaveform()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,13 +189,20 @@ export default function App() {
         : handsFree
           ? 'handsfree'
           : 'ptt'
+  const showFlash = flash && state === 'idle'
 
-  if (state === 'idle' || state === 'error') return null
+  if (state === 'error') return null
+  if (state === 'idle' && !showFlash) return null
 
   return (
     <div className="pill-root">
       <div className="capsule-wrap">
-        <div className="capsule" data-mode={mode}>
+        <div className="capsule" data-mode={showFlash ? 'ptt' : mode}>
+          {showFlash && (
+            <span className="pill-dots" aria-hidden="true">
+              <i /><i /><i />
+            </span>
+          )}
           {state === 'recording' && (
             <>
               {handsFree && (

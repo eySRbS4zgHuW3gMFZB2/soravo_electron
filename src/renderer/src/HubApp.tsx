@@ -384,6 +384,16 @@ function SettingsModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  // The placement window commits straight into Rust, bypassing the modal's
+  // save flow. Sync just the anchor (a chip choice, never in-flight typing)
+  // whenever it changes elsewhere so the 3×3 indicator doesn't go stale.
+  useEffect(() => {
+    const off = window.soravo.onPillAnchorChanged(({ anchor }) => {
+      if (PILL_ANCHORS.includes(anchor)) setPillAnchor(anchor)
+    })
+    return off
+  }, [])
+
   /** Pick a folder for the transcription models. */
   const chooseModelsFolder = async () => {
     try {
