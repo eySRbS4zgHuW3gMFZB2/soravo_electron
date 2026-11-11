@@ -2050,6 +2050,10 @@ async fn flash_pill_preview(app: tauri::AppHandle) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("pill") {
         win.show().ok();
     }
+    // The pill only renders while a session is active; ask the webview to
+    // flash a static capsule for the same window of time so the placement
+    // commit is visible even at rest.
+    let _ = app.emit("soravo:pill-flash", ());
     let hide_gen = app.state::<AppState>().hide_gen.clone();
     spawn_timer(&app, &hide_gen, std::time::Duration::from_millis(900), |app| {
         // Only hide when nothing else is showing the pill (no active session).

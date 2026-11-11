@@ -1309,3 +1309,11 @@ Runtime commits `0bc0a64` and `17dddcb` were pushed to `feature/AUTH-DEV-SERVER-
 - Note: the Rust store writes happen in-process (Tauri plugin-store, ~100 ms debounce) — settings apply at next pill show, which is how the product already worked.
 - Not done / limits: the flash preview shows the pill window but the pill renders nothing at idle by design (existing behaviour, unchanged); no DPI-scaled or multi-monitor display available to verify live at 125/150 % (the margin math is unit-tested for scale 2.0); OpenCode's always-on-top window blocked fullscreen capture of the test app at times — worked around with a self-elevation of the test window, then user-minimised OpenCode for the remainder.
 
+## PILL-OVERLAY-02 follow-on — placement flash is now visible (2026-11-11)
+
+- Owner report: "The drag and drop feature is not making actual change of the position of the pill." Root cause of the perception: at idle the pill renders `null` (design: hidden at rest), so `flash_pill_preview` showed an empty window after a placement commit — the pill never visibly appeared; the placement flow's only feedback was the drop commit itself.
+- Fix: `flash_pill_preview` now emits `soravo:pill-flash`; the pill webview listens (`onPillFlash`) and renders the static idle dots capsule (existing capsule styling, `data-mode="ptt"`) for ~900 ms at the new anchor before hiding. No visual changes to recording/transcribing states; error state stays hidden as before.
+- Verified live on the real dev build: drag-drop commits centre-left and top-left with the pill flashing at the committed anchor (screenshots 97-flash-after-drop, 98-flash-top-left in the harness evidence dir); the persisted anchor round-trips through the real settings file; the owner's own anchor choice (bottom-center) restored afterwards.
+- Gates: `npm run typecheck` clean; `npm test` 74/74; Rust unchanged behaviourally except the new emit (existing `cargo test --locked` 64/64 unaffected).
+- The dev stack (`npx tauri dev` over this worktree) is running and reloaded the frontend automatically; the Rust change auto-rebuilt by the dev watcher (app relaunched at 23:26).
+

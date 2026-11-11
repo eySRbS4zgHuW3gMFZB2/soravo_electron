@@ -155,6 +155,8 @@ export interface SoravoAPI {
   deleteScratchpadNote(id: number): Promise<void>
   updateScratchpadNote(id: number, patch: { text?: string; pinned?: boolean }): Promise<void>
   onScratchpadChanged(cb: () => void): () => void
+  /** Fires when the placement preview asks the pill to flash at its anchor. */
+  onPillFlash(cb: () => void): () => void
   /** Fires every time placement mode is shown, so the window can re-read the anchor. */
   onPlacementShown(cb: () => void): () => void
   openScratchpadWindow(): Promise<void>
@@ -248,6 +250,10 @@ async function setupEventListeners() {
     const cbs = listeners['scratchpad-changed']
     if (cbs) cbs.forEach((cb) => cb())
   })
+  await listen('soravo:pill-flash', () => {
+    const cbs = listeners['pill-flash']
+    if (cbs) cbs.forEach((cb) => cb())
+  })
   await listen('soravo:placement-shown', () => {
     const cbs = listeners['placement-shown']
     if (cbs) cbs.forEach((cb) => cb())
@@ -319,6 +325,7 @@ export const soravo: SoravoAPI = {
   updateScratchpadNote: (id, patch) => invoke('update_scratchpad_note', { id, patch }),
   onScratchpadChanged: (cb) => addListener('scratchpad-changed', cb as Function),
   onPlacementShown: (cb) => addListener('placement-shown', cb as Function),
+  onPillFlash: (cb) => addListener('pill-flash', cb as Function),
   openScratchpadWindow: () => invoke('open_scratchpad_window'),
   getSettings: async () => {
     const raw = await invoke<any>('get_settings')
